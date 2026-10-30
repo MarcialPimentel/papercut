@@ -62,7 +62,7 @@ The one question it answers: **is cutting paper fun on its own?**
 - **Out:** AI fighters, menus, real arenas, Blender art, 2-player, rounds and best-of-3.
 - **Done when:** Marz can spend five minutes hitting the dummy and it feels good, and the tuned feel numbers are saved as the defaults.
 
-## Roadmap (proposed; issue-level plan in [roadmap.md](roadmap.md))
+## Roadmap (approved; issue-level plan in [roadmap.md](roadmap.md))
 1. **Milestone 1, Feel test: cutting paper.** The first playable above.
 2. **Milestone 2, Paper doll from Blender.** One rigged doll and one blade made in Blender, exported to glTF, replacing the code doll. Click-by-click pipeline doc in `docs/`.
 3. **Milestone 3, First duel.** One AI fighter with clear tells, a first pop-up diorama arena, best-of-3, simple start and win screens.
@@ -100,3 +100,4 @@ Later candidates (only once the duel is fun): more fighters and blades, local 2-
 | 2026-10-30 | Milestone 1 doll is built from flat card shapes in code; a rigged Blender doll replaces it in Milestone 2 | Feel numbers can be tuned fast without re-exporting; the pipeline gets its own milestone and doc (pillars 2 and 5). |
 | 2026-10-30 | Deploy to GitHub Pages; every merge to main goes live | Free for a public repo; Marz can play every build from a link. |
 | 2026-10-30 | Roadmap proposed: M1 Feel test, M2 Paper doll from Blender, M3 First duel vs AI | Each milestone tests one risk at a time; content waits until the duel is fun. |
+| 2026-10-30 | Roadmap and Milestone 1 plan approved; milestone "M1 Feel test: cutting paper" and issues #2–#10 created on GitHub | Marz approved the plan at the end of the first design session. |
