@@ -1,0 +1,21 @@
+# --- Web client (TypeScript, built by Vite) ---
+node_modules/
+dist/
+test-results/
+playwright-report/
+*.tmp
+
+# --- Secrets and logs ---
+.env
+*.private.md
+*.log
+
+# --- Blender backups (keep .blend, ignore autosaves) ---
+*.blend1
+*.blend2
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
