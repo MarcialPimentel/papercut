@@ -1,7 +1,7 @@
 # Papercut — Roadmap
 _Updated 2026-11-01 for the mouse-driven fighting game (art direction v4). The design behind this plan is in [GDD.md](GDD.md) and [art-direction.md](art-direction.md)._
 
-The Milestone 1 milestone and issues #2–#10 on GitHub were created on 2026-10-30 for the first plan (flat dolls vs a dummy). The table below is the current plan; the GitHub issues get rewritten to match once Marz says go.
+On GitHub this is the milestone "M1 Feel test: mouse vs dummy" with issues #2–#12 (rewritten to this plan on 2026-11-01).
 
 ## Milestone 1: Feel test (mouse vs dummy)
 **Question it answers:** does mouse-driven paper swordplay feel good?
@@ -18,10 +18,10 @@ The Milestone 1 milestone and issues #2–#10 on GitHub were created on 2026-10-
 | #8 | Hit feel | Hitstop, shake, slash lines, paper sounds, K.O. camera with slow motion. |
 | #9 | Tuning panel and restart | On-screen sliders for every move's frames, damage, chip and stun, the parry, riposte, feint and counter windows, the cursor waist line; save as defaults; R restarts. |
 | #10 | Playtest guide | `docs/playtest.md`: how to open the build, the mouse controls, what to try, what to report. |
-| new | Mouse controls | Cursor guard (waist line, small dead zone, a visible guard cue), left and right click, feint, keyboard movement, on-screen buttons on touch screens only. |
-| new | Rounds, timer and page turns | 60-second rounds, best of 3, round banners, the page-turn animation to the next spread, the back-cover win, the Ruled Courtyard and Legal Pad Grove pop-ups. |
+| #11 | Mouse controls | Cursor guard (waist line, small dead zone, a visible guard cue), left and right click, feint, keyboard movement, on-screen buttons on touch screens only. |
+| #12 | Rounds, timer and page turns | 60-second rounds, best of 3, round banners, the page-turn animation to the next spread, the back-cover win, the Ruled Courtyard and Legal Pad Grove pop-ups. |
 
-Suggested build order: #2 → #3 → #4 → #5 → mouse controls → #6 → #7 → #8 → rounds → #9 → #10.
+Suggested build order: #2 → #3 → #4 → #5 → #11 → #6 → #7 → #8 → #12 → #9 → #10.
 
 ## Milestone 2: Online fights
 The first real PvP, right after Milestone 1. Two players on different PCs, each with a mouse: invite links, a small service to connect them, WebRTC for inputs, rollback to hide lag. Issues to be written when Milestone 1 is done.
