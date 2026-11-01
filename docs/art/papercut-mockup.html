@@ -77,8 +77,8 @@ code { font-size: .88em; background: var(--sheet-2); padding: 1px 5px; border-ra
   overflow: hidden; background: #E9E4DA; font-family: var(--body);
   border: 2px solid #18171C; box-shadow: 6px 6px 0 #18171C; border-radius: 4px;
 }
-.stage canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; cursor: grab; }
-.stage canvas:active { cursor: grabbing; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; cursor: crosshair; }
+
 .stage-fallback { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: #18171C; font-weight: 700; }
 .stage.ready .stage-fallback { display: none; }
 /* HUD sits on the scene: fixed paper-and-ink colors that read on every page */
@@ -148,7 +148,7 @@ code { font-size: .88em; background: var(--sheet-2); padding: 1px 5px; border-ra
   .chip kbd { display: none; }
   .wlabel { font-size: 22px; }
 }
-@media (prefers-reduced-motion: reduce) { .pop { animation-duration: .01s; } .toast { transition: none; } }
+@media (hover: hover) and (pointer: fine) { .hud-chips { display: none; } } @media (prefers-reduced-motion: reduce) { .pop { animation-duration: .01s; } .toast { transition: none; } }
 .stage-help { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
 .stage-help div { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .stage-help b { color: var(--ink); }
@@ -207,7 +207,7 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
 
 <div class="wrap">
   <header class="hero">
-    <p class="eyebrow">Papercut · art direction v3 · paper fighting game · draft for Marz</p>
+    <p class="eyebrow">Papercut · art direction v4 · mouse-driven paper fighting game · draft for Marz</p>
     <h1><span class="slip">The Notebook</span> Dojo</h1>
     <p class="lead">A 3D weapon fighting game in folded paper. Light and heavy slashes, a high or low guard, and one rule that changes everything: catch your rival mid-attack and it's a counter cut, an instant K.O.</p>
   </header>
@@ -223,7 +223,6 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
         <div class="bar r" id="bar1"><div class="row"><span class="nm">Sumi</span><div class="strip"><i></i></div></div><div class="pips" aria-label="Rounds won"><b></b><b></b></div></div>
       </div>
       <div class="hud opts">
-        <button class="hbtn" id="bP2" type="button">Sumi: <b>Dummy</b></button>
         <button class="hbtn" id="bOutline" type="button">Outline: <b>Sticker</b></button>
         <button class="hbtn" id="bSound" type="button">Sound: <b>On</b></button>
       </div>
@@ -234,29 +233,30 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
         <button class="chip" data-hold="right" type="button">▶<kbd>D</kbd></button>
         <button class="chip" data-act="high" type="button">High<kbd>W</kbd></button>
         <button class="chip" data-act="low" type="button">Low<kbd>S</kbd></button>
-        <button class="chip" data-act="light" type="button">Light<kbd>F</kbd></button>
-        <button class="chip cut" data-act="heavy" type="button">Heavy<kbd>G</kbd></button>
+        <button class="chip" data-act="light" type="button">Light<kbd>LMB</kbd></button>
+        <button class="chip cut" data-act="heavy" type="button">Heavy<kbd>RMB</kbd></button>
+        <button class="chip" data-act="feint" type="button">Feint<kbd>Q</kbd></button>
         <button class="chip" data-act="jump" type="button">Jump<kbd>Space</kbd></button>
         <button class="chip" data-act="dashB" type="button">Backdash<kbd>A A</kbd></button>
         <button class="chip" data-act="reset" type="button">Restart<kbd>R</kbd></button>
       </div>
     </div>
     <div class="stage-help">
-      <div><b>Kami (player 1):</b> <span><kbd>A</kbd> <kbd>D</kbd> move (double-tap to dash)</span> <span><kbd>W</kbd> <kbd>S</kbd> guard high / low</span> <span><kbd>F</kbd> light</span> <span><kbd>G</kbd> heavy</span> <span><kbd>Space</kbd> jump</span></div>
-      <div><b>Sumi (player 2, switch "Sumi" to Player 2):</b> <span><kbd>←</kbd> <kbd>→</kbd> move (double-tap to dash)</span> <span><kbd>↑</kbd> <kbd>↓</kbd> guard</span> <span><kbd>.</kbd> light</span> <span><kbd>/</kbd> heavy</span> <span><kbd>Right Shift</kbd> jump</span> <span>Gamepads work too: X light, Y heavy, A jump, B backdash.</span></div>
-      <div><span>Drag the scene to look around. <kbd>R</kbd> restarts the match. Click the scene first so the arrow keys and Space don't scroll the page.</span> <span>Look test: timings and damage are placeholders that Milestone 1 tunes.</span></div>
+      <div><b>Mouse fights:</b> <span>cursor above Kami's waist = guard high, below = guard low</span> <span><kbd>Left click</kbd> light slash</span> <span><kbd>Right click</kbd> heavy slash</span> <span>left click (or <kbd>Q</kbd>) during a heavy's wind-up = feint</span></div>
+      <div><b>Keyboard moves:</b> <span><kbd>A</kbd> <kbd>D</kbd> move (double-tap to dash)</span> <span><kbd>Space</kbd> or <kbd>W</kbd> jump</span> <span><kbd>R</kbd> restart the match</span></div>
+      <div><span>Sumi is a practice dummy: switches guard (watch for the yellow glint), swings back, and sometimes feints a heavy. On a phone, use the buttons.</span> <span>Look test: timings and damage are placeholders that Milestone 1 tunes.</span></div>
     </div>
   </section>
 
   <section>
-    <h2>What changed since v2</h2>
+    <h2>What changed in v4</h2>
     <div class="changed">
-      <div><strong>A fighting game now.</strong> Best of 3 rounds, a 60-second timer, a paper health strip for each fighter.</div>
-      <div><strong>Light and heavy slashes</strong> on top of the W/S guard. Jump, dash and backdash for fast footwork.</div>
-      <div><strong>The counter cut.</strong> Hit a rival while a heavy winds up, or after they miss, and the round ends on the spot.</div>
-      <div><strong>Every hit cuts.</strong> A red cut wraps around the folded paper where the blade landed; the strip loses a slice. The K.O. splits the fighter.</div>
-      <div><strong>Pages turn between rounds.</strong> Round 1 on graph paper, round 2 ruled, round 3 legal pad. The match winner stands on the marble back cover.</div>
-      <div><strong>Settled:</strong> Kami and Sumi, smooth motion, Rapier physics for the cut halves. Gone: right of way and running off the page.</div>
+      <div><strong>The mouse fights.</strong> The cursor's height sets your guard (above the waist high, below low); left click is a light slash, right click a heavy. The keyboard only moves: A/D, Space to jump, double-tap to dash.</div>
+      <div><strong>Feint.</strong> Cancel a heavy during its wind-up (left click or Q). Fake the heavy, bait their counter cut, punish the miss.</div>
+      <div><strong>Riposte.</strong> Parry by flicking the cursor across the waist at the last moment; your next slash is a riposte: light speed, heavy damage, can't be parried.</div>
+      <div><strong>No two players on one PC.</strong> PvP happens online (Milestone 2). Milestone 1 is a mouse feel test against the practice dummy, which now also feints.</div>
+      <div><strong>From v3:</strong> a 3D paper fighting game with health strips, 60-second best-of-3 rounds, page turns between rounds and the counter cut.</div>
+      <div><strong>Settled earlier:</strong> Kami and Sumi, smooth motion, Rapier physics for the cut halves.</div>
     </div>
   </section>
 
@@ -275,17 +275,18 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
   <section>
     <div class="col stack">
       <h2>How a fight works</h2>
-      <p>Two attack buttons, both cutting at your guard height. The light slash is the poke you throw all the time. The heavy slash is the hit that changes the round, and the risk that can end it for you.</p>
+      <p>The mouse does all the fighting, in the style of PC melee games like Chivalry: where your cursor sits is where your blade guards, and the two buttons cut at that height. The light slash is the poke you throw all the time. The heavy slash is the hit that changes the round, and the risk that can end it for you.</p>
     </div>
     <div class="tablebox">
       <table>
         <thead><tr><th>Move</th><th>Speed</th><th>Effect</th><th>Risk</th></tr></thead>
         <tbody>
-          <tr><td><strong>Light slash</strong> (F)</td><td>Fast wind-up, short recovery</td><td>10% of the strip, a thin red cut</td><td>Safe if blocked; a miss leaves a short opening</td></tr>
-          <tr><td><strong>Heavy slash</strong> (G)</td><td>Slow wind-up, long recovery</td><td>35% of the strip, a wide red cut across two parts; chips 3% through a block</td><td>While it winds up, any hit is a counter cut</td></tr>
-          <tr><td><strong>Guard</strong> (W / S)</td><td>Instant switch, works while walking</td><td>Blocks slashes at that height</td><td>Wrong height: you're cut</td></tr>
-          <tr><td><strong>Parry</strong></td><td>Switch guard at the last moment</td><td>The attacker staggers, open to a free hit</td><td>Too early is just a block; too late is a hit</td></tr>
-          <tr><td><strong>Jump</strong> (Space)</td><td>A paper hop</td><td>Low slashes pass underneath; air slashes cut high</td><td>High slashes still hit you</td></tr>
+          <tr><td><strong>Light slash</strong> (left click)</td><td>Fast wind-up, short recovery</td><td>10% of the strip, a thin red cut</td><td>Safe if blocked; a miss leaves a short opening</td></tr>
+          <tr><td><strong>Heavy slash</strong> (right click)</td><td>Slow wind-up, long recovery</td><td>35% of the strip, a wide red cut across two parts; chips 3% through a block</td><td>While it winds up, any hit is a counter cut</td></tr>
+          <tr><td><strong>Feint</strong> (left click or Q during a heavy's wind-up)</td><td>Cancels the heavy, back to guard fast</td><td>Baits a counter-cut attempt; punish their miss</td><td>Only before the swing is nearly out</td></tr>
+          <tr><td><strong>Guard</strong> (cursor height)</td><td>Instant, works while walking</td><td>Blocks slashes at that height</td><td>Wrong height: you're cut</td></tr>
+          <tr><td><strong>Parry, then riposte</strong></td><td>Flick the cursor to the right height at the last moment</td><td>The attacker staggers; your next slash is a riposte (light speed, heavy damage, can't be parried)</td><td>Too early is just a block; too late is a hit</td></tr>
+          <tr><td><strong>Jump</strong> (Space or W)</td><td>A paper hop</td><td>Low slashes pass underneath; air slashes cut high</td><td>High slashes still hit you</td></tr>
           <tr><td><strong>Dash / backdash</strong> (double-tap)</td><td>Quick</td><td>Get in, get out</td><td>Committed for a moment</td></tr>
           <tr><td><strong>Counter cut</strong></td><td>Any hit at the right moment</td><td>Instant K.O. and split</td><td>Only on a heavy's wind-up or after a miss; two lights trading just do normal damage</td></tr>
         </tbody>
@@ -298,14 +299,15 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
           <li><strong>60 seconds.</strong> A K.O. ends the round, or the most strip left when time runs out. A tie replays it.</li>
           <li><strong>Best of 3.</strong> Between rounds everything folds flat and the page turns to the next spread.</li>
           <li><strong>The match winner</strong> stands alone on the marble back cover.</li>
-          <li><strong>Practice dummy:</strong> Sumi switches guard (a yellow glint is the tell) and swings back now and then, so you can practise counter cuts alone.</li>
+          <li><strong>Practice dummy:</strong> Sumi switches guard (a yellow glint is the tell), swings back now and then and sometimes feints a heavy, so you can practise counter cuts and parries alone.</li>
+          <li><strong>Against people:</strong> online only (Milestone 2). No two players on one PC.</li>
         </ul>
       </div>
       <div class="card stack">
         <h3>Where the depth comes from</h3>
-        <p>Spacing at the tip of your light slash, reading the guard, baiting a heavy and punishing it, parrying a predictable swing, jumping a low, and the clock pressing on whoever is behind. Every round can turn on one greedy swing.</p>
+        <p>Spacing at the tip of your light slash, reading the guard, feinting a heavy to bait their counter cut, parrying a predictable swing into a riposte, jumping a low, and the clock pressing on whoever is behind. Every round can turn on one greedy swing.</p>
         <p class="hand">poke fast, never get greedy</p>
-        <p class="muted small">Weapon fighters like Samurai Shodown inspired the heavy-hit feel. The counter cut, the guard stance and the paper damage are ours.</p>
+        <p class="muted small">Weapon fighters like Samurai Shodown inspired the heavy-hit feel, and PC melee games like Chivalry the mouse control, feint and riposte. The counter cut, the cursor guard and the paper damage are ours.</p>
       </div>
     </div>
   </section>
@@ -413,8 +415,10 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
         <thead><tr><th>System</th><th>How it looks</th><th>Player does</th><th>Milestone 1 issue</th></tr></thead>
         <tbody>
           <tr><td><strong>Move, dash</strong></td><td>Walk along the lane; a dash is a quick lunge with a lean.</td><td>A / D, double-tap</td><td>#3, #5</td></tr>
-          <tr><td><strong>Guard</strong></td><td>Blade high over the shoulder or low and forward.</td><td>W / S</td><td>#5</td></tr>
-          <tr><td><strong>Light / heavy</strong></td><td>A small or a big wind-up, then one razor line: ink for a miss or block, red for a hit.</td><td>F / G</td><td>#5, #8</td></tr>
+          <tr><td><strong>Guard</strong></td><td>The blade follows the cursor: high over the shoulder or low and forward.</td><td>Move the cursor</td><td>#5</td></tr>
+          <tr><td><strong>Light / heavy</strong></td><td>A small or a big wind-up, then one razor line: ink for a miss or block, red for a hit.</td><td>Left / right click</td><td>#5, #8</td></tr>
+          <tr><td><strong>Feint</strong></td><td>The heavy's wind-up snaps back to guard; a yellow "Feint" sticker.</td><td>Left click or Q mid wind-up</td><td>#5</td></tr>
+          <tr><td><strong>Riposte</strong></td><td>After a parry, a fast heavy-damage slash with a "Riposte" sticker.</td><td>Click right after a parry</td><td>#5</td></tr>
           <tr><td><strong>Hit</strong></td><td>A red cut wraps around the struck part; the health strip loses a slice that falls away; a short stagger.</td><td>Land a clean hit</td><td>#7</td></tr>
           <tr><td><strong>Block / parry / clash</strong></td><td>"Block" sticker and paper chips; parry adds a yellow glint and a stagger; a clash bounces both.</td><td>Guard at the right height</td><td>#5</td></tr>
           <tr><td><strong>Counter cut</strong></td><td>"Counter cut" sticker, instant split, slow motion, three-quarter camera.</td><td>Hit them mid-heavy or after a miss</td><td>#5, #7</td></tr>
@@ -440,6 +444,7 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
           <li><strong>Moves as data:</strong> wind-up, active and recovery frames, reach, damage, chip and stun for every move, all tunable live.</li>
           <li><strong>Hit areas:</strong> each move's blade reach is checked against the defender; jumping lifts you over low cuts.</li>
           <li><strong>Input buffer:</strong> a press a few frames early still counts, so the game feels responsive.</li>
+          <li><strong>Mouse to guard:</strong> the cursor is compared with the fighter's waist on screen every frame; only the resulting high or low (and clicks) enter the rules, so online play sends the same tiny inputs.</li>
           <li><strong>Online (Milestone 2):</strong> only inputs travel between two browsers (WebRTC), with rollback to hide lag, the fighting-game standard.</li>
         </ul>
       </div>
@@ -510,7 +515,8 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
           <tr><td>Rules</td><td class="now">One slash, one cut kills, dodge</td><td>Light and heavy, block, parry, clash, counter cut, hit stun, jump, dash and backdash</td></tr>
           <tr><td>Opponents</td><td class="now">Dummy only, no bot</td><td>Dummy in M1 (now swings back); a computer fighter in Milestone 4</td></tr>
           <tr><td>Roster</td><td class="now">Two looks</td><td>Shared move set in M1; own speed, reach and simple specials in Milestone 4</td></tr>
-          <tr><td>Roadmap</td><td class="now">M1 local, M2 online, M3 Blender, M4 notebook</td><td>M1 Feel test, M2 Online fights, M3 Blender fighters, M4 Solo and character, M5 The full notebook</td></tr>
+          <tr><td>Controls</td><td class="now">Keyboard: W/S guard, F/G slash; two players on one keyboard</td><td>Mouse fights (cursor guard, left/right click), keyboard moves; feint and riposte; no local two-player, no gamepads for now</td></tr>
+          <tr><td>Roadmap</td><td class="now">M1 local PvP, M2 online, M3 Blender, M4 notebook</td><td>M1 Feel test (mouse vs dummy), M2 Online fights (first real PvP), M3 Blender fighters, M4 Solo and character, M5 The full notebook</td></tr>
         </tbody>
       </table>
     </div>
@@ -520,8 +526,8 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
     <div class="col stack">
       <h2>Plan</h2>
       <ol class="steps">
-        <li><strong>Milestone 1, feel test (local PvP).</strong> Setup and deploy, the notebook and camera, Kami and Sumi from code shapes, fight rules as data with tests, two players on one PC, the practice dummy, hits, cuts and the K.O. split with Rapier, hit feel, rounds, timer and page turns, tuning panel, playtest guide.</li>
-        <li><strong>Milestone 2, online fights.</strong> Invite links, WebRTC, rollback.</li>
+        <li><strong>Milestone 1, feel test (mouse vs dummy).</strong> Setup and deploy, the notebook and camera, Kami and Sumi from code shapes, fight rules as data with tests, mouse controls, the practice dummy (guard switches, swings, feints), hits, cuts and the K.O. split with Rapier, hit feel, rounds, timer and page turns, tuning panel, playtest guide.</li>
+        <li><strong>Milestone 2, online fights.</strong> The first real PvP: invite links, WebRTC, rollback.</li>
         <li><strong>Milestone 3, Blender fighters.</strong> Kami remade in Blender and the pipeline guide.</li>
         <li><strong>Milestone 4, solo and character.</strong> A computer fighter, Kami and Sumi made different, one or two specials each.</li>
         <li><strong>Milestone 5, the full notebook.</strong> Menus, more spreads and blades.</li>
@@ -530,10 +536,10 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
     <div class="decide col">
       <h3 style="margin-bottom:14px">Next from you</h3>
       <ol>
-        <li><b>Play it:</b> does a round feel like the fighting game you have in mind? Try counter-cutting Sumi's heavy.</li>
+        <li><b>Play it with a mouse:</b> does guarding with the cursor and slashing with clicks feel right? Try parrying Sumi's swing into a riposte, and counter-cutting a heavy.</li>
         <li><b>Go:</b> once it does, I rewrite the Milestone 1 issues to this plan and open the docs PR.</li>
       </ol>
-      <p class="muted small" style="margin-top:14px">Risks: fighting games grow fast (move sets, a computer fighter, a roster), so Milestone 1 keeps one shared move set. The counter cut must only ever punish a visible mistake, or it will feel cheap; its windows are on the tuning panel.</p>
+      <p class="muted small" style="margin-top:14px">Risks: with no local two-player, PvP fun can't be tested until online play lands in Milestone 2, so Milestone 2 should follow right after Milestone 1. Fighting games grow fast, so Milestone 1 keeps one shared move set. The counter cut must only ever punish a visible mistake, or it will feel cheap; its windows are on the tuning panel.</p>
     </div>
   </section>
 </div>
@@ -868,7 +874,10 @@ function renderTrack() {}
 const MOVES = {
   light: { wind: 0.09, act: 0.05, rec: 0.2, reach: 1.55, dmg: 10, chip: 0, stun: 0.22, push: 0.22, windK: 0.45, strikeK: 0.8 },
   heavy: { wind: 0.32, act: 0.08, rec: 0.42, reach: 1.85, dmg: 35, chip: 3, stun: 0.45, push: 0.55, windK: 1, strikeK: 1 },
+  // after a parry: light speed, heavy damage, can't be parried
+  riposte: { wind: 0.09, act: 0.06, rec: 0.25, reach: 2.15, dmg: 35, chip: 3, stun: 0.45, push: 0.5, windK: 0.6, strikeK: 1 },
 };
+const FEINT_T = 0.14, RIPOSTE_WIN = 0.6;
 const WALK = 2.6, PARRY_WIN = 0.12, GRAV = 15, JUMP_V = 5.6, ROUND_T = 60;
 function makeFighter(id, cfg, x, side) {
   const f = { id, cfg, x, y: 0, vy: 0, vx: 0, facing: side, yaw: side > 0 ? 0 : Math.PI, stance: 'high', stanceAt: -9, state: 'guard', t: 0, atk: 'light', slash: 'high', whiffed: false,
@@ -949,49 +958,47 @@ const sfx = {
   hop() { noise(0.09, 'lowpass', 600, 0.7, 0.2); }, page() { noise(0.6, 'bandpass', 700, 0.4, 0.35); }, fold() { noise(0.25, 'bandpass', 1600, 0.6, 0.2); },
 };
 
-// ---------- input: keyboard, chips, gamepads ----------
-const input = [{ left: 0, right: 0, q: [] }, { left: 0, right: 0, q: [] }];
+// ---------- input: the mouse fights, the keyboard moves ----------
+const input = [{ left: 0, right: 0, q: [] }];
 input[9] = { left: 0, right: 0, q: [] }; // the dummy's controls
-const KEYS = {
-  KeyA: [0, 'left'], KeyD: [0, 'right'], KeyW: [0, 'high'], KeyS: [0, 'low'], KeyF: [0, 'light'], KeyG: [0, 'heavy'], Space: [0, 'jump'],
-  ArrowLeft: [1, 'left'], ArrowRight: [1, 'right'], ArrowUp: [1, 'high'], ArrowDown: [1, 'low'], Period: [1, 'light'], Slash: [1, 'heavy'], ShiftRight: [1, 'jump'],
-  Numpad1: [1, 'light'], Numpad2: [1, 'heavy'], Numpad3: [1, 'jump'],
-};
-let stageActive = false;
+const KEYS = { KeyA: 'left', KeyD: 'right', ArrowLeft: 'left', ArrowRight: 'right', Space: 'jump', KeyW: 'jump', ArrowUp: 'jump', KeyQ: 'feint' };
+let stageActive = false, mouseY = null;
 stageEl.addEventListener('pointerdown', () => { stageActive = true; ac(); });
 document.addEventListener('pointerdown', (e) => { if (!stageEl.contains(e.target)) stageActive = false; });
-const who = (p) => (p === 1 && p2Mode !== 'human' ? 0 : p);
-const lastTap = [{}, {}];
+const lastTap = {};
 addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.code === 'KeyR' && !e.repeat) { restart(); return; }
   const k = KEYS[e.code]; if (!k) return;
   if (/^Arrow|Space/.test(e.code)) { if (!stageActive) return; e.preventDefault(); }
-  const p = who(k[0]); ac();
-  if (k[1] === 'left' || k[1] === 'right') {
-    if (!e.repeat) { const now = performance.now(); if (now - (lastTap[p][k[1]] || 0) < 240) input[p].q.push(k[1] === 'left' ? 'dashL' : 'dashR'); lastTap[p][k[1]] = now; }
-    input[p][k[1]] |= 1 << k[0];
-  } else if (!e.repeat) input[p].q.push(k[1]);
+  ac();
+  if (k === 'left' || k === 'right') {
+    if (!e.repeat) { const now = performance.now(); if (now - (lastTap[k] || 0) < 240) input[0].q.push(k === 'left' ? 'dashL' : 'dashR'); lastTap[k] = now; }
+    input[0][k] |= 1;
+  } else if (!e.repeat) input[0].q.push(k);
 });
-addEventListener('keyup', (e) => { const k = KEYS[e.code]; if (!k || (k[1] !== 'left' && k[1] !== 'right')) return; for (const p of [0, 1]) input[p][k[1]] &= ~(1 << k[0]); });
-addEventListener('blur', () => { for (const i of [input[0], input[1]]) i.left = i.right = 0; });
+addEventListener('keyup', (e) => { const k = KEYS[e.code]; if (k === 'left' || k === 'right') input[0][k] &= ~1; });
+addEventListener('blur', () => { input[0].left = input[0].right = 0; });
+// The cursor: above Kami's waist guards high, below guards low. Left click light, right click heavy.
+canvas.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') mouseY = e.clientY - canvas.getBoundingClientRect().top; });
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  e.preventDefault(); ac(); mouseY = e.clientY - canvas.getBoundingClientRect().top; cursorGuard();
+  input[0].q.push(e.button === 2 ? 'heavy' : e.button === 0 ? 'light' : 'feint');
+});
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+const _w = new THREE.Vector3();
+function cursorGuard() {
+  if (mouseY == null || !kami.alive) return;
+  _w.set(kami.x, kami.y + 1.0, 0).project(camera);
+  const want = mouseY < (1 - _w.y) / 2 * canvas.clientHeight ? 'high' : 'low';
+  if (want !== kami.stance) input[0].q.push(want);
+}
 for (const b of document.querySelectorAll('.chip')) {
   if (b.dataset.act) b.addEventListener('click', () => { ac(); if (b.dataset.act === 'reset') restart(); else input[0].q.push(b.dataset.act); });
   if (b.dataset.hold) {
     const bit = 1 << 3, on = (e) => { e.preventDefault(); input[0][b.dataset.hold] |= bit; ac(); }, off = () => { input[0][b.dataset.hold] &= ~bit; };
     b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off);
-  }
-}
-const padPrev = [{}, {}];
-function pollPads() {
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  for (let i = 0; i < 2; i++) {
-    const g = pads[i]; if (!g) continue; const p = who(i), prev = padPrev[i], bit = 1 << (4 + i);
-    const ax = g.axes[0] || 0, ay = g.axes[1] || 0;
-    input[p].left = ax < -0.35 ? input[p].left | bit : input[p].left & ~bit; input[p].right = ax > 0.35 ? input[p].right | bit : input[p].right & ~bit;
-    const now = { high: ay < -0.6 || g.buttons[12]?.pressed, low: ay > 0.6 || g.buttons[13]?.pressed, light: g.buttons[2]?.pressed, heavy: g.buttons[3]?.pressed, jump: g.buttons[0]?.pressed, dashB: g.buttons[1]?.pressed, dashF: g.buttons[5]?.pressed };
-    for (const a in now) { if (now[a] && !prev[a]) input[p].q.push(a); prev[a] = now[a]; }
-    if (g.buttons[9]?.pressed && !prev.start) restart(); prev.start = g.buttons[9]?.pressed;
   }
 }
 
@@ -1014,8 +1021,13 @@ function slashLine(att) { const base = att.slash === 'high' ? -22 * D : 14 * D; 
 function act(f, a, inp) {
   if (!f.alive || phase !== 'fight') return;
   if (a === 'high' || a === 'low') { if (f.stance !== a) { f.stance = a; f.stanceAt = simClock; } return; }
+  // feint: cancel a heavy during its wind-up (Q, middle click, or the other mouse button)
+  if ((a === 'feint' || a === 'light') && f.state === 'wind' && f.atk === 'heavy' && f.t < MOVES.heavy.wind * 0.85) {
+    f.state = 'feint'; f.t = 0; f.feintFrom = copyPose(f.pose); popLabel('Feint', [f.x, f.y + 2.3], 'gold'); sfx.fold(); return;
+  }
+  if (a === 'feint') return;
   if (f.state !== 'guard') { if (a !== 'high' && a !== 'low') f.buf = { a, left: 0.1 }; return; }
-  if (a === 'light' || a === 'heavy') { f.state = 'wind'; f.t = 0; f.atk = a; f.slash = f.y > 0.2 ? 'high' : f.stance; f.from = copyPose(f.pose); f.whiffed = false; sfx.whoosh(); }
+  if (a === 'light' || a === 'heavy') { f.state = 'wind'; f.t = 0; f.atk = f.riposte > 0 ? 'riposte' : a; f.riposte = 0; f.slash = f.y > 0.2 ? 'high' : f.stance; f.from = copyPose(f.pose); f.whiffed = false; sfx.whoosh(); }
   else if (a === 'jump' && f.y <= 0) { f.vy = JUMP_V; f.vx = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * WALK; sfx.hop(); }
   else if (a.startsWith('dash') && f.y <= 0) {
     const d = a === 'dashL' ? -1 : a === 'dashR' ? 1 : a === 'dashF' ? f.facing : -f.facing;
@@ -1023,7 +1035,7 @@ function act(f, a, inp) {
   }
 }
 function resolve(att) {
-  const M = MOVES[att.atk], def = other(att), L = slashLine(att), heavy = att.atk === 'heavy';
+  const M = MOVES[att.atk], def = other(att), L = slashLine(att), heavy = att.atk !== 'light';
   const tipX = att.x + att.facing * (M.reach - 0.3);
   if (!def.alive || Math.abs(def.x - att.x) > M.reach) { att.whiffed = true; razor([tipX, L.y], L.ang, C.ink, heavy ? 2.8 : 1.8); return; }
   if (att.slash === 'low' && def.y > 0.3) { att.whiffed = true; razor([tipX, L.y], L.ang, C.ink, 2.2); popLabel('Over', [def.x, def.y + 2.2], 'gold'); return; }
@@ -1037,7 +1049,8 @@ function resolve(att) {
     popLabel('Counter cut', [P[0], P[1] + 0.9], 'cut'); return ko(att, def, P, L.ang, 'Counter cut');
   }
   if (def.state === 'guard' && def.y <= 0.3 && def.stance === att.slash) {
-    if (simClock - def.stanceAt < PARRY_WIN) {
+    if (simClock - def.stanceAt < PARRY_WIN && att.atk !== 'riposte') {
+      def.riposte = RIPOSTE_WIN;
       razor(P, L.ang, C.legal, 2.4); burst(P, [C.legal, C.paper], 10, att.facing); popLabel('Parry', [P[0], P[1] + 0.6], 'gold'); sfx.parry();
       hitstop = 0.1; shake = 0.06; att.state = 'stun'; att.t = 0; att.stunT = 0.5; att.x -= att.facing * 0.3; return;
     }
@@ -1051,7 +1064,7 @@ function resolve(att) {
   if (def.hp <= 0) return ko(att, def, P, L.ang, 'K.O.');
   addCut(def, P, L.ang + (Math.random() - .5) * 10 * D, heavy);
   razor(P, L.ang, C.red, heavy ? 3.8 : 2.4); burst(P, [C.red, C.paper, C.redDeep], heavy ? 18 : 8, att.facing);
-  if (heavy) { popLabel('Cut', [P[0], P[1] + 0.6], 'cut'); sfx.cut(); } else sfx.hit();
+  if (heavy) { popLabel(att.atk === 'riposte' ? 'Riposte' : 'Cut', [P[0], P[1] + 0.6], 'cut'); sfx.cut(); } else sfx.hit();
   hitstop = heavy ? 0.12 : 0.06; shake = heavy ? 0.14 : 0.05;
   def.state = 'stun'; def.t = 0; def.stunT = M.stun; def.x += att.facing * M.push;
 }
@@ -1115,14 +1128,15 @@ function dummyThink(f, dt) {
   const dx = Math.abs(kami.x - f.x);
   if (f.state === 'guard' && dx > 2.4) f.x += Math.sign(kami.x - f.x) * 1.0 * dt;
   f.atkTimer -= dt;
-  if (f.atkTimer <= 0 && f.state === 'guard' && dx < 1.9 && f.tell === 0) { input[9].q.push(Math.random() < 0.55 ? 'heavy' : 'light'); f.atkTimer = 1.8 + Math.random() * 2.4; }
+  if (f.atkTimer <= 0 && f.state === 'guard' && dx < 1.9 && f.tell === 0) { const h = Math.random() < 0.55; input[9].q.push(h ? 'heavy' : 'light'); f.planFeint = h && Math.random() < 0.3; f.atkTimer = 1.8 + Math.random() * 2.4; }
+  if (f.planFeint && f.state === 'wind' && f.atk === 'heavy' && f.t > 0.14) { f.planFeint = false; input[9].q.push('feint'); }
 }
 function step(dt) {
   simClock += dt;
   if (phase === 'fight') { roundTime -= dt; if (roundTime <= 0) { roundTime = 0; timeUp(); } }
   for (const f of fighters) {
-    const inp = input[f.id === 1 && p2Mode !== 'human' ? 9 : f.id];
-    if (f.id === 1 && p2Mode !== 'human') input[1].q.length = 0;
+    const inp = input[f.id === 1 ? 9 : 0];
+    f.riposte = Math.max(0, (f.riposte || 0) - dt);
     for (const a of inp.q) act(f, a, inp); inp.q.length = 0;
     // input buffer: a press up to 0.1 s early still comes out
     if (f.buf) { if (f.state === 'guard') { const b = f.buf; f.buf = null; act(f, b.a, inp); } else if ((f.buf.left -= dt) <= 0) f.buf = null; }
@@ -1150,6 +1164,9 @@ function step(dt) {
     } else if (f.state === 'recover') {
       const M = MOVES[f.atk]; lerpPose(f.recFrom, POSE.guard[f.stance], easeIO(Math.min(1, f.t / M.rec)), f.pose);
       if (f.t >= M.rec) { f.state = 'guard'; f.whiffed = false; }
+    } else if (f.state === 'feint') {
+      lerpPose(f.feintFrom, POSE.guard[f.stance], easeOut(Math.min(1, f.t / FEINT_T)), f.pose);
+      if (f.t >= FEINT_T) f.state = 'guard';
     } else if (f.state === 'stun') {
       lerpPose(f.pose, { ...POSE.guard[f.stance], lean: 0.32, head: -0.15 }, 1 - Math.exp(-dt * 18), f.pose);
       if (f.t >= f.stunT) f.state = 'guard';
@@ -1160,7 +1177,7 @@ function step(dt) {
       if (k >= 1) f.state = 'guard';
     }
     if (f.state !== 'dash' && (f.y > 0 || f.vy > 0)) { f.vy -= GRAV * dt; f.y += f.vy * dt; if (f.y <= 0) { f.y = 0; f.vy = 0; f.vx = 0; } }
-    if (f.id === 1 && p2Mode !== 'human') dummyThink(f, dt);
+    if (f.id === 1) dummyThink(f, dt);
   }
   // fighters can't walk through each other; jumping over is allowed
   if (kami.alive && sumi.alive && kami.y < 0.35 && sumi.y < 0.35) {
@@ -1196,7 +1213,7 @@ function updatePhase(real) {
   }
 }
 let leaf = null;
-function startTurn(to, final) { turning = { t: 0, to, final, built: false }; sfx.page(); for (const i of [input[0], input[1], input[9]]) i.q.length = 0; }
+function startTurn(to, final) { turning = { t: 0, to, final, built: false }; sfx.page(); for (const i of [input[0], input[9]]) i.q.length = 0; }
 function updateTurn(real) {
   const T = turning; T.t += real; const t = T.t;
   // 0-0.35 fold flat, 0.35-1.15 flip, 1.15-1.6 pop up
@@ -1230,9 +1247,6 @@ function setFold(v) { foldNow = v; if (popups) popups.scale.y = v; }
 // ---------- camera ----------
 const cam = { x: 0, y: 1.1, dist: 11, yaw: 0.16, pitch: 0.2 };
 const drag = { yaw: 0, pitch: 0, active: false, idle: 9, lx: 0, ly: 0, id: null };
-canvas.addEventListener('pointerdown', (e) => { drag.active = true; drag.lx = e.clientX; drag.ly = e.clientY; drag.id = e.pointerId; });
-addEventListener('pointermove', (e) => { if (!drag.active || e.pointerId !== drag.id) return; const dx = e.clientX - drag.lx, dy = e.clientY - drag.ly; drag.lx = e.clientX; drag.ly = e.clientY; if (e.pointerType === 'touch' && Math.abs(dy) > Math.abs(dx)) return; drag.yaw = clamp(drag.yaw - dx * 0.006, -1.3, 1.3); drag.pitch = clamp(drag.pitch + dy * 0.004, -0.15, 0.8); drag.idle = 0; });
-addEventListener('pointerup', () => { drag.active = false; });
 function updateCamera(real) {
   const alive = fighters.filter((f) => f.alive);
   const xs = alive.length ? alive.map((f) => f.x) : [0];
@@ -1253,10 +1267,6 @@ function updateCamera(real) {
 }
 
 // ---------- buttons ----------
-$('#bP2').addEventListener('click', () => {
-  p2Mode = p2Mode === 'dummy' ? 'human' : 'dummy'; $('#bP2 b').textContent = p2Mode === 'human' ? 'Player 2' : 'Dummy'; sumi.tell = 0;
-  toast(p2Mode === 'human' ? 'Sumi is player 2: arrows to move and guard, <em>.</em> light, <em>/</em> heavy, <em>Right Shift</em> jump. Or plug in a second gamepad.' : 'Sumi is a practice dummy again: switches guard and swings back now and then.', 4400);
-});
 $('#bOutline').addEventListener('click', () => {
   outlineMode = outlineMode === 'sticker' ? 'ink' : 'sticker'; $('#bOutline b').textContent = outlineMode === 'sticker' ? 'Sticker' : 'Ink only';
   scene.traverse((o) => { if (o.userData.outline === 'w') o.visible = outlineMode === 'sticker'; if (o.userData.outline === 'i') o.geometry = hullOf(o.userData.geo, (outlineMode === 'sticker' ? HULL_I : 0.014) * o.userData.os); });
@@ -1282,7 +1292,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const real = Math.min(0.05, (now - last) / 1000); last = now;
   if (!visible || !running) return;
-  pollPads();
+  if (phase === 'fight') cursorGuard();
   let scale = 1;
   if (slowmo > 0) { slowmo -= real; scale = slowmo > 0.25 ? 0.22 : lerp(1, 0.22, slowmo / 0.25); }
   if (hitstop > 0) { hitstop -= real; scale = 0; }
@@ -1307,7 +1317,7 @@ function frame(now) {
   }
   for (const h of halvesOnPage) h.holder.scale.y = Math.max(0.001, foldNow);
   for (const f of flecks) f.m.visible = foldNow > 0.5;
-  if (p2Mode !== 'human' && sumi.alive && sumi.tell > 0) {
+  if (sumi.alive && sumi.tell > 0) {
     _tip.set(1.15, 0, 0).applyMatrix4(sumi.rig.parts.blade.matrixWorld); glint.position.set(_tip.x, _tip.y, _tip.z + 0.3); glint.visible = true;
     const k = 1 - sumi.tell / 0.5; glint.scale.setScalar(0.4 + Math.sin(k * Math.PI) * 1.1); glint.quaternion.copy(camera.quaternion); glint.rotateZ(k * 2);
   } else glint.visible = false;
@@ -1325,7 +1335,7 @@ function frame(now) {
 setSpread(page); setPageScene(page); renderPips(); resize(); startRound();
 stageEl.classList.add('ready');
 requestAnimationFrame((t) => { last = t; frame(t); });
-setTimeout(() => toast('Poke with <em>F</em> (light), commit with <em>G</em> (heavy), guard with <em>W</em>/<em>S</em>. Hit Sumi while a heavy winds up, or after a miss: <em>counter cut</em>, instant K.O.', 7000), 1600);
+setTimeout(() => toast('Move the cursor above or below Kami\'s waist to guard high or low. <em>Left click</em> light, <em>right click</em> heavy. Hit Sumi while a heavy winds up, or after a miss: <em>counter cut</em>, instant K.O.', 7500), 1600);
 // test hooks (used by the screenshot script only)
-window.__pc = { kami, sumi, input, restart, get phase() { return phase; }, get round() { return round; }, get page() { return page; }, get matchOver() { return matchOver; }, get halves() { return halvesOnPage.length; }, setMode(m) { if (m !== p2Mode) $('#bP2').click(); } };
+window.__pc = { kami, sumi, input, restart, get phase() { return phase; }, get round() { return round; }, get page() { return page; }, get matchOver() { return matchOver; }, get halves() { return halvesOnPage.length; }, act: (a) => input[0].q.push(a), setMouse(y) { mouseY = y; } };
 </script>

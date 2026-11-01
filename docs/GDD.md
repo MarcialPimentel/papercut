@@ -1,24 +1,24 @@
 # Papercut — Game Design Document
-_Status: design set as a 3D paper weapon fighting game (2026-11-01). Next: Milestone 1, "Feel test" (local PvP). Source of truth for what the game is._
+_Status: design set as a mouse-driven 3D paper weapon fighting game (2026-11-01). Next: Milestone 1, "Feel test" (mouse vs the practice dummy). Source of truth for what the game is._
 
 ## Pitch
-A 3D weapon fighting game in folded paper. Two paper samurai trade light and heavy slashes inside a pop-up notebook; every hit cuts the paper red, and anyone caught mid-attack is cut in half on the spot.
+A 3D weapon fighting game in folded paper. Two paper samurai trade light and heavy slashes inside a pop-up notebook, fought with the mouse: every hit cuts the paper red, and anyone caught mid-attack is cut in half on the spot.
 
-Art direction: [art-direction.md](art-direction.md) (the Notebook Dojo; playable mock-up in `art/papercut-mockup.html`). Style references, inspiration only (our own characters and world, nothing borrowed): Paper Mario (sticker outline), Samurai Jack (flat angular shapes), Kartana (folded white-and-red blade), South Park (cut paper), school stationery. Game references: weapon fighting games such as Samurai Shodown (few, heavy, decisive hits), Bushido Blade (one clean cut can decide it). The counter cut, the guard stance and the paper damage are ours.
+Art direction: [art-direction.md](art-direction.md) (the Notebook Dojo; playable mock-up in `art/papercut-mockup.html`). Style references, inspiration only (our own characters and world, nothing borrowed): Paper Mario (sticker outline), Samurai Jack (flat angular shapes), Kartana (folded white-and-red blade), South Park (cut paper), school stationery. Game references: weapon fighting games such as Samurai Shodown (few, heavy, decisive hits), Bushido Blade (one clean cut can decide it), and PC melee games such as Chivalry (mouse-driven swordplay, feints, ripostes). The counter cut, the cursor guard and the paper damage are ours.
 
 ## Player fantasy
 A sharp duelist in a real fighting game: poke fast, read the rival, and punish the moment they get greedy, with one counter cut that splits them in half. Easy to learn, with a high skill ceiling.
 
 ## Core loop (30 seconds / one match / one session / long term)
-- **30 seconds:** dance in and out of range, poke with light slashes, switch guard high or low, and wait for the rival to commit to a heavy or miss. Hit them mid-attack and it's a counter cut: instant K.O.
+- **30 seconds:** dance in and out of range, poke with light slashes, move the cursor to guard high or low, feint a heavy to bait them, and wait for the rival to commit or miss. Hit them mid-attack and it's a counter cut: instant K.O.
 - **One match:** best of 3 rounds of 60 seconds. Every hit slices the rival's paper health strip and leaves a red cut on their body; a K.O. splits them. Between rounds the notebook's page turns to the next spread.
-- **One session:** a few matches against a friend, on one PC (Milestone 1) or online (Milestone 2). Sumi doubles as a practice dummy; a computer fighter comes later.
+- **One session:** a few online matches against friends (from Milestone 2). Sumi doubles as a practice dummy; a computer fighter comes later.
 - **Long term:** new fighters with their own moves and specials, new blades and spreads, each a new Blender model and rig to test. Kept small on purpose: the game is also a test bed.
 
 ## Design pillars (every feature must serve one; in a conflict the lower number wins)
 1. **Every cut shows:** every hit cuts the paper. Hits leave red cuts that wrap around the folded body, the health strip is paper that gets sliced shorter, and a K.O. splits the fighter in 3D. Red appears only where paper is cut. No damage numbers.
 2. **Feel first:** a slash must feel good (hitstop, shake, sound, slash line) before any new content is added.
-3. **Read it at a glance:** one lane, side-on camera, clear wind-ups, few buttons. Guard height is readable from the blade alone, and every fighter keeps its outline against any paper.
+3. **Read it at a glance:** one lane, side-on camera, clear wind-ups, the mouse plus a few keys. Guard height is readable from the blade alone, and every fighter keeps its outline against any paper.
 4. **Pop-up notebook:** everything is folded or cut from stationery (graph, ruled, legal pad, marble covers, kraft card), in a real 3D book whose pages turn between rounds.
 5. **Test bed for art:** every fighter and blade goes through one documented Blender → game pipeline, so models, rigs and animations are easy to try.
 
@@ -29,8 +29,8 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 
 ## The fight (rules)
 - **The lane:** both fighters move along one path across the spread and always face each other. The world, fighters and camera are fully 3D; the fight is on a line.
-- **Guard stance:** hold the blade **high** or **low** (W/S). When not attacking, you guard at that height, even while walking.
-- **Attacks** (both cut at your guard height):
+- **Guard stance:** the cursor sets it. Above your fighter's waist on screen you guard **high**, below it **low**; the blade follows. When not attacking, you guard at that height, even while walking.
+- **Attacks** (both cut at your guard height; left click light, right click heavy):
 
   | Move | Speed | Damage | Notes |
   |---|---|---|---|
@@ -38,7 +38,9 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
   | Heavy slash | Slow wind-up, long recovery | 35% of the strip | Chips 3% through a block; while winding up you're open to a counter cut |
 
 - **Block:** a slash that meets a guard at the same height is blocked (paper chips, both pushed apart).
-- **Parry:** switch to the matching height in the last moment before impact; the attacker staggers and is open.
+- **Parry:** flick the cursor to the matching height in the last moment before impact; the attacker staggers and is open.
+- **Riposte:** after a parry, your next slash (within about 0.6 s) is a riposte: light-slash speed, heavy damage, a lunge with extra reach, and it can't be parried.
+- **Feint:** cancel a heavy during most of its wind-up (left click or Q) and snap back to guard. Fakes a heavy to bait the rival's counter cut, then punish their miss.
 - **Clash:** two slashes of the same kind and height at the same moment bounce off each other.
 - **Counter cut (touch of death):** hit a fighter during a heavy's wind-up, or during the recovery of any attack that missed, and it's an instant K.O. Two light slashes trading at once just do normal damage, so quick pokes never become a coin flip.
 - **Hit stun:** a clean hit staggers the defender briefly (longer for heavies) and pushes them back.
@@ -46,19 +48,22 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 - **Dash and backdash:** double-tap toward or away from the rival.
 - **Rounds:** 60 seconds. A K.O. or the most strip left at time wins the round; a tie replays it. Best of 3. The page turns between rounds.
 - **Camera:** side-on with a slight angle to show volume, framing both fighters. On a K.O. it swings to a three-quarter view with slow motion; on a page turn it pulls up to show the whole book.
-- **Controls (two players on one keyboard, or gamepads):**
+- **Controls (the mouse fights, the keyboard moves):**
 
-  | Action | Player 1 (Kami) | Player 2 (Sumi) | Gamepad |
-  |---|---|---|---|
-  | Move | A / D | ← / → | Left stick |
-  | Guard high / low | W / S | ↑ / ↓ | Stick up / down |
-  | Light slash | F | . | X / Square |
-  | Heavy slash | G | / | Y / Triangle |
-  | Jump | Space | Right Shift | A / Cross |
-  | Dash / backdash | Double-tap D / A | Double-tap → / ← | R1 / B |
-  | Restart match | R | R | Start |
+  | Action | Input |
+  |---|---|
+  | Guard high / low | Cursor above / below your fighter's waist |
+  | Light slash | Left click |
+  | Heavy slash | Right click |
+  | Feint (during a heavy's wind-up) | Left click or Q |
+  | Move | A / D |
+  | Dash / backdash | Double-tap D / A |
+  | Jump | Space or W |
+  | Restart match | R |
 
-- **Opponents:** another person (local in Milestone 1, online in Milestone 2). Sumi works as a practice dummy that switches guard (a glint is the tell) and swings back now and then. A computer fighter comes in a later milestone.
+  Touch screens get on-screen buttons (shown only when there's no mouse). Gamepads are out of scope for now.
+
+- **Opponents:** another person, online only (Milestone 2). No two players on one PC. Sumi works as a practice dummy that switches guard (a glint is the tell), swings back now and then and sometimes feints a heavy. A computer fighter comes in Milestone 4.
 - **Roster:** Kami and Sumi share one move set in Milestone 1 (different looks), so the core feel is tuned once. Later each gets their own speed, reach and one or two specials done as direction + button (no motion inputs).
 
 ## Paper damage (approach)
@@ -70,26 +75,29 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 ## Platform and tech
 - **Platform:** desktop, played in a desktop browser with keyboard or gamepads. Can be wrapped as a desktop app later if Steam ever makes sense.
 - **Stack:** TypeScript, Vite, Three.js. Flat-shaded faceted shells, inverted-hull outlines and clipping-plane cuts (no custom shaders needed). Rapier (`@dimforge/rapier3d-compat`) for the cut halves and flecks, loaded in the background so the first fight isn't delayed.
+- **Mouse input:** each frame the cursor is compared with the fighter's waist on screen; only the resulting guard height and the clicks enter the rules, so the inputs stay tiny and identical for online play.
 - **Fighting-game foundations:** the fight runs on a fixed 60-frames-per-second clock and is decided only by the players' inputs, in plain code with tests, separate from drawing. Every move is data (wind-up, active and recovery frames, reach, damage, hit stun). Hits are checked with simple hit areas per move. Inputs are buffered for a few frames so a press slightly early still counts. Effects (camera, flecks, physics halves) are cosmetic and never affect the result.
 - **Online (Milestone 2):** send only inputs between two browsers (WebRTC), with rollback to hide lag (the standard for fighting games), plus a small service to connect players by invite link.
 - **Art pipeline:** Blender → glTF (`.glb`): low-poly parts, flat shading, one bone per part. The game adds the outline, the red inside and the cut marks to any model. Milestone 1 builds the fighters from code shapes.
 - **Deploy:** GitHub Pages. Every merge to `main` goes live at a public link.
 
 ## Scope for the first playable (Milestone 1: "Feel test")
-The one question it answers: **is a paper weapon fight fun between two people?**
-- **In:** the 3D notebook with three round spreads and the back cover; Kami and Sumi built from code shapes with outlines, red insides and cut marks; two players on one PC (keyboard and gamepads); Sumi as a practice dummy; guard stance, light and heavy slashes, block, parry, clash, counter cut, hit stun, jump, dash and backdash; paper health strips, 60-second timer, best of 3 rounds with page turns; K.O. split with Rapier halves; hitstop, shake, slash line, paper sounds, K.O. camera with slow motion; R to restart; an on-screen tuning panel for the feel numbers (frame timings, damage, parry window, counter window).
-- **Out:** online play, menus, the computer fighter, specials, different move sets, Blender art, more fighters or blades.
-- **Done when:** Marz and a second player can play five matches and want a sixth, and the tuned numbers are saved as defaults.
+The one question it answers: **does mouse-driven paper swordplay feel good?** (Person-vs-person fun is tested in Milestone 2, the first online build.)
+- **In:** the 3D notebook with three round spreads and the back cover; Kami and Sumi built from code shapes with outlines, red insides and cut marks; mouse controls (cursor guard, clicks) with keyboard movement; Sumi as a practice dummy that switches guard, swings and feints; guard stance, light and heavy slashes, block, parry, riposte, feint, clash, counter cut, hit stun, jump, dash and backdash; paper health strips, 60-second timer, best of 3 rounds with page turns; K.O. split with Rapier halves; hitstop, shake, slash line, paper sounds, K.O. camera with slow motion; R to restart; an on-screen tuning panel for the feel numbers (frame timings, damage, parry window, counter window).
+- **Out:** online play, two players on one PC, gamepads, menus, the computer fighter, specials, different move sets, Blender art, more fighters or blades.
+- **Done when:** Marz can play ten minutes against the dummy with the mouse and the guard, slashes, feints, parries and counter cuts all feel good, and the tuned numbers are saved as defaults.
 
 ## Roadmap (issue-level plan in [roadmap.md](roadmap.md))
-1. **Milestone 1, Feel test (local PvP).** The first playable above.
-2. **Milestone 2, Online fights.** Invite links, WebRTC, rollback.
+1. **Milestone 1, Feel test (mouse vs dummy).** The first playable above.
+2. **Milestone 2, Online fights.** The first real PvP: invite links, WebRTC, rollback. Should follow Milestone 1 directly.
 3. **Milestone 3, Blender fighters.** Kami remade in Blender plus the click-by-click pipeline guide.
 4. **Milestone 4, Solo and character.** A computer fighter, Kami and Sumi made different (speed, reach), one or two specials each.
 5. **Milestone 5, The full notebook.** Menus, more spreads and blades.
 
 ## Risks and how we'll test them
-- **Game feel is the whole game (Milestone 1):** a weak slash sinks a fighting game. Tuning panel and local PvP playtests from the first build.
+- **Game feel is the whole game (Milestone 1):** a weak slash sinks a fighting game. Tuning panel and dummy playtests from the first build.
+- **PvP is untested until Milestone 2:** with no local two-player, person-vs-person fun can only be judged once online works. Keep Milestone 2 right after Milestone 1, and keep the dummy smart enough (feints, swings back) to stand in until then.
+- **Mouse guard precision:** guarding by cursor height could feel twitchy. The waist line, a small dead zone and a visible guard cue are tuned in Milestone 1.
 - **Counter cut balance:** a touch of death can feel cheap. Tune the windows in Milestone 1 so it only ever punishes a visible mistake (a slow wind-up or a miss).
 - **Online play (Milestone 2):** the biggest technical job. Reduced up front by input-driven, fixed-frame rules in Milestone 1.
 - **Fighting-game scope:** move sets, hit areas, a computer fighter and a roster grow fast. One shared move set in Milestone 1; differences, specials and the CPU wait for Milestone 4.
@@ -147,3 +155,7 @@ The one question it answers: **is a paper weapon fight fun between two people?**
 | 2026-11-01 | Roster: Kami and Sumi share one move set in Milestone 1; their own speed, reach and specials later | Marz's pick. Tune the core feel once before balancing differences. |
 | 2026-11-01 | Specials: later, one or two per fighter, direction + button (no motion inputs) | Marz's pick. Easy to learn, works on keyboard. |
 | 2026-11-01 | Roadmap: M1 Feel test, M2 Online fights, M3 Blender fighters, M4 Solo and character (CPU, differences, specials), M5 The full notebook | Follows from the fighting-game direction. |
+| 2026-11-01 | Controls: the mouse fights, the keyboard moves. Cursor height sets the guard (above the waist high, below low); left click light, right click heavy; A/D move, Space or W jump, double-tap to dash. Replaces W/S guard and F/G slashes | Marz: few people will play a fighting game on keyboard alone; PC players know mouse swordplay from games like Chivalry. The cursor guard keeps the high/low read we already had. |
+| 2026-11-01 | Borrowed from Chivalry-style melee: feint (cancel a heavy's wind-up) and riposte (after a parry, a fast heavy-damage slash that can't be parried). Not borrowed: swing drag and accel, stamina | Marz's picks. Feints feed the counter-cut mind game; ripostes make a parry worth the risk. Drag and stamina would muddy timing and add a meter. |
+| 2026-11-01 | No two players on one PC, and no gamepads for now. PvP is online only (Milestone 2). Milestone 1 becomes a mouse feel test against the practice dummy | Marz: local two-player is out of scope. One mouse per PC makes it awkward anyway. |
+| 2026-11-01 | Riposte gets a lunge with extra reach | Found in the mock-up: the parry pushes the attacker back just out of normal reach, so a riposte could whiff. |

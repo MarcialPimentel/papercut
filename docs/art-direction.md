@@ -1,38 +1,41 @@
-# Papercut — Art direction (v3: paper fighting game)
-_v3, 2026-11-01. v1 (2026-10-30) was a flat side-view look; v2 made it 3D with a run-across-the-pages match; v3 makes it a weapon fighting game. Decisions are logged in the [GDD](GDD.md)._
+# Papercut — Art direction (v4: mouse-driven paper fighting game)
+_v4, 2026-11-01. v1 (2026-10-30) was a flat side-view look; v2 made it 3D with a run-across-the-pages match; v3 made it a weapon fighting game; v4 moves the fighting to the mouse and adds feint and riposte. Decisions are logged in the [GDD](GDD.md)._
 
-Playable mock-up: [art/papercut-mockup.html](art/papercut-mockup.html) (open it in a desktop browser). Two players on one keyboard or gamepads, or Kami against Sumi as a practice dummy. It's a look test: timings and damage are placeholders that Milestone 1 tunes.
+Playable mock-up: [art/papercut-mockup.html](art/papercut-mockup.html) (open it in a desktop browser). Kami with the mouse against Sumi as a practice dummy (two players on one PC is out of scope; PvP comes online in Milestone 2). It's a look test: timings and damage are placeholders that Milestone 1 tunes.
 
 ## The short version
 - **World:** the Notebook Dojo. A pop-up feudal Japan made of stationery, as a real 3D book open on a desk. Each round is fought on a different spread.
 - **Fighters:** folded low-poly papercraft samurai with crisp facets, a white sticker outline and an ink edge around every part.
 - **The red rule:** every fighter is a hollow paper shell, white outside and red inside. Red only appears where paper is cut: hits, the K.O. split, the health strip's cut edge.
-- **The fight:** light and heavy slashes at your guard height (W/S), block, parry, jump, dash. Catch the rival mid-heavy or after a miss and it's a counter cut: instant K.O.
+- **The fight:** the cursor sets your guard (above the waist high, below low), left click light, right click heavy, feint, parry into riposte, jump, dash. Catch the rival mid-heavy or after a miss and it's a counter cut: instant K.O.
 - **Technology:** Three.js, no new stack. Moves as data on a fixed 60-frame clock, ready for rollback online. Rapier for the falling halves.
 - **Making the art:** code-made fighters for Milestone 1, then low-poly models rigged in Blender. The game adds outlines, the red inside and cut marks to any model.
 
-References Marz shared (inspiration only, nothing copied): Samurai Shodown (heavy-hit weapon fighting), Kartana (white/red folded blade), the Samurai Jack poster (flat angular shapes, thin lines), Paper Mario (white sticker border), ruled and graph paper, a marble composition notebook, South Park's cut-paper look. The counter cut, the guard stance and the paper damage are ours.
+References Marz shared (inspiration only, nothing copied): Samurai Shodown (heavy-hit weapon fighting), Chivalry (mouse swordplay, feints, ripostes), Kartana (white/red folded blade), the Samurai Jack poster (flat angular shapes, thin lines), Paper Mario (white sticker border), ruled and graph paper, a marble composition notebook, South Park's cut-paper look. The counter cut, the guard stance and the paper damage are ours.
 
 ## How a fight works
 | Move | Speed | Effect | Risk |
 |---|---|---|---|
-| Light slash (F) | Fast wind-up, short recovery | 10% of the strip, a thin red cut | Safe if blocked; a miss leaves a short opening |
-| Heavy slash (G) | Slow wind-up, long recovery | 35% of the strip, a wide cut across two parts; chips 3% through a block | While it winds up, any hit is a counter cut |
-| Guard (W / S) | Instant, works while walking | Blocks slashes at that height | Wrong height: you're cut |
-| Parry | Switch guard at the last moment | Attacker staggers, open to a free hit | Too early is a block, too late is a hit |
-| Jump (Space) | A paper hop | Low slashes pass under; air slashes cut high | High slashes still hit |
+| Light slash (left click) | Fast wind-up, short recovery | 10% of the strip, a thin red cut | Safe if blocked; a miss leaves a short opening |
+| Heavy slash (right click) | Slow wind-up, long recovery | 35% of the strip, a wide cut across two parts; chips 3% through a block | While it winds up, any hit is a counter cut |
+| Feint (left click or Q mid wind-up) | Cancels a heavy, back to guard fast | Baits a counter-cut attempt | Only before the swing is nearly out |
+| Guard (cursor height) | Instant, works while walking | Blocks slashes at that height | Wrong height: you're cut |
+| Parry, then riposte | Flick the cursor to the right height at the last moment | Attacker staggers; your next slash is a riposte (light speed, heavy damage, a lunge, can't be parried) | Too early is a block, too late is a hit |
+| Jump (Space or W) | A paper hop | Low slashes pass under; air slashes cut high | High slashes still hit |
 | Dash / backdash (double-tap) | Quick | Get in, get out | Committed for a moment |
 | Counter cut | Any hit at the right moment | Instant K.O. and split | Only on a heavy's wind-up or after a miss; two lights trading just do normal damage |
 
 **Rounds:** 60 seconds; a K.O. or the most strip left at time wins; a tie replays. Best of 3. Between rounds everything folds flat and the page turns: round 1 Graph Paper Dojo, round 2 Ruled Courtyard, round 3 Legal Pad Grove. The match winner stands alone on the marble back cover.
 
-**Depth:** spacing at the tip of your light slash, reading the guard, baiting a heavy and punishing it, parrying a predictable swing, jumping a low, and the clock pressing on whoever is behind. Every round can turn on one greedy swing.
+**Depth:** spacing at the tip of your light slash, reading the guard, feinting a heavy to bait their counter cut, parrying a predictable swing into a riposte, jumping a low, and the clock pressing on whoever is behind. Every round can turn on one greedy swing.
 
 ## HUD
 - **Health strip:** a strip of graph paper per fighter; each hit slices a piece off its inner end, which falls away. The cut end is a red edge. No numbers.
 - **Clock:** a paper tag counting down from 60.
 - **Round markers:** two paper diamonds per fighter, filled red for each round won.
 - **Banners:** red paper banners for "Round 1", "Cut!", round winner and match winner.
+- **Stickers:** "Block", "Clash", "Parry", "Feint", "Riposte", "Cut", "Counter cut".
+- **Touch buttons** appear only on screens without a mouse. The cursor is a crosshair over the stage.
 - Menus and HUD stay flat paper; only the world is 3D.
 
 ## Fighters in 3D
@@ -128,4 +131,5 @@ Check the commercial-use terms of any image tool, and don't name other franchise
 ## Decided 2026-11-01
 - A 3D weapon fighting game: paper health strip plus red body cuts, best of 3 rounds of 60 seconds with page turns between, the W/S guard stance, light and heavy slashes, fast feet and deadly commits, the counter cut as the touch of death.
 - Kami (player 1) and Sumi (player 2 / dummy); smooth motion; Rapier physics for the cut halves (cosmetic).
+- Mouse controls: cursor guard, left click light, right click heavy, keyboard movement; feint and riposte; no two players on one PC, no gamepads for now.
 - A practice dummy in Milestone 1 and a computer fighter later; one shared move set in Milestone 1; simple specials later.
