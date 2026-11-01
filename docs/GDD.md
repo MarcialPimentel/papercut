@@ -12,7 +12,7 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 ## Core loop (30 seconds / one match / one session / long term)
 - **30 seconds:** dance in and out of range, poke with light slashes, move the cursor to guard high or low, feint a heavy to bait them, and wait for the rival to commit or miss. Hit them mid-attack and it's a counter cut: instant K.O.
 - **One match:** best of 3 rounds of 60 seconds. Every hit slices the rival's paper health strip and leaves a red cut on their body; a K.O. splits them. Between rounds the notebook's page turns to the next spread.
-- **One session:** a few online matches against friends (from Milestone 2). Sumi doubles as a practice dummy; a computer fighter comes later.
+- **One session:** a few online matches against friends (since the first build). Sumi doubles as a practice dummy; a computer fighter comes later.
 - **Long term:** new fighters with their own moves and specials, new blades and spreads, each a new Blender model and rig to test. Kept small on purpose: the game is also a test bed.
 
 ## Design pillars (every feature must serve one; in a conflict the lower number wins)
@@ -63,7 +63,7 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 
   Touch screens get on-screen buttons (shown only when there's no mouse). Gamepads are out of scope for now.
 
-- **Opponents:** another person, online only (Milestone 2). No two players on one PC. Sumi works as a practice dummy that switches guard (a glint is the tell), swings back now and then and sometimes feints a heavy. A computer fighter comes in Milestone 4.
+- **Opponents:** another person, online only (since the first build). No two players on one PC. Sumi works as a practice dummy that switches guard (a glint is the tell), swings back now and then and sometimes feints a heavy. A computer fighter comes in Milestone 4.
 - **Roster:** Kami and Sumi share one move set in Milestone 1 (different looks), so the core feel is tuned once. Later each gets their own speed, reach and one or two specials done as direction + button (no motion inputs).
 
 ## Paper damage (approach)
@@ -73,23 +73,24 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 - **Physics:** the halves are Rapier physics bodies from Milestone 1: they tumble, bounce off pop-ups and pile up on the page. Physics is cosmetic only: it never decides who wins, so online play only has to sync inputs. Halves and flecks clear when the page turns.
 
 ## Platform and tech
-- **Platform:** desktop, played in a desktop browser with keyboard or gamepads. Can be wrapped as a desktop app later if Steam ever makes sense.
+- **Platform:** desktop, played in a desktop browser with the mouse and keyboard. Can be wrapped as a desktop app later if Steam ever makes sense.
 - **Stack:** TypeScript, Vite, Three.js. Flat-shaded faceted shells, inverted-hull outlines and clipping-plane cuts (no custom shaders needed). Rapier (`@dimforge/rapier3d-compat`) for the cut halves and flecks, loaded in the background so the first fight isn't delayed.
 - **Mouse input:** each frame the cursor is compared with the fighter's waist on screen; only the resulting guard height and the clicks enter the rules, so the inputs stay tiny and identical for online play.
 - **Fighting-game foundations:** the fight runs on a fixed 60-frames-per-second clock and is decided only by the players' inputs, in plain code with tests, separate from drawing. Every move is data (wind-up, active and recovery frames, reach, damage, hit stun). Hits are checked with simple hit areas per move. Inputs are buffered for a few frames so a press slightly early still counts. Effects (camera, flecks, physics halves) are cosmetic and never affect the result.
-- **Online (Milestone 2):** send only inputs between two browsers (WebRTC), with rollback to hide lag (the standard for fighting games), plus a small service to connect players by invite link.
+- **Online (since the first build):** only inputs travel. A small rooms server pairs players (invite link, room code or quick match) and passes each frame's buttons to the other player; both browsers run the same fight and compare a fingerprint every second. Input delay of 2–8 frames, picked from each player's measured ping; the fight waits if the rival's input is late. Later: rollback to hide lag, and direct browser-to-browser links (WebRTC) to cut the server hop.
 - **Art pipeline:** Blender → glTF (`.glb`): low-poly parts, flat shading, one bone per part. The game adds the outline, the red inside and the cut marks to any model. Milestone 1 builds the fighters from code shapes.
-- **Deploy:** GitHub Pages. Every merge to `main` goes live at a public link.
+- **Deploy:** one Docker container on the hub server shared with Hormigas, at https://papercut.marz.gg (serves the game and the rooms; no database). Every merge to `main` deploys automatically, with a health check and automatic rollback. Details: [deploy.md](deploy.md).
 
 ## Scope for the first playable (Milestone 1: "Feel test")
-The one question it answers: **does mouse-driven paper swordplay feel good?** (Person-vs-person fun is tested in Milestone 2, the first online build.)
+The one question it answers: **does mouse-driven paper swordplay feel good?** Since the first build it can also be played person against person online (input delay; rollback comes in Milestone 2).
 - **In:** the 3D notebook with three round spreads and the back cover; Kami and Sumi built from code shapes with outlines, red insides and cut marks; mouse controls (cursor guard, clicks) with keyboard movement; Sumi as a practice dummy that switches guard, swings and feints; guard stance, light and heavy slashes, block, parry, riposte, feint, clash, counter cut, hit stun, jump, dash and backdash; paper health strips, 60-second timer, best of 3 rounds with page turns; K.O. split with Rapier halves; hitstop, shake, slash line, paper sounds, K.O. camera with slow motion; R to restart; an on-screen tuning panel for the feel numbers (frame timings, damage, parry window, counter window).
-- **Out:** online play, two players on one PC, gamepads, menus, the computer fighter, specials, different move sets, Blender art, more fighters or blades.
+- **Also in (first build):** online fights by invite link, room code or quick match; rematch.
+- **Out:** rollback, two players on one PC, gamepads, menus beyond the start screen, the computer fighter, specials, different move sets, Blender art, more fighters or blades.
 - **Done when:** Marz can play ten minutes against the dummy with the mouse and the guard, slashes, feints, parries and counter cuts all feel good, and the tuned numbers are saved as defaults.
 
 ## Roadmap (issue-level plan in [roadmap.md](roadmap.md))
 1. **Milestone 1, Feel test (mouse vs dummy).** The first playable above.
-2. **Milestone 2, Online fights.** The first real PvP: invite links, WebRTC, rollback. Should follow Milestone 1 directly.
+2. **Milestone 2, Online fights.** Online play already works with input delay (first build); this milestone adds rollback, direct browser-to-browser links and online polish (reconnects, ping display).
 3. **Milestone 3, Blender fighters.** Kami remade in Blender plus the click-by-click pipeline guide.
 4. **Milestone 4, Solo and character.** A computer fighter, Kami and Sumi made different (speed, reach), one or two specials each.
 5. **Milestone 5, The full notebook.** Menus, more spreads and blades.
@@ -159,3 +160,10 @@ The one question it answers: **does mouse-driven paper swordplay feel good?** (P
 | 2026-11-01 | Borrowed from Chivalry-style melee: feint (cancel a heavy's wind-up) and riposte (after a parry, a fast heavy-damage slash that can't be parried). Not borrowed: swing drag and accel, stamina | Marz's picks. Feints feed the counter-cut mind game; ripostes make a parry worth the risk. Drag and stamina would muddy timing and add a meter. |
 | 2026-11-01 | No two players on one PC, and no gamepads for now. PvP is online only (Milestone 2). Milestone 1 becomes a mouse feel test against the practice dummy | Marz: local two-player is out of scope. One mouse per PC makes it awkward anyway. |
 | 2026-11-01 | Riposte gets a lunge with extra reach | Found in the mock-up: the parry pushes the attacker back just out of normal reach, so a riposte could whiff. |
+| 2026-11-01 | The first build is an online duel: project setup, hosting, the fight as tested code, the mock-up's look, and invite-link PvP, ahead of the feel-tuning issues (#7–#9 polish comes after) | Marz: "something playable with people online". Learns whether PvP is fun sooner; the deterministic fight core was needed for online anyway. |
+| 2026-11-01 | Hosting: the hub server shared with Hormigas, at papercut.marz.gg, one Docker container with auto-deploy, health check and rollback. Replaces GitHub Pages | Marz's pick, following the Hormigas hosting docs. Online play needs a server anyway; one container serves both the game and the rooms. |
+| 2026-11-01 | Netcode, first version: input delay (lockstep). Each player's buttons are scheduled 2–8 frames ahead depending on measured ping; the fight waits for late inputs. Rollback later on the same core | Marz's pick. Simple and reliable; the fight already runs only on inputs, so rollback can be added without rewriting it. |
+| 2026-11-01 | Matchmaking: invite link (with a 4-letter room code) plus quick match | Marz's pick (link + quick match). The room code is my addition so a link isn't required. |
+| 2026-11-01 | Inputs go through the rooms server over a WebSocket for now, not browser-to-browser (WebRTC) | My call: works through every home router with no extra relay service; costs one server hop of latency. WebRTC comes with rollback. |
+| 2026-11-01 | Online seats: whoever creates the room (or waited first) is Kami on the left, the other is Sumi on the right; a rematch needs both players to say yes | My call: simple and fair; the camera is the same for both. |
+| 2026-11-01 | The K.O. halves keep the mock-up's scripted tumble in the first build; Rapier physics moves to the hit-feel work (#7) | My call: cosmetic only, and keeps the first online build small. |
