@@ -14,7 +14,7 @@ The Milestone 1 milestone and issues #2–#10 on GitHub were created on 2026-10-
 | #4 | Kami and Sumi from code shapes | Folded low-poly fighters with flat-shaded facets, white-and-ink outlines, red insides, guard poses, walking, turning around. |
 | #5 | Duel rules (fixed-step, tested) | Guard, slash (wind-up / active / recovery), block, parry, clash, jump, dodge, one-cut kill, on a fixed 60 Hz clock driven only by inputs, with unit tests. |
 | #6 | Sumi as a practice dummy | Switches guard on a timer with a glint tell, so one person can test alone. |
-| #7 | Kills: 3D split and refold | Clipping-plane split along the blade line with the red inside, scripted tumbling halves, refold ahead of the winner. |
+| #7 | Kills: 3D split and refold | Clipping-plane split along the blade line with the red inside, halves as Rapier physics bodies (cosmetic), refold ahead of the winner. |
 | #8 | Hit feel | Hitstop, shake, slash line, paper sounds, kill camera with slow motion. |
 | #9 | Tuning panel and restart | On-screen sliders for timings, parry window, refold delay, hitstop, shake, slow motion; save as defaults; R / Start restarts. |
 | #10 | Playtest guide | `docs/playtest.md`: how to open the build, both players' controls, what to try, what to report. |

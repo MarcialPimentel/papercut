@@ -58,11 +58,11 @@ A calm, sharp duelist facing another person: read them, guess right, land the on
 - A cut is a plane through the whole fighter along the blade's path. The fighter is drawn twice, once on each side of the plane (clipping planes); the white layers stop a hair short of the plane, so a thin red line opens along the cut.
 - The halves tumble apart: the top slides off along the cut, the bottom falls back. Their open ends show the red inside of the shell.
 - Halves and red flecks stay on the page until it turns, so a long fight leaves the spread littered with red.
-- Tumbling is scripted in Milestone 1; Rapier physics comes in when halves need to bounce off pop-ups.
+- The halves are Rapier physics bodies from Milestone 1: they tumble, bounce off pop-ups and pile up on the page. Physics is cosmetic only: it never decides who wins, so online play only has to sync inputs, not physics.
 
 ## Platform and tech
 - **Platform:** desktop, played in a desktop browser with keyboard or gamepads. Can be wrapped as a desktop app later if Steam ever makes sense.
-- **Stack:** TypeScript, Vite, Three.js. Flat-shaded faceted shells, inverted-hull outlines and clipping-plane cuts (no custom shaders needed). Rapier deferred.
+- **Stack:** TypeScript, Vite, Three.js. Flat-shaded faceted shells, inverted-hull outlines and clipping-plane cuts (no custom shaders needed). Rapier (`@dimforge/rapier3d-compat`) for the cut halves and flecks, loaded in the background so the first duel isn't delayed.
 - **Built for online from day one:** the duel runs on a fixed 60-steps-per-second clock and is decided only by the players' inputs, in plain code with tests, separate from drawing. Effects (camera, flecks, tumbling halves) are cosmetic and never affect the result. Milestone 2 sends only inputs between two browsers (WebRTC) with rollback to hide lag, plus a small service to connect players by invite link.
 - **Art pipeline:** Blender → glTF (`.glb`): low-poly parts, flat shading, one bone per part. The game adds the outline and the red inside to any model. Milestone 1 builds the fighters from code shapes.
 - **Deploy:** GitHub Pages. Every merge to `main` goes live at a public link.
@@ -70,6 +70,7 @@ A calm, sharp duelist facing another person: read them, guess right, land the on
 ## Scope for the first playable (Milestone 1: "Feel test")
 The one question it answers: **is a one-cut paper duel fun between two people?**
 - **In:** the 3D notebook with three spreads and two covers; Kami and Sumi built from code shapes with outlines and red insides; two players on one PC (keyboard and gamepads); Sumi as a practice dummy; guard, slash, block, parry, clash, jump, dodge; one-cut kills with 3D split, refold and right of way; page turns and the cover win; hitstop, shake, slash line, paper sounds, kill camera with slow motion; R to restart; an on-screen tuning panel for the feel numbers.
+- Rapier physics for the cut halves (cosmetic).
 - **Out:** online play, menus, AI bot, Blender art, more fighters or blades.
 - **Done when:** Marz and a second player can play five matches and want a sixth, and the tuned feel numbers are saved as defaults.
 
@@ -79,7 +80,7 @@ The one question it answers: **is a one-cut paper duel fun between two people?**
 3. **Milestone 3, Blender fighters.** Kami remade in Blender plus the click-by-click pipeline guide.
 4. **Milestone 4, The full notebook.** More spreads and arenas, menus, more blades.
 
-Later candidates (only once PvP is fun): an AI bot, more fighters, Rapier physics for halves.
+Later candidates (only once PvP is fun): an AI bot, more fighters.
 
 ## Risks and how we'll test them
 - **Game feel is the whole game (Milestone 1):** a weak slash sinks it. Tuning panel and local PvP playtests from the first build.
@@ -91,8 +92,6 @@ Later candidates (only once PvP is fun): an AI bot, more fighters, Rapier physic
 ## Open questions (for later milestones)
 - Wind-up, active and recovery timings, the parry window and the refold delay. (Tuned in Milestone 1; record the final numbers here.)
 - Does dodge have invincibility, or only distance?
-- Smooth poses or stop-motion (the mock-up has both)?
-- Names: Kami and Sumi are working names until Marz confirms.
 - Sound style: real paper sounds, stylised, or both?
 
 ## Decision Log
@@ -126,3 +125,6 @@ Later candidates (only once PvP is fun): an AI bot, more fighters, Rapier physic
 | 2026-11-01 | Computer opponents: Sumi as a practice dummy only; no AI bot for now | Marz's pick. Keeps the focus on PvP; a bot can come later. |
 | 2026-11-01 | Cuts use clipping planes on two copies of the fighter; tumbling halves are scripted; Rapier deferred | Looks the same as real mesh cutting from the game's camera, works on skinned models, stays cheap, and saves about 1.5 MB in Milestone 1. |
 | 2026-11-01 | Roadmap changed: M1 Feel test (local PvP), M2 Online duels, M3 Blender fighters, M4 The full notebook | Follows from PvP, online and 3D. The Milestone 1 issues on GitHub get updated to match once Marz confirms. |
+| 2026-11-01 | Names confirmed: Kami (player 1) and Sumi (player 2 / dummy) | Marz's pick: paper and ink, the game's two materials. |
+| 2026-11-01 | Motion: smooth poses (no stop-motion stepping) | Marz's pick. Wind-ups and parry timing read best in PvP when motion is fluid (pillar 3). |
+| 2026-11-01 | Rapier physics for the cut halves from Milestone 1, cosmetic only. Replaces "scripted tumbling, Rapier deferred" | Marz's call (my pick was scripted). Halves that bounce off pop-ups and pile up sell every kill (pillar 1). Cost: about 1.5 MB more, loaded in the background. Physics never affects results, so online sync stays inputs-only. |

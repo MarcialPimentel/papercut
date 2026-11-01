@@ -113,7 +113,7 @@ Icons in `art/icons/` (katana, high, low, jump, clean cut, dodge): flat paper sh
 | Screen-space outline (post-processing) | One outline around everything loses the per-part "cut out" look; extra full-screen pass; fiddly white-plus-ink double edge. |
 | Real mesh cutting (3D boolean) | True cut faces, but slow, fragile on skinned meshes and hard to keep in sync online. Clipping looks the same from the game's camera. |
 | Toon shader with smooth models | Reads as cartoon, not paper. Folded facets are the identity. |
-| Rapier physics for halves | Scripted tumbling is enough for Milestone 1; Rapier when halves should bounce off pop-ups. |
+| Rapier physics for halves | **Chosen by Marz for Milestone 1.** Halves are cosmetic physics bodies that bounce off pop-ups and pile up; never part of the rules. |
 
 **Built for online from day one:** fixed 60-steps-per-second rules decided only by inputs, in tested code separate from drawing; cosmetic effects never affect results. Milestone 2 sends only inputs between two browsers (WebRTC) with rollback, plus a small service to connect players by invite link.
 
@@ -129,10 +129,9 @@ Concept prompt:
 
 Check the commercial-use terms of any image tool, and don't name other franchises' characters in prompts.
 
-## Still open
-1. Names: Kami for player 1 and Sumi for player 2?
-2. Motion: smooth poses, or stop-motion (the mock-up's Motion button)?
-3. Rapier: leave it out of Milestone 1 and use scripted tumbling?
-4. Go: update the Milestone 1 issues on GitHub to the new plan and open the PR?
+## Decided 2026-11-01
+- Names: Kami (player 1) and Sumi (player 2 / dummy).
+- Motion: smooth poses.
+- Rapier physics for the cut halves from Milestone 1 (cosmetic only).
 
 Risks: online play is the biggest technical job (Milestone 2), and 3D models are slower to make than flat pieces; keeping parts low-poly and letting the game add outlines and the red inside keeps that manageable.
