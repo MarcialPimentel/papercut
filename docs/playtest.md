@@ -4,7 +4,7 @@ _For the first online build (2026-11-01)._
 
 ## Open the game
 
-- **Live:** https://papercut.marz.gg (after the one-time setup in [deploy.md](deploy.md)). The build number is in the bottom-right corner.
+- **Live:** https://papercut.marz.gg. The build number is in the bottom-right corner.
 - **On your PC:** `npm install`, then `npm run dev`, then open http://localhost:5173.
 
 Use a desktop browser with a mouse. Phones get on-screen buttons, but the game is made for the mouse.

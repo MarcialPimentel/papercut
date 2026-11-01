@@ -2,7 +2,7 @@
 
 _Current as of the first online build (2026-11-01)._
 
-Papercut will be live at **https://papercut.marz.gg**. It runs on the same small cloud server as Hormigas (the "hub"), as **one Docker container** with no database: it serves the game and runs the rooms that pair players online. The hub itself (Caddy for HTTPS, the other projects) is described in the Hormigas repo's `docs/DEPLOY.md`.
+Papercut is live at **https://papercut.marz.gg**. It runs on the same small cloud server as Hormigas (the "hub"), as **one Docker container** with no database: it serves the game and runs the rooms that pair players online. The hub itself (Caddy for HTTPS, the other projects) is described in the Hormigas repo's `docs/DEPLOY.md`.
 
 > **Private details are not in this repo.** The server's address, SSH keys and passwords live in Marz's private hosting notes, GitHub secrets and the server itself. Never commit them here.
 
@@ -33,64 +33,16 @@ Merging to `main` deploys automatically:
 
 **Redeploy or roll back:** GitHub → **Actions** → **Deploy** → **Run workflow**. Leave the box empty to redeploy the latest `main`, or paste an older commit from `main` to go back to it.
 
-Until the one-time setup below is done, Deploy skips with a yellow warning instead of failing.
+## One-time setup (done 2026-11-01)
 
-## One-time setup (Marz)
+Papercut was added to the hub on 2026-11-01. This is what was done, in case the hub is ever rebuilt:
 
-Do these once, in order. Steps 1 and 2 can be done any time; step 4 needs the PR merged first.
+1. **DNS:** an A record `papercut` for marz.gg points at the hub (same IP as `hormigas`).
+2. **Hub:** [`deploy/hub/add-to-hub.sh`](../deploy/hub/add-to-hub.sh) was run on the server as the deploy user. It adds the `papercut` service (256 MB, half a CPU, capped logs, like the other games) to `/opt/hub/docker-compose.yml` and a `papercut.marz.gg` block to `/opt/hub/Caddyfile`, checks both, and reloads Caddy without downtime for the other games. If a check fails it puts both files back. Safe to run twice. To run it again: copy it to the server, then `bash add-to-hub.sh` in `/opt/hub`.
+3. **GitHub secrets:** `DROPLET_HOST` (the hub's IP) and `DROPLET_SSH_KEY` (the private half of the deploy key, the same one Hormigas uses) are set in the repo's Settings → Secrets and variables → Actions.
+4. **First deploy:** Actions → Deploy → Run workflow. Build 2b5269e went live.
 
-### 1. Point papercut.marz.gg at the hub
-
-1. Open the website where you manage marz.gg's DNS (the same place you added `hormigas.marz.gg`; your private hosting notes say which).
-2. Find the existing **A** record named `hormigas` and copy its value (an IP address).
-3. Click **Add record**:
-   - **Type:** A
-   - **Name / Host:** `papercut`
-   - **Value / Points to:** the IP you copied
-   - **TTL:** leave the default
-4. Save. It can take a few minutes to start working.
-
-### 2. Add Papercut to the hub
-
-You need to be logged in to the hub server as your admin user (the same way you set up Hormigas; the command is in your private hosting notes). Then:
-
-1. Go to the hub folder: `cd /opt/hub`
-2. Open the containers file: `nano docker-compose.yml`
-3. Scroll to the end of the `services:` list (just above the line `volumes:`), and paste the block from this repo's [`deploy/hub/papercut-service.yml`](../deploy/hub/papercut-service.yml), starting at the line `  papercut:` (keep the two spaces in front). Save with **Ctrl+O**, **Enter**, then exit with **Ctrl+X**.
-4. Open the web settings: `nano Caddyfile`
-5. Paste the block from [`deploy/hub/Caddyfile-block`](../deploy/hub/Caddyfile-block) at the end (the part from `papercut.marz.gg {` to the closing `}`). Save and exit the same way.
-6. Tell Caddy to read its settings again: `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`
-7. Don't start Papercut by hand: its first build doesn't exist yet. Step 4 starts it.
-
-Then copy the same two blocks into the Hormigas repo's `deploy/hub/` reference copy (Claude can do this in a Hormigas session).
-
-### 3. Give GitHub the key to the hub
-
-Papercut uses the same deploy key as Hormigas.
-
-1. Open https://github.com/MarcialPimentel/papercut/settings/secrets/actions
-2. Click **New repository secret**:
-   - **Name:** `DROPLET_HOST`
-   - **Secret:** the hub's IP address (the same value as in step 1)
-   - Click **Add secret**.
-3. Click **New repository secret** again:
-   - **Name:** `DROPLET_SSH_KEY`
-   - **Secret:** the whole contents of the file `C:\Users\marci\.ssh\hormigas-deploy` (open it in Notepad, **Ctrl+A**, **Ctrl+C**, paste here). It starts with `-----BEGIN` and ends with `-----END … KEY-----`.
-   - Click **Add secret**.
-
-Or, in a terminal on your PC, this does step 3.3 in one go:
-
-```bash
-gh secret set DROPLET_SSH_KEY -R MarcialPimentel/papercut < ~/.ssh/hormigas-deploy
-```
-
-### 4. First deploy
-
-After the PR is merged and its CI run has finished:
-
-1. Open https://github.com/MarcialPimentel/papercut/actions/workflows/deploy.yml
-2. Click **Run workflow** → leave the box empty → **Run workflow**.
-3. When it turns green, open https://papercut.marz.gg. From now on every merge deploys by itself.
+Still to do: copy the Papercut service and Caddy blocks into the Hormigas repo's `deploy/hub/`, which is the hub's master copy.
 
 ## Everyday commands (on the server, in /opt/hub)
 
