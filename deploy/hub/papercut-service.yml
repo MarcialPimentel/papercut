@@ -1,0 +1,18 @@
+# Papercut's block for the hub's docker-compose.yml (on the server: /opt/hub/docker-compose.yml).
+# Paste it under `services:` once, keeping the two-space indent. See docs/deploy.md, step 2.
+# A reference copy of the whole hub lives in the hormigas repo: deploy/hub/.
+
+  papercut:
+    image: ghcr.io/marcialpimentel/papercut:latest
+    restart: unless-stopped
+    environment:
+      ALLOWED_ORIGINS: https://papercut.marz.gg
+      CAPACITY: "200"
+    # Players drop back to the menu if the server restarts mid-fight; a short grace period is enough.
+    stop_grace_period: 5s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8790/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -1,7 +1,7 @@
 # Papercut — Art direction (v4: mouse-driven paper fighting game)
 _v4, 2026-11-01. v1 (2026-10-30) was a flat side-view look; v2 made it 3D with a run-across-the-pages match; v3 made it a weapon fighting game; v4 moves the fighting to the mouse and adds feint and riposte. Decisions are logged in the [GDD](GDD.md)._
 
-Playable mock-up: [art/papercut-mockup.html](art/papercut-mockup.html) (open it in a desktop browser). Kami with the mouse against Sumi as a practice dummy (two players on one PC is out of scope; PvP comes online in Milestone 2). It's a look test: timings and damage are placeholders that Milestone 1 tunes.
+Playable mock-up: [art/papercut-mockup.html](art/papercut-mockup.html) (open it in a desktop browser). Kami with the mouse against Sumi as a practice dummy (two players on one PC is out of scope; PvP is online). It's a look test: timings and damage are placeholders that Milestone 1 tunes.
 
 ## The short version
 - **World:** the Notebook Dojo. A pop-up feudal Japan made of stationery, as a real 3D book open on a desk. Each round is fought on a different spread.
@@ -114,7 +114,7 @@ Icons in `art/icons/` (katana, high, low, jump, clean cut, dodge): flat paper sh
 | Real mesh cutting (3D boolean) | Slow, fragile on skinned meshes and hard to keep in sync online. Clipping looks the same from the game's camera. |
 | Rapier physics for halves | **Chosen by Marz.** Cosmetic only: halves bounce off pop-ups and pile up, never part of the rules. (The mock-up still uses scripted tumbling.) |
 
-**Fighting-game foundations:** a fixed 60-steps-per-second clock decided only by inputs, in tested code separate from drawing; every move as data (wind-up, active and recovery frames, reach, damage, chip, stun); hit areas per move; a short input buffer (the mock-up keeps a press for 0.1 s); online in Milestone 2 by sending only inputs over WebRTC with rollback.
+**Fighting-game foundations:** a fixed 60-steps-per-second clock decided only by inputs, in tested code separate from drawing; every move as data (wind-up, active and recovery frames, reach, damage, chip, stun); hit areas per move; a short input buffer (the mock-up keeps a press for 0.1 s); online by sending only inputs (input delay since the first build; rollback and WebRTC in Milestone 2).
 
 **Budgets:** about 2 MB to the first fight, Rapier (about 1.5 MB) loading in the background; a fighter is about 15 parts, roughly 1,500 triangles with outlines; scene under 30,000 triangles and 500 draw calls with halves on the page; 60 fps on integrated laptop graphics with one 2048 shadow map.
 

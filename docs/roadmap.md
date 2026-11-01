@@ -1,7 +1,9 @@
 # Papercut — Roadmap
-_Updated 2026-11-01 for the mouse-driven fighting game (art direction v4). The design behind this plan is in [GDD.md](GDD.md) and [art-direction.md](art-direction.md)._
+_Updated 2026-11-01 for the first build (an online duel). Before that: the mouse-driven fighting game (art direction v4). The design behind this plan is in [GDD.md](GDD.md) and [art-direction.md](art-direction.md)._
 
 On GitHub this is the milestone "M1 Feel test: mouse vs dummy" with issues #2–#12 (rewritten to this plan on 2026-11-01).
+
+**First build (2026-11-01), Marz's call:** an online duel came first. It delivers #2, #3, #4, #5, #6, #10, #11 and #12, most of #7 and #8 (Rapier halves and tuning left), plus online fights by invite link, room code or quick match with input delay. Still to do in Milestone 1: #7 Rapier halves, #8 tuning the hit feel, #9 tuning panel.
 
 ## Milestone 1: Feel test (mouse vs dummy)
 **Question it answers:** does mouse-driven paper swordplay feel good?
@@ -9,7 +11,7 @@ On GitHub this is the milestone "M1 Feel test: mouse vs dummy" with issues #2–
 
 | Issue | Title | What it delivers |
 |---|---|---|
-| #2 | Project setup and deploy | Vite + TypeScript + Three.js + Rapier, `npm run dev / test / build`, unit tests, and a GitHub Pages deploy on every merge to `main`. |
+| #2 | Project setup and deploy | Vite + TypeScript + Three.js + Rapier, `npm run dev / test / build`, unit tests, and a deploy to the hub server (papercut.marz.gg) on every merge to `main`. |
 | #3 | Notebook spread and side camera | The 3D open notebook on a desk (pages, stacks, covers), the Graph Paper Dojo pop-ups, and the side-on camera that frames both fighters. |
 | #4 | Kami and Sumi from code shapes | Folded low-poly fighters with flat-shaded facets, white-and-ink outlines, guard poses, walking, turning around. |
 | #5 | Fight rules as data (fixed frames, tested) | Guard stance, light and heavy slashes, block, parry, riposte, feint, clash, counter cut, hit stun, jump, dash and backdash, input buffer, on a fixed 60 Hz clock driven only by inputs, with unit tests. |
@@ -24,7 +26,7 @@ On GitHub this is the milestone "M1 Feel test: mouse vs dummy" with issues #2–
 Suggested build order: #2 → #3 → #4 → #5 → #11 → #6 → #7 → #8 → #12 → #9 → #10.
 
 ## Milestone 2: Online fights
-The first real PvP, right after Milestone 1. Two players on different PCs, each with a mouse: invite links, a small service to connect them, WebRTC for inputs, rollback to hide lag. Issues to be written when Milestone 1 is done.
+Online play already works with input delay (first build). This milestone makes it feel local: rollback to hide lag, direct browser-to-browser links (WebRTC) to cut the server hop, reconnects and a ping display. Issues to be written when Milestone 1 is done.
 
 ## Milestone 3: Blender fighters
 Kami remade in Blender (low-poly parts, flat shading, one bone per part) and the click-by-click pipeline guide.
