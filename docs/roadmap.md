@@ -1,28 +1,36 @@
 # Papercut — Roadmap
-_Proposed 2026-10-30 in the first design session and approved by Marz the same day. Milestone 1 is on GitHub as "M1 Feel test: cutting paper" (issues #2–#10)._
+_Updated 2026-11-01 for the mouse-driven fighting game (art direction v4). The design behind this plan is in [GDD.md](GDD.md) and [art-direction.md](art-direction.md)._
 
-The design behind this plan is in [GDD.md](GDD.md).
+On GitHub this is the milestone "M1 Feel test: mouse vs dummy" with issues #2–#12 (rewritten to this plan on 2026-11-01).
 
-## Milestone 1: Feel test, cutting paper
-**Question it answers:** is cutting paper fun on its own?
-**Done when:** Marz can spend five minutes hitting the dummy and it feels good, and the tuned feel numbers are saved as the defaults.
+## Milestone 1: Feel test (mouse vs dummy)
+**Question it answers:** does mouse-driven paper swordplay feel good?
+**Done when:** Marz can play ten minutes against the dummy with the mouse and the guard, slashes, feints, parries and counter cuts all feel good, and the tuned numbers are saved as defaults.
 
 | Issue | Title | What it delivers |
 |---|---|---|
-| #2 | Project setup and deploy | Vite + TypeScript + Three.js + Rapier, `npm run dev / test / build`, unit tests, and a GitHub Pages deploy on every merge to `main`. A blank page with a spinning card proves it works. |
-| #3 | Duel lane and side camera | A grey-box stage floor and backdrop. Side-on camera that slides and zooms to keep both fighters framed. |
-| #4 | Paper doll from code | A pinned paper doll built from flat card shapes (head, torso, arms, legs on pins). High and low stance poses, walk left/right, facing the foe. |
-| #5 | Duel rules | Stance, slash (wind-up / active / recovery), dodge back, block and parry, as plain game logic with unit tests. Keyboard and gamepad input. |
-| #6 | Training dummy | A dummy that holds a guard and switches high/low on a timer, with a clear tell before each switch. It can be blocked against and cut. |
-| #7 | Paper damage v1 | Three damage stages: torn edge and flap, a piece hanging loose from its pin, then a split into two physics halves that fall and crumple. |
-| #8 | Hit feel | Hitstop, camera shake, slash trail, paper sounds (cut, block, parry, tear), and the finishing punch-in with slow-mo. |
-| #9 | Tuning panel and restart | On-screen sliders for slash timings, parry window, hitstop, shake and slow-mo; save as defaults; R / Start restarts. |
-| #10 | Playtest guide | `docs/playtest.md`: how to open the build, what to try, what to report. |
+| #2 | Project setup and deploy | Vite + TypeScript + Three.js + Rapier, `npm run dev / test / build`, unit tests, and a GitHub Pages deploy on every merge to `main`. |
+| #3 | Notebook spread and side camera | The 3D open notebook on a desk (pages, stacks, covers), the Graph Paper Dojo pop-ups, and the side-on camera that frames both fighters. |
+| #4 | Kami and Sumi from code shapes | Folded low-poly fighters with flat-shaded facets, white-and-ink outlines, guard poses, walking, turning around. |
+| #5 | Fight rules as data (fixed frames, tested) | Guard stance, light and heavy slashes, block, parry, riposte, feint, clash, counter cut, hit stun, jump, dash and backdash, input buffer, on a fixed 60 Hz clock driven only by inputs, with unit tests. |
+| #6 | Sumi as a practice dummy | Switches guard with a glint tell, swings back now and then and sometimes feints a heavy, so one person can practise everything alone. |
+| #7 | Hits, cuts and the K.O. split | Red cut bands on struck parts, the paper health strip, the K.O. split with the red inside, halves as Rapier physics bodies (cosmetic). |
+| #8 | Hit feel | Hitstop, shake, slash lines, paper sounds, K.O. camera with slow motion. |
+| #9 | Tuning panel and restart | On-screen sliders for every move's frames, damage, chip and stun, the parry, riposte, feint and counter windows, the cursor waist line; save as defaults; R restarts. |
+| #10 | Playtest guide | `docs/playtest.md`: how to open the build, the mouse controls, what to try, what to report. |
+| #11 | Mouse controls | Cursor guard (waist line, small dead zone, a visible guard cue), left and right click, feint, keyboard movement, on-screen buttons on touch screens only. |
+| #12 | Rounds, timer and page turns | 60-second rounds, best of 3, round banners, the page-turn animation to the next spread, the back-cover win, the Ruled Courtyard and Legal Pad Grove pop-ups. |
 
-Suggested build order: #2 → #3 → #4 → #5 → #6 → #7 → #8 → #9 → #10. Issues #7 and #8 can be one build, as the tear and the hit feel are judged together.
+Suggested build order: #2 → #3 → #4 → #5 → #11 → #6 → #7 → #8 → #12 → #9 → #10.
 
-## Milestone 2: Paper doll from Blender
-One rigged doll and one blade made in Blender and exported to glTF, replacing the code-made doll with the same feel numbers. Click-by-click pipeline doc in `docs/` so new fighters are easy to try. Issues to be written when Milestone 1 is done.
+## Milestone 2: Online fights
+The first real PvP, right after Milestone 1. Two players on different PCs, each with a mouse: invite links, a small service to connect them, WebRTC for inputs, rollback to hide lag. Issues to be written when Milestone 1 is done.
 
-## Milestone 3: First duel
-One AI fighter with clear tells, a first pop-up diorama arena, best-of-3, simple start and win screens. Issues to be written when Milestone 2 is done.
+## Milestone 3: Blender fighters
+Kami remade in Blender (low-poly parts, flat shading, one bone per part) and the click-by-click pipeline guide.
+
+## Milestone 4: Solo and character
+A computer fighter, Kami and Sumi made different (speed, reach), one or two specials each (direction + button).
+
+## Milestone 5: The full notebook
+Menus, more spreads and blades.
