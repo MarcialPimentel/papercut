@@ -4,8 +4,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Caveat:wght@600&display=swap">
 <style>
-/* Layout: a duel on a sheet of graph paper you can play first, then the proposal as one
-   readable column on a graph-paper page, with wide tables and swatch grids breaking out. */
+/* Layout: a 3D pop-up notebook you can fight across first, then the proposal as one readable
+   column on a graph-paper page, with wide tables and swatch grids breaking out where needed. */
 :root {
   --bg: #F5F4EF;        /* desk paper: page ground */
   --sheet: #FFFFFF;     /* fresh sheet: cards */
@@ -14,7 +14,7 @@
   --muted: #57555E;
   --red: #B0141C;       /* cut red: links, emphasis (red = cut) */
   --on-red: #FFFFFF;
-  --blue: #2A5F8F;      /* graph-line blue: secondary labels */
+  --blue: #2A5F8F;      /* graph-line blue: labels */
   --grid: rgba(42, 95, 143, .09);
   --line: rgba(24, 23, 28, .14);
   --shadow: 0 1px 0 rgba(24,23,28,.06), 0 10px 26px rgba(24,23,28,.08);
@@ -66,8 +66,6 @@ section { display: grid; gap: 18px; }
 .stack { display: grid; gap: 10px; align-content: start; }
 code { font-size: .88em; background: var(--sheet-2); padding: 1px 5px; border-radius: 3px; }
 :focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
-
-/* hero: the title is cut with a razor line */
 .hero { display: grid; gap: 16px; }
 .hero h1 { position: relative; width: fit-content; max-width: 100%; }
 .hero h1 .slip { display: inline-block; transform: translate(.06em, -.035em); }
@@ -75,50 +73,63 @@ code { font-size: .88em; background: var(--sheet-2); padding: 1px 5px; border-ra
 
 /* ---------- the stage ---------- */
 .stage {
-  position: relative; height: clamp(440px, 72vh, 660px); max-width: 100%;
-  overflow: hidden; background: #EFF4F8; font-family: var(--body);
+  position: relative; height: clamp(460px, 74vh, 680px); max-width: 100%;
+  overflow: hidden; background: #E9E4DA; font-family: var(--body);
   border: 2px solid #18171C; box-shadow: 6px 6px 0 #18171C; border-radius: 4px;
 }
-.stage canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
 .stage-fallback { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: #18171C; font-weight: 700; }
 .stage.ready .stage-fallback { display: none; }
-/* HUD sits on the scene: fixed paper-and-ink colors that read on every arena */
+/* HUD sits on the scene: fixed paper-and-ink colors that read on every page */
 .hud { position: absolute; pointer-events: none; }
 .hud * { pointer-events: auto; }
 .hud-top { top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
 .hud-top .spacer { flex: 1; }
-.tagp { background: #FFFFFF; color: #18171C; border: 2px solid #18171C; padding: 4px 12px 5px; font: 800 20px/1 var(--display); text-transform: uppercase; letter-spacing: .03em; box-shadow: 3px 3px 0 #18171C; }
-.tagp small { display: block; font: 700 11px var(--body); letter-spacing: .12em; color: #2A5F8F; margin-bottom: 2px; }
+.track { display: flex; background: #FFFFFF; border: 2px solid #18171C; box-shadow: 3px 3px 0 #18171C; }
+.track span { font: 700 11px/1.15 var(--body); letter-spacing: .04em; text-transform: uppercase; color: #57555E; padding: 6px 8px; border-right: 1.5px solid rgba(24,23,28,.2); text-align: center; min-width: 56px; }
+.track span:last-child { border-right: 0; }
+.track span.cov { background: #141316; color: #F3F1EA; }
+.track span.on { background: #F6E27F; color: #18171C; }
+.track span.cov.on { background: #D7262E; color: #FFFFFF; }
+.way { font: 800 15px/1 var(--display); text-transform: uppercase; letter-spacing: .05em; background: #18171C; color: #FFFFFF; padding: 7px 10px; border: 2px solid #FFFFFF; align-self: center; }
+.way b { color: #F6E27F; font-weight: 800; }
 .hbtn { font: 700 14px var(--body); color: #18171C; background: #FFFFFF; border: 2px solid #18171C; padding: 7px 12px; min-height: 40px; cursor: pointer; box-shadow: 3px 3px 0 #18171C; }
 .hbtn:hover { background: #F6E27F; }
 .hbtn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #18171C; }
 .hbtn b { font-weight: 700; color: #2A5F8F; }
 .hud-chips { left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.chip { font: 700 14px var(--body); color: #FFFFFF; background: #18171C; border: 2px solid #FFFFFF; padding: 7px 13px; min-height: 42px; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+.chip { font: 700 14px var(--body); color: #FFFFFF; background: #18171C; border: 2px solid #FFFFFF; padding: 7px 12px; min-height: 42px; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
 .chip:hover { background: #2E3F8F; }
 .chip.cut { background: #B0141C; }
 .chip kbd { font: 700 12px var(--body); opacity: .7; margin-left: 4px; }
-.toast { top: 74px; left: 50%; transform: translateX(-50%); width: min(470px, calc(100% - 24px)); background: #FFFFFF; color: #18171C; border: 2px solid #18171C; box-shadow: 4px 4px 0 #18171C; padding: 10px 14px; font-weight: 700; font-size: 15px; line-height: 1.35; transition: opacity .25s, transform .25s; }
+.toast { top: 72px; left: 50%; transform: translateX(-50%); width: min(480px, calc(100% - 24px)); background: #FFFFFF; color: #18171C; border: 2px solid #18171C; box-shadow: 4px 4px 0 #18171C; padding: 10px 14px; font-weight: 700; font-size: 15px; line-height: 1.35; transition: opacity .25s, transform .25s; }
 .toast[data-show="0"] { opacity: 0; transform: translateX(-50%) translateY(-8px); pointer-events: none; }
 .toast em { font-style: normal; color: #B0141C; }
 .labels { inset: 0; overflow: hidden; pointer-events: none; }
 .wlabel { position: absolute; left: 0; top: 0; pointer-events: none; font: 800 30px/1 var(--display); text-transform: uppercase; letter-spacing: .04em; padding: 2px 10px 4px; background: #FFFFFF; color: #18171C; border: 2px solid #18171C; transform: translate(-50%, -100%) rotate(-4deg); white-space: nowrap; }
 .wlabel.cut { background: #D7262E; color: #FFFFFF; }
-.wlabel.blk { background: #FFFFFF; }
+.wlabel.gold { background: #F6E27F; }
 .pop { animation: pop 1s ease-out forwards; }
 @keyframes pop { 0% { opacity: 0; margin-top: 8px; } 12% { opacity: 1; margin-top: 0; } 70% { opacity: 1; } 100% { opacity: 0; margin-top: -30px; } }
+.banner { inset: 0; display: grid; place-items: center; pointer-events: none; }
+.banner div { font: 800 clamp(40px, 8vw, 86px)/.95 var(--display); text-transform: uppercase; text-align: center; color: #FFFFFF; background: #D7262E; border: 3px solid #FFFFFF; outline: 2px solid #18171C; padding: 10px 26px 14px; transform: rotate(-3deg); }
+.banner small { display: block; font: 700 16px var(--body); letter-spacing: .06em; margin-top: 6px; }
 @media (max-width: 620px) {
   .hud-top { gap: 6px; }
-  .tagp { font-size: 16px; padding: 3px 8px 4px; }
+  .track span { min-width: 0; padding: 5px 5px; font-size: 9.5px; }
+  .way { font-size: 12px; padding: 5px 7px; }
   .hbtn { font-size: 12px; padding: 4px 7px; min-height: 34px; box-shadow: 2px 2px 0 #18171C; }
   .hud-top .spacer { flex-basis: 100%; height: 0; }
   .toast { top: auto; bottom: 168px; font-size: 14px; }
-  .chip { font-size: 13px; padding: 6px 10px; min-height: 40px; }
+  .chip { font-size: 13px; padding: 6px 9px; min-height: 40px; }
   .chip kbd { display: none; }
   .wlabel { font-size: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { .pop { animation-duration: .01s; } .toast { transition: none; } }
-.stage-help { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--muted); }
+.stage-help { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+.stage-help div { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.stage-help b { color: var(--ink); }
 .stage-help kbd { font: 700 12px var(--body); border: 1.5px solid var(--line); border-bottom-width: 3px; padding: 0 5px; border-radius: 3px; color: var(--ink); background: var(--sheet); }
 
 /* ---------- content blocks ---------- */
@@ -126,9 +137,9 @@ code { font-size: .88em; background: var(--sheet-2); padding: 1px 5px; border-ra
 .card h3 { margin-bottom: 8px; }
 .grid2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .grid3 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
-.five { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
-.five .card { padding: 16px; }
-.five .k { font: 800 15px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--red); display: block; margin-bottom: 6px; }
+.six { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+.six .card { padding: 16px; }
+.six .k { font: 800 15px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--red); display: block; margin-bottom: 6px; }
 .tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; background: var(--red); color: var(--on-red); }
 .tag.alt { background: transparent; color: var(--muted); border: 1.5px solid var(--line); }
 ul.clean { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
@@ -147,14 +158,12 @@ td.now { color: var(--muted); }
 .icons { display: flex; flex-wrap: wrap; gap: 16px; }
 .icons figure { margin: 0; display: grid; gap: 6px; justify-items: center; font-size: 13px; color: var(--muted); }
 .icons svg { width: 72px; height: 72px; display: block; }
-.rows { display: grid; border: 1.5px solid var(--line); background: var(--sheet); }
-.rowi { display: flex; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); min-width: 0; }
-.rowi:last-child { border-bottom: 0; }
-.rowi .paper { width: 44px; height: 44px; flex: none; border: 1.5px solid #18171C; }
-.rowi .t { flex: 1; min-width: 0; }
-.rowi .t b { display: block; font-family: var(--display); font-weight: 800; font-size: 22px; text-transform: uppercase; line-height: 1; }
-.rowi .t span { font-size: 14px; color: var(--muted); }
-.rowi .s { flex: none; white-space: nowrap; font-size: 13px; font-weight: 700; color: var(--blue); }
+.pages { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 2px solid var(--ink); background: var(--sheet); }
+.pages div { padding: 12px 8px; text-align: center; border-right: 1.5px solid var(--line); display: grid; gap: 6px; justify-items: center; min-width: 0; }
+.pages div:last-child { border-right: 0; }
+.pages b { font: 800 18px/1 var(--display); text-transform: uppercase; }
+.pages span { font-size: 12px; color: var(--muted); }
+.pages .paper { width: 100%; max-width: 64px; height: 40px; border: 1.5px solid #18171C; }
 .p-graph { background-color: #FBFAF6; background-image: linear-gradient(#9CC0DC 1px, transparent 1px), linear-gradient(90deg, #9CC0DC 1px, transparent 1px); background-size: 8.8px 8.8px; }
 .p-lined { background-color: #FBFAF6; background-image: linear-gradient(#8FB0D3 1.5px, transparent 1.5px); background-size: 100% 8.8px; }
 .p-legal { background-color: #F6E27F; background-image: linear-gradient(#7FA3CC 1.5px, transparent 1.5px); background-size: 100% 8.8px; }
@@ -165,105 +174,153 @@ td.now { color: var(--muted); }
 .layer.new { border-color: var(--red); }
 .layer .tag { margin-left: auto; }
 ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
-.prompt { position: relative; background: var(--sheet-2); padding: 14px 16px; font-size: 15px; border-left: 3px solid var(--blue); }
-.copy { font: 700 13px var(--body); color: var(--ink); background: var(--sheet); border: 1.5px solid var(--line); padding: 6px 12px; cursor: pointer; margin-top: 10px; }
+.prompt { background: var(--sheet-2); padding: 14px 16px; font-size: 15px; border-left: 3px solid var(--blue); }
+.copy { font: 700 13px var(--body); color: var(--ink); background: var(--sheet); border: 1.5px solid var(--line); padding: 6px 12px; cursor: pointer; margin-top: 10px; justify-self: start; }
 .decide { border: 2px solid var(--red); background: var(--sheet); padding: 22px; box-shadow: 6px 6px 0 var(--red); }
 .decide ol { margin: 0; padding-left: 22px; display: grid; gap: 10px; }
 .decide li b { color: var(--red); }
-.phase { display: grid; gap: 4px; }
+.changed { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.changed div { padding: 10px 14px; border-left: 3px solid var(--red); background: var(--sheet); }
 </style>
 
 <div class="wrap">
   <header class="hero">
-    <p class="eyebrow">Papercut · art direction proposal · draft for Marz</p>
+    <p class="eyebrow">Papercut · art direction v2 · 3D · draft for Marz</p>
     <h1><span class="slip">The Notebook</span> Dojo</h1>
-    <p class="lead">From grey boxes to paper samurai: flat, angular card fighters with a white sticker border, dueling on a pop-up stage made of school stationery, where every cut shows a red paper core.</p>
+    <p class="lead">Folded paper samurai in a real 3D pop-up notebook. Two players, one clean cut, and the winner fights their way across the pages to the other player's cover.</p>
   </header>
 
   <section aria-label="Playable mock-up">
     <div class="stage" id="stage">
-      <canvas id="scene" aria-label="A side-view duel on a sheet of graph paper: Kami, a white paper samurai with an indigo sash, faces Sumi, a paper samurai in black hakama. Behind them are pop-up mountains cut from a marble notebook cover, a yellow paper sun and a black torii gate."></canvas>
+      <canvas id="scene" aria-label="A 3D pop-up notebook lying open on a desk. On the graph-paper spread, Kami, a folded white paper samurai with an indigo sash, faces Sumi, a paper samurai in black hakama. Behind them, folded marble-paper mountains, a black torii gate and a yellow paper sun stand up from the pages."></canvas>
       <div class="stage-fallback" id="fallback">Folding the paper…</div>
       <div class="hud labels" id="labels"></div>
       <div class="hud hud-top">
-        <div class="tagp" id="arenaTag"><small>Arena</small><span id="arenaName">Graph Paper Dojo</span></div>
+        <div class="track" id="track" aria-label="Notebook pages"></div>
+        <div class="way" id="way">No one has the way</div>
         <span class="spacer"></span>
-        <button class="hbtn" id="bArena" type="button">Next arena</button>
+        <button class="hbtn" id="bP2" type="button">Sumi: <b>Dummy</b></button>
         <button class="hbtn" id="bOutline" type="button">Outline: <b>Sticker</b></button>
         <button class="hbtn" id="bMotion" type="button">Motion: <b>Smooth</b></button>
         <button class="hbtn" id="bSound" type="button">Sound: <b>On</b></button>
       </div>
       <div class="hud toast" id="toast" role="status" data-show="0"></div>
+      <div class="hud banner" id="banner" hidden><div id="bannerText"></div></div>
       <div class="hud hud-chips" id="chips">
-        <button class="chip" data-hold="left" type="button">◀ Move<kbd>A</kbd></button>
-        <button class="chip" data-hold="right" type="button">Move ▶<kbd>D</kbd></button>
+        <button class="chip" data-hold="left" type="button">◀<kbd>A</kbd></button>
+        <button class="chip" data-hold="right" type="button">▶<kbd>D</kbd></button>
         <button class="chip" data-act="high" type="button">High<kbd>W</kbd></button>
         <button class="chip" data-act="low" type="button">Low<kbd>S</kbd></button>
-        <button class="chip cut" data-act="slash" type="button">Slash<kbd>J</kbd></button>
-        <button class="chip" data-act="dodge" type="button">Dodge<kbd>K</kbd></button>
-        <button class="chip" data-act="reset" type="button">Reset<kbd>R</kbd></button>
+        <button class="chip cut" data-act="slash" type="button">Slash<kbd>F</kbd></button>
+        <button class="chip" data-act="jump" type="button">Jump<kbd>Space</kbd></button>
+        <button class="chip" data-act="dodge" type="button">Dodge<kbd>Q</kbd></button>
+        <button class="chip" data-act="reset" type="button">Restart<kbd>R</kbd></button>
       </div>
     </div>
     <div class="stage-help">
-      <span><kbd>A</kbd> <kbd>D</kbd> move</span>
-      <span><kbd>W</kbd> <kbd>S</kbd> guard high / low</span>
-      <span><kbd>J</kbd> slash at your guard height</span>
-      <span><kbd>K</kbd> dodge back</span>
-      <span><kbd>R</kbd> fold a new Sumi</span>
-      <span>This is a look test: timings and hit rules are placeholders that Milestone 1 tunes for real.</span>
+      <div><b>Kami (player 1):</b> <span><kbd>A</kbd> <kbd>D</kbd> move</span> <span><kbd>W</kbd> <kbd>S</kbd> guard high / low</span> <span><kbd>F</kbd> slash</span> <span><kbd>Space</kbd> jump</span> <span><kbd>Q</kbd> dodge back</span></div>
+      <div><b>Sumi (player 2, switch "Sumi" to Player 2):</b> <span><kbd>←</kbd> <kbd>→</kbd> move</span> <span><kbd>↑</kbd> <kbd>↓</kbd> guard</span> <span><kbd>/</kbd> slash</span> <span><kbd>Right Shift</kbd> jump</span> <span><kbd>.</kbd> dodge</span> <span>Gamepads work too: first pad is Kami, second is Sumi.</span></div>
+      <div><span>Drag the scene to look around. <kbd>R</kbd> restarts the match. Click the scene first so the arrow keys and Space don't scroll the page.</span> <span>Look test: timings and rules are placeholders that Milestone 1 tunes.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What changed since v1</h2>
+    <div class="changed">
+      <div><strong>Real 3D fighters.</strong> Folded papercraft with volume and crisp facets, instead of flat paper dolls.</div>
+      <div><strong>A 3D pop-up notebook.</strong> The arena is an open book on a desk. Scenery pops up from the pages, and pages really turn.</div>
+      <div><strong>PvP.</strong> Two players on one PC in Milestone 1. Online play in Milestone 2, and the rules are built for it from day one.</div>
+      <div><strong>One cut kills.</strong> Every clean cut splits the loser in 3D. They refold ahead of the winner, who fights on toward the other cover.</div>
+      <div><strong>Jump.</strong> Hop over a low slash or past a blocker. High and low guards, block, parry and dodge stay.</div>
+      <div><strong>Still a lane.</strong> You fight along one path, so high and low stay easy to read, and the camera swings around for kills and page turns.</div>
     </div>
   </section>
 
   <section>
     <h2>The short version</h2>
-    <div class="five">
-      <div class="card"><span class="k">World</span><p>The Notebook Dojo: a feudal-Japan pop-up stage built from stationery. Graph paper floors, marble-cover mountains, legal-pad bamboo.</p></div>
-      <div class="card"><span class="k">Fighters</span><p>Paper samurai with flat, angular, straight-edged shapes and a white sticker border. Every piece is cut card on a pin.</p></div>
-      <div class="card"><span class="k">The red rule</span><p>The world is white, ink and paper colors. Red appears only where paper is cut: fighters are two-ply card with a red core.</p></div>
-      <div class="card"><span class="k">Technology</span><p>Three.js flat shapes. The game draws each border itself, and cuts are real: the doll is sliced along the blade's line.</p></div>
-      <div class="card"><span class="k">Making the art</span><p>Code-made dolls for Milestone 1. From Milestone 2, flat pieces drawn in Blender; the game adds borders, core and cuts.</p></div>
+    <div class="six">
+      <div class="card"><span class="k">World</span><p>The Notebook Dojo: a pop-up feudal Japan built from stationery, now a real 3D book. Each spread is a different paper: graph, ruled, legal pad, marble cover.</p></div>
+      <div class="card"><span class="k">Fighters</span><p>Folded papercraft samurai: low-poly, faceted, white, with a white sticker outline and an ink edge around every piece.</p></div>
+      <div class="card"><span class="k">The red rule</span><p>Every fighter is a hollow paper shell: white outside, red inside. A cut opens the shell, so red only appears where paper is cut.</p></div>
+      <div class="card"><span class="k">The match</span><p>One clean cut kills. The winner gets the way and runs for the page edge. Turn the last page onto your rival's cover to win.</p></div>
+      <div class="card"><span class="k">Technology</span><p>Three.js, no new stack. Faceted shells, an inverted-hull outline, clipping-plane cuts, and a fixed-step game loop ready for online play.</p></div>
+      <div class="card"><span class="k">Making the art</span><p>Code-made fighters for Milestone 1. Then low-poly models rigged in Blender. The game adds the outline and the red inside to any model.</p></div>
     </div>
   </section>
 
   <section>
     <div class="col stack">
-      <h2>Setting</h2>
-      <p>Your references pull two ways: samurai duels (stern, angular, quiet) and school paper (graph paper, ruled sheets, legal pads, marble covers). I'd put the samurai on the paper rather than pick one. The duel stays serious; the materials carry the charm.</p>
+      <h2>Fighters in 3D</h2>
+      <p>Each body part is a low-poly folded shape (diamond-section torso and limbs, a faceted head, flared hakama legs), lit so every fold shows as a lighter and a darker facet. The game builds four extra layers for every part from the same model:</p>
+    </div>
+    <div class="layers">
+      <div class="layer"><b>Ink edge</b><span>A slightly bigger copy, drawn inside out in ink: the thin outer hairline.</span></div>
+      <div class="layer"><b>Sticker</b><span>A bigger copy drawn inside out in white: the sticker border, so every piece looks cut out.</span></div>
+      <div class="layer"><b>Paper shell</b><span>The model itself, flat-shaded white (or the fighter's accent color).</span></div>
+      <div class="layer new"><b>Red inside</b><span>The shell's inside faces, plus a slightly smaller core, all in cut red. Invisible until a blade opens the shell.</span><span class="tag">the red rule</span></div>
+    </div>
+    <p class="col">A cut is a plane through the whole fighter along the blade's path. The game draws the fighter twice, once on each side of the plane, with the white layers stopping a hair short of it. A thin red line opens along the cut, and as the halves tumble apart you see straight into the red inside. Halves stay on the page until it turns, so a long fight leaves the spread littered with red.</p>
+    <p class="col muted small">Readability stays the top priority: the camera sits side-on with a slight angle to show volume, every fighter keeps its white-and-ink outline against any paper, and the guard height is readable from the blade alone.</p>
+  </section>
+
+  <section>
+    <div class="col stack">
+      <h2>The match: across the notebook</h2>
+      <p>The notebook is the match. Both fighters start on the middle spread. Kami fights toward Sumi's cover (right), Sumi toward Kami's (left).</p>
+    </div>
+    <div class="pages" role="list">
+      <div role="listitem"><span class="paper p-marble"></span><b>Kami's cover</b><span>Sumi wins here</span></div>
+      <div role="listitem"><span class="paper p-legal"></span><b>Legal Pad Grove</b><span>Bamboo</span></div>
+      <div role="listitem"><span class="paper p-graph"></span><b>Graph Paper Dojo</b><span>Start</span></div>
+      <div role="listitem"><span class="paper p-lined"></span><b>Ruled Courtyard</b><span>Castle</span></div>
+      <div role="listitem"><span class="paper p-marble"></span><b>Sumi's cover</b><span>Kami wins here</span></div>
     </div>
     <div class="grid2">
       <div class="card stack">
-        <p><span class="tag">A · Recommended</span></p>
-        <h3>The Notebook Dojo</h3>
-        <p>A pop-up feudal Japan built from a kid's desk. The floor is a sheet of graph paper bent up into a backdrop. Mountains are cut from a marble notebook cover, the sun from a legal pad, clouds from ruled paper, gates from black card. Each arena is a different paper.</p>
-        <p class="muted small">Why: it uses everything you sent, gives every arena a built-in identity at almost no art cost (the paper is the theme), and white fighters on ruled or grid paper read instantly. Cost: low. Most of it is generated textures and flat cut-outs.</p>
+        <h3>Rules in the mock-up</h3>
+        <ul class="clean">
+          <li><strong>One clean cut kills.</strong> The loser splits, then refolds a moment later ahead of the winner, standing in the way.</li>
+          <li><strong>Whoever cut last has the way.</strong> Only they can run off the page edge toward the rival's cover. The page turns and the fight goes on.</li>
+          <li><strong>Turn the last page and you win.</strong> The other player's cover closes the match.</li>
+          <li><strong>Block:</strong> a slash meets a guard at the same height. <strong>Parry:</strong> switch to that height at the last moment and the attacker staggers.</li>
+          <li><strong>Jump</strong> clears a low slash, or hops over a blocker to get past.</li>
+          <li><strong>Clash:</strong> two slashes at the same height at the same moment bounce off each other.</li>
+        </ul>
       </div>
       <div class="card stack">
-        <p><span class="tag alt">B · Lower risk, less ours</span></p>
-        <h3>Washi pop-up book</h3>
-        <p>A traditional pop-up storybook: rice paper, ink-wash mountains, folded origami props. Same fighters and cuts.</p>
-        <p class="muted small">Why not first: prettier on its own, but it's close to many existing papercraft games, it drops the stationery ideas you liked, and soft ink-wash backdrops fight with white fighters for attention.</p>
+        <h3>Where the depth comes from</h3>
+        <p>Few buttons, many reads: high or low, strike or wait for their wind-up, jump their low slash, fake a guard switch to bait a parry, or simply run when you have the way. Every exchange ends in one decisive moment, and a comeback is always one cut away.</p>
+        <p class="hand">easy to learn, high ceiling</p>
+        <p class="muted small">The page-by-page push is a classic duel structure. Ours is told through the notebook: pages turn, covers close, and the red stays on the paper.</p>
       </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="col stack">
+      <h2>Setting and names</h2>
+      <p>Same world as v1, now a real object: a notebook lying open on a desk, its pop-ups standing up from the spread. Covers are marble composition boards (generic, no label).</p>
     </div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Today</th><th>New name</th><th>Why</th></tr></thead>
+        <thead><tr><th>Thing</th><th>Name</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td class="now">Player fighter</td><td><strong>Kami</strong></td><td>紙, "paper". White gi and hakama, indigo sash, indigo-wrapped grip.</td></tr>
-          <tr><td class="now">Training dummy / first rival</td><td><strong>Sumi</strong></td><td>墨, "ink". Black hakama, gold sash. Paper and ink: the two materials of the game.</td></tr>
-          <tr><td class="now">Grey-box lane</td><td><strong>Graph Paper Dojo</strong></td><td>First arena (Milestone 1). Daylight, blue grid, marble mountains, yellow sun, black torii.</td></tr>
-          <tr><td class="now">Night arena (later)</td><td><strong>Marble Cover Night</strong></td><td>A black-and-white marble cover floor. White fighters glow against it. The game's night palette.</td></tr>
-          <tr><td class="now">Later arenas</td><td><strong>Ruled Courtyard</strong>, <strong>Legal Pad Grove</strong></td><td>Ruled notebook paper with a white castle, and yellow legal paper with bamboo cut from the pad.</td></tr>
+          <tr><td class="now">Player 1</td><td><strong>Kami</strong></td><td>紙, "paper". White gi and hakama, indigo sash and grip.</td></tr>
+          <tr><td class="now">Player 2 / practice dummy</td><td><strong>Sumi</strong></td><td>墨, "ink". Black hakama, gold sash. Plays the dummy when you're alone.</td></tr>
+          <tr><td class="now">Middle spread (start)</td><td><strong>Graph Paper Dojo</strong></td><td>Folded marble mountains, black torii, legal-yellow sun.</td></tr>
+          <tr><td class="now">Spreads toward Sumi</td><td><strong>Ruled Courtyard</strong></td><td>A white castle, ink sun.</td></tr>
+          <tr><td class="now">Spreads toward Kami</td><td><strong>Legal Pad Grove</strong></td><td>Bamboo rolled from yellow pad paper.</td></tr>
+          <tr><td class="now">The goals</td><td><strong>Kami's cover</strong> / <strong>Sumi's cover</strong></td><td>Marble covers at night: paper moon, lanterns.</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="col muted small">No permanent IDs exist yet; code will use short English IDs (<code>kami</code>, <code>sumi</code>, <code>graph_dojo</code>) so display names can change freely.</p>
     <div class="card col stack">
       <h3>Tone rules</h3>
       <ul class="clean">
-        <li><strong>Samurai film, school-desk materials.</strong> Characters are stern and quiet. The humour lives in the materials, never in mugging faces.</li>
-        <li><strong>Straight lines only.</strong> Everything is cut with a blade: no curves anywhere. Even the sun and moon are cut as 16-sided polygons.</li>
-        <li><strong>Red is paper, not blood.</strong> The red core is a material, so cuts read as dramatic, never gory.</li>
-        <li><strong>Reference, not copy.</strong> Paper Mario, Samurai Jack, Kartana and South Park inspired the style. No characters, faces, logos or signature shapes are taken from them. No real brand names either: the marble cover is generic, with no label.</li>
+        <li><strong>Samurai film, school-desk materials.</strong> Stern, quiet characters; the charm lives in the materials.</li>
+        <li><strong>Straight lines and flat facets only.</strong> Everything is folded or cut with a blade: no smooth curves, even on the sun and moon.</li>
+        <li><strong>Red is paper, not blood.</strong> The red inside is a material, so cuts read as dramatic, never gory.</li>
+        <li><strong>Reference, not copy.</strong> Paper Mario, Samurai Jack, Kartana and South Park inspired the style; no characters, faces, logos or signature shapes are taken from them. No real brand names.</li>
         <li><strong>Japan as seasoning.</strong> Names, torii, katana, hakama. Any visible Japanese text gets checked by a native speaker before release.</li>
       </ul>
     </div>
@@ -272,97 +329,71 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
   <section>
     <div class="col stack">
       <h2>Palette</h2>
-      <p>Mostly white, ink and paper colors, so the red of a cut is the loudest thing on screen. There's no old palette to retire: until now the game was grey boxes.</p>
+      <p>Unchanged from v1: mostly white, ink and paper colors, so the red inside a cut is the loudest thing on screen.</p>
     </div>
-    <h3>World colors</h3>
     <div class="swatches">
-      <div class="sw" style="background:#FBFAF6;color:#18171C"><b>Paper white</b><span class="hex">#FBFAF6</span><span>Fighters' faces. The main color.</span></div>
-      <div class="sw" style="background:#DCD8CF;color:#18171C"><b>Fold grey</b><span class="hex">#DCD8CF</span><span>Folds, far limbs, facets.</span></div>
-      <div class="sw" style="background:#18171C;color:#FBFAF6"><b>Sumi ink</b><span class="hex">#18171C</span><span>Hairlines, hair, gates.</span></div>
-      <div class="sw" style="background:#D7262E;color:#FFFFFF"><b>Cut red</b><span class="hex">#D7262E</span><span>The paper core. Only where cut.</span></div>
-      <div class="sw" style="background:#8F1219;color:#FFFFFF"><b>Core shadow</b><span class="hex">#8F1219</span><span>Inside deep cuts, at the split.</span></div>
-      <div class="sw" style="background:#E9EEF2;color:#18171C"><b>Blade steel</b><span class="hex">#E9EEF2</span><span>Blades, with a white edge line.</span></div>
+      <div class="sw" style="background:#FBFAF6;color:#18171C"><b>Paper white</b><span class="hex">#FBFAF6</span><span>Fighter shells. The main color.</span></div>
+      <div class="sw" style="background:#DCD8CF;color:#18171C"><b>Fold grey</b><span class="hex">#DCD8CF</span><span>Far limbs, shaded facets.</span></div>
+      <div class="sw" style="background:#18171C;color:#FBFAF6"><b>Sumi ink</b><span class="hex">#18171C</span><span>Edges, hair, gates.</span></div>
+      <div class="sw" style="background:#D7262E;color:#FFFFFF"><b>Cut red</b><span class="hex">#D7262E</span><span>The inside of the paper. Only where cut.</span></div>
+      <div class="sw" style="background:#8F1219;color:#FFFFFF"><b>Core shadow</b><span class="hex">#8F1219</span><span>Deep inside the cut.</span></div>
+      <div class="sw" style="background:#E9EEF2;color:#18171C"><b>Blade steel</b><span class="hex">#E9EEF2</span><span>Blades.</span></div>
       <div class="sw" style="background:#9CC0DC;color:#18171C"><b>Graph blue</b><span class="hex">#9CC0DC</span><span>Grid and ruled lines.</span></div>
       <div class="sw" style="background:#F6E27F;color:#18171C"><b>Legal yellow</b><span class="hex">#F6E27F</span><span>Sun, glints, tells.</span></div>
-      <div class="sw" style="background:#141316;color:#F3F1EA"><b>Marble black</b><span class="hex">#141316</span><span>Night floors, mountains.</span></div>
-      <div class="sw" style="background:#B98B5E;color:#18171C"><b>Kraft card</b><span class="hex">#B98B5E</span><span>Stage base, pop-up tabs.</span></div>
-      <div class="sw" style="background:#2E3F8F;color:#FFFFFF"><b>Indigo</b><span class="hex">#2E3F8F</span><span>Kami's sash and grip.</span></div>
-      <div class="sw" style="background:#D9A21B;color:#18171C"><b>Gold</b><span class="hex">#D9A21B</span><span>Sumi's sash and grip.</span></div>
+      <div class="sw" style="background:#141316;color:#F3F1EA"><b>Marble black</b><span class="hex">#141316</span><span>Covers, night.</span></div>
+      <div class="sw" style="background:#B98B5E;color:#18171C"><b>Kraft card</b><span class="hex">#B98B5E</span><span>The desk.</span></div>
+      <div class="sw" style="background:#2E3F8F;color:#FFFFFF"><b>Indigo</b><span class="hex">#2E3F8F</span><span>Kami's accent.</span></div>
+      <div class="sw" style="background:#D9A21B;color:#18171C"><b>Gold</b><span class="hex">#D9A21B</span><span>Sumi's accent.</span></div>
     </div>
-    <p class="col muted small">World colors are never used for small text. Each fighter gets one non-red accent (indigo, gold, later teal or violet), so red stays unique to cuts. The notebook's usual red margin line becomes blue for the same reason.</p>
-    <h3>Menus: day and night</h3>
-    <div class="grid2">
-      <div class="swatches">
-        <div class="sw" style="background:#F5F4EF;color:#18171C"><b>Desk paper</b><span class="hex">#F5F4EF</span><span>Day background</span></div>
-        <div class="sw" style="background:#FFFFFF;color:#18171C"><b>Fresh sheet</b><span class="hex">#FFFFFF</span><span>Day cards</span></div>
-        <div class="sw" style="background:#18171C;color:#FFFFFF"><b>Ink text</b><span class="hex">#18171C</span><span>16.2:1 on desk paper</span></div>
-        <div class="sw" style="background:#B0141C;color:#FFFFFF"><b>Red text</b><span class="hex">#B0141C</span><span>6.4:1 on desk paper</span></div>
-        <div class="sw" style="background:#57555E;color:#FFFFFF"><b>Muted text</b><span class="hex">#57555E</span><span>6.7:1 on desk paper</span></div>
-        <div class="sw" style="background:#2A5F8F;color:#FFFFFF"><b>Blue labels</b><span class="hex">#2A5F8F</span><span>6.1:1 on desk paper</span></div>
-      </div>
-      <div class="swatches">
-        <div class="sw" style="background:#121115;color:#F3F1EA"><b>Marble cover</b><span class="hex">#121115</span><span>Night background</span></div>
-        <div class="sw" style="background:#1C1B20;color:#F3F1EA"><b>Cover sheet</b><span class="hex">#1C1B20</span><span>Night cards</span></div>
-        <div class="sw" style="background:#F3F1EA;color:#121115"><b>Chalk text</b><span class="hex">#F3F1EA</span><span>16.6:1 on cover</span></div>
-        <div class="sw" style="background:#FF6F6F;color:#121115"><b>Red text</b><span class="hex">#FF6F6F</span><span>6.9:1 on cover</span></div>
-        <div class="sw" style="background:#A8A5AE;color:#121115"><b>Muted text</b><span class="hex">#A8A5AE</span><span>7.8:1 on cover</span></div>
-        <div class="sw" style="background:#8DBAE3;color:#121115"><b>Blue labels</b><span class="hex">#8DBAE3</span><span>9.2:1 on cover</span></div>
-      </div>
-    </div>
-    <p class="col muted small">Every text color passes WCAG AA (4.5:1) on every background it sits on; the lowest pair is 5.6:1.</p>
+    <p class="col muted small">Menu text colors from v1 all pass WCAG AA in day and night (lowest pair 5.6:1). Each fighter gets one non-red accent, so red stays unique to cuts.</p>
   </section>
 
   <section>
     <div class="col stack">
       <h2>Type and icons</h2>
-      <p>A stencil display face, because stencil letters are literally cut from paper. A very readable body face. A handwritten face, used sparingly, for hints written in the notebook margin.</p>
+      <p>A stencil display face (stencil letters are cut from paper), a very readable body face, and a handwritten face for margin notes.</p>
     </div>
     <div class="grid2">
       <div class="card specimen stack">
         <p class="eyebrow">Big Shoulders Stencil · Atkinson Hyperlegible · Caveat</p>
         <p class="big">Kami <span>vs</span> Sumi</p>
-        <p>Sumi's blade glints just before the guard switches. Strike in that moment and the cut goes through.</p>
-        <p class="hand">← hold W for a high guard</p>
+        <p>Kami has the way. Reach the page edge before Sumi refolds in front of you.</p>
+        <p class="hand">← jump the low slash</p>
       </div>
       <div class="card stack">
         <div class="icons">
           <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#F4F8FB"/><path d="M8 0V64M0 8H64" stroke="#CFE0EC" stroke-width="1"/><path d="M16 0V64M0 16H64" stroke="#CFE0EC" stroke-width="1"/><path d="M24 0V64M0 24H64" stroke="#CFE0EC" stroke-width="1"/><path d="M32 0V64M0 32H64" stroke="#CFE0EC" stroke-width="1"/><path d="M40 0V64M0 40H64" stroke="#CFE0EC" stroke-width="1"/><path d="M48 0V64M0 48H64" stroke="#CFE0EC" stroke-width="1"/><path d="M56 0V64M0 56H64" stroke="#CFE0EC" stroke-width="1"/><path d="M14 50 L46 13 L50 11 L48 15 L18 53 Z M10 47 L19 56 L17 58 L8 49 Z M12 54 L6 60 L4 58 L10 52 Z" fill="#18171C" stroke="#18171C" stroke-width="9" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M14 50 L46 13 L50 11 L48 15 L18 53 Z M10 47 L19 56 L17 58 L8 49 Z M12 54 L6 60 L4 58 L10 52 Z" fill="#FBFAF6" stroke="#FBFAF6" stroke-width="6.5" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M14 50 L46 13 L50 11 L48 15 L18 53 Z M10 47 L19 56 L17 58 L8 49 Z M12 54 L6 60 L4 58 L10 52 Z" fill="#E9EEF2" stroke="#18171C" stroke-width="1.4" stroke-linejoin="miter"/><path d="M17 49 L46 15" stroke="#FFFFFF" stroke-width="1.6"/><path d="M10 47 L19 56 L17 58 L8 49 Z" fill="#18171C"/><path d="M12 54 L6 60 L4 58 L10 52 Z" fill="#18171C"/><path d="M9 56 l1.6 -1.6 M7 58 l1.2 -1.2" stroke="#2E3F8F" stroke-width="2"/></svg><figcaption>Katana</figcaption></figure>
           <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#F4F8FB"/><path d="M8 0V64M0 8H64" stroke="#CFE0EC" stroke-width="1"/><path d="M16 0V64M0 16H64" stroke="#CFE0EC" stroke-width="1"/><path d="M24 0V64M0 24H64" stroke="#CFE0EC" stroke-width="1"/><path d="M32 0V64M0 32H64" stroke="#CFE0EC" stroke-width="1"/><path d="M40 0V64M0 40H64" stroke="#CFE0EC" stroke-width="1"/><path d="M48 0V64M0 48H64" stroke="#CFE0EC" stroke-width="1"/><path d="M56 0V64M0 56H64" stroke="#CFE0EC" stroke-width="1"/><path d="M30 54 L30 16 L32 9 L34 16 L34 54 Z M24 44 L40 44 L40 47 L24 47 Z" fill="#18171C" stroke="#18171C" stroke-width="9" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M30 54 L30 16 L32 9 L34 16 L34 54 Z M24 44 L40 44 L40 47 L24 47 Z" fill="#FBFAF6" stroke="#FBFAF6" stroke-width="6.5" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M30 54 L30 16 L32 9 L34 16 L34 54 Z M24 44 L40 44 L40 47 L24 47 Z" fill="#E9EEF2" stroke="#18171C" stroke-width="1.4" stroke-linejoin="miter"/><path d="M24 44 L40 44 L40 47 L24 47 Z" fill="#18171C"/><path d="M30 54 L34 54 L34 47 L30 47 Z" fill="#18171C"/><path d="M44 24 L51 16 L58 24" fill="none" stroke="#18171C" stroke-width="3.2" stroke-linejoin="miter"/></svg><figcaption>High</figcaption></figure>
           <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#F4F8FB"/><path d="M8 0V64M0 8H64" stroke="#CFE0EC" stroke-width="1"/><path d="M16 0V64M0 16H64" stroke="#CFE0EC" stroke-width="1"/><path d="M24 0V64M0 24H64" stroke="#CFE0EC" stroke-width="1"/><path d="M32 0V64M0 32H64" stroke="#CFE0EC" stroke-width="1"/><path d="M40 0V64M0 40H64" stroke="#CFE0EC" stroke-width="1"/><path d="M48 0V64M0 48H64" stroke="#CFE0EC" stroke-width="1"/><path d="M56 0V64M0 56H64" stroke="#CFE0EC" stroke-width="1"/><path d="M8 24 L44 41 L52 46 L43 44 L7 28 Z M9 19 L15 31 L12 32 L6 20 Z" fill="#18171C" stroke="#18171C" stroke-width="9" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M8 24 L44 41 L52 46 L43 44 L7 28 Z M9 19 L15 31 L12 32 L6 20 Z" fill="#FBFAF6" stroke="#FBFAF6" stroke-width="6.5" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M8 24 L44 41 L52 46 L43 44 L7 28 Z M9 19 L15 31 L12 32 L6 20 Z" fill="#E9EEF2" stroke="#18171C" stroke-width="1.4" stroke-linejoin="miter"/><path d="M9 19 L15 31 L12 32 L6 20 Z" fill="#18171C"/><path d="M44 14 L51 22 L58 14" fill="none" stroke="#18171C" stroke-width="3.2" stroke-linejoin="miter"/></svg><figcaption>Low</figcaption></figure>
+          <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#F4F8FB"/><path d="M8 0V64M0 8H64" stroke="#CFE0EC" stroke-width="1"/><path d="M16 0V64M0 16H64" stroke="#CFE0EC" stroke-width="1"/><path d="M24 0V64M0 24H64" stroke="#CFE0EC" stroke-width="1"/><path d="M32 0V64M0 32H64" stroke="#CFE0EC" stroke-width="1"/><path d="M40 0V64M0 40H64" stroke="#CFE0EC" stroke-width="1"/><path d="M48 0V64M0 48H64" stroke="#CFE0EC" stroke-width="1"/><path d="M56 0V64M0 56H64" stroke="#CFE0EC" stroke-width="1"/><path d="M8 54 L56 54" stroke="#18171C" stroke-width="2"/><path d="M20 44 L44 44 L46 50 L18 50 Z" fill="#D7262E" opacity="0"/><path d="M32 10 L48 28 L40 28 L40 40 L24 40 L24 28 L16 28 Z" fill="#18171C" stroke="#18171C" stroke-width="9" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M32 10 L48 28 L40 28 L40 40 L24 40 L24 28 L16 28 Z" fill="#FBFAF6" stroke="#FBFAF6" stroke-width="6.5" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M32 10 L48 28 L40 28 L40 40 L24 40 L24 28 L16 28 Z" fill="#FBFAF6" stroke="#18171C" stroke-width="1.4" stroke-linejoin="miter"/><path d="M32 12 L32 39 L40 39 L40 28 L46 28 Z" fill="#DCD8CF"/><path d="M14 48 H22 M42 48 H50" stroke="#18171C" stroke-width="2"/></svg><figcaption>Jump</figcaption></figure>
           <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#F4F8FB"/><path d="M8 0V64M0 8H64" stroke="#CFE0EC" stroke-width="1"/><path d="M16 0V64M0 16H64" stroke="#CFE0EC" stroke-width="1"/><path d="M24 0V64M0 24H64" stroke="#CFE0EC" stroke-width="1"/><path d="M32 0V64M0 32H64" stroke="#CFE0EC" stroke-width="1"/><path d="M40 0V64M0 40H64" stroke="#CFE0EC" stroke-width="1"/><path d="M48 0V64M0 48H64" stroke="#CFE0EC" stroke-width="1"/><path d="M56 0V64M0 56H64" stroke="#CFE0EC" stroke-width="1"/><path d="M14 18 L50 18 L50 50 L14 50 Z" fill="#18171C" stroke="#18171C" stroke-width="9" stroke-linejoin="miter"/><path d="M14 18 L50 18 L50 50 L14 50 Z" fill="#FBFAF6" stroke="#FBFAF6" stroke-width="6.5" stroke-linejoin="miter"/><path d="M14 18 L50 18 L50 50 L14 50 Z" fill="#D7262E"/><path d="M14 40 L50 28 L50 50 L14 50 Z" fill="#FBFAF6" stroke="#18171C" stroke-width="1.4"/><path d="M14 18 L50 18 L50 28 L14 40 Z" transform="translate(3 -2.5)" fill="#FBFAF6" stroke="#18171C" stroke-width="1.4"/><path d="M4 46 L60 27.3" stroke="#18171C" stroke-width="1" opacity=".5"/></svg><figcaption>Clean cut</figcaption></figure>
           <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#F4F8FB"/><path d="M8 0V64M0 8H64" stroke="#CFE0EC" stroke-width="1"/><path d="M16 0V64M0 16H64" stroke="#CFE0EC" stroke-width="1"/><path d="M24 0V64M0 24H64" stroke="#CFE0EC" stroke-width="1"/><path d="M32 0V64M0 32H64" stroke="#CFE0EC" stroke-width="1"/><path d="M40 0V64M0 40H64" stroke="#CFE0EC" stroke-width="1"/><path d="M48 0V64M0 48H64" stroke="#CFE0EC" stroke-width="1"/><path d="M56 0V64M0 56H64" stroke="#CFE0EC" stroke-width="1"/><path d="M40 14 L22 32 L40 50 L46 44 L34 32 L46 20 Z" fill="#18171C" stroke="#18171C" stroke-width="9" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M40 14 L22 32 L40 50 L46 44 L34 32 L46 20 Z" fill="#FBFAF6" stroke="#FBFAF6" stroke-width="6.5" stroke-linejoin="miter" stroke-miterlimit="3"/><path d="M40 14 L22 32 L40 50 L46 44 L34 32 L46 20 Z" fill="#FBFAF6" stroke="#18171C" stroke-width="1.4" stroke-linejoin="miter"/><path d="M50 26 H60 M52 32 H62 M50 38 H60" stroke="#18171C" stroke-width="2"/></svg><figcaption>Dodge</figcaption></figure>
         </div>
-        <p class="small"><strong>Icon rules.</strong> Flat paper shapes with straight edges only. Each one has a white sticker border with a thin ink hairline outside it and another at the piece's edge. Two tones at most per piece (paper and fold grey). Side view, like the game. Red appears only on a cut. Icons sit on a light graph-paper tile so they read in both themes.</p>
+        <p class="small"><strong>Icon rules.</strong> Flat paper shapes with straight edges, a white sticker border with an ink hairline, two tones at most, side view, red only on a cut, on a light graph-paper tile. Menus and icons stay flat paper; only the world is 3D.</p>
       </div>
-    </div>
-    <h3>How a menu looks now</h3>
-    <div class="rows col" role="list">
-      <div class="rowi" role="listitem"><span class="paper p-graph"></span><span class="t"><b>Graph Paper Dojo</b><span>Day · marble mountains, black torii</span></span><span class="s">Milestone 1</span></div>
-      <div class="rowi" role="listitem"><span class="paper p-marble"></span><span class="t"><b>Marble Cover Night</b><span>Night · paper moon, lanterns</span></span><span class="s">Milestone 3</span></div>
-      <div class="rowi" role="listitem"><span class="paper p-lined"></span><span class="t"><b>Ruled Courtyard</b><span>Day · white castle, ink sun</span></span><span class="s">Later</span></div>
-      <div class="rowi" role="listitem"><span class="paper p-legal"></span><span class="t"><b>Legal Pad Grove</b><span>Day · bamboo cut from the pad</span></span><span class="s">Later</span></div>
     </div>
   </section>
 
   <section>
     <div class="col stack">
       <h2>Interaction map</h2>
-      <p>Every duel system shows up on the paper itself, with no meters. The duel rules (plain code with tests) decide what happens; the art only shows it.</p>
+      <p>Every system shows up on the paper itself, with no meters. The duel rules (plain code with tests) decide what happens; the 3D world only shows it.</p>
     </div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>System</th><th>How it looks</th><th>What the player does</th><th>Builds on</th></tr></thead>
+        <thead><tr><th>System</th><th>How it looks</th><th>Player does</th><th>Milestone 1 issue</th></tr></thead>
         <tbody>
-          <tr><td><strong>Move</strong></td><td>Walk along the graph-paper lane; hakama pleats swing.</td><td>A / D, left stick</td><td>Duel lane (GDD), issue #3</td></tr>
-          <tr><td><strong>Stance</strong></td><td>Blade held high over the shoulder or low and forward. Readable from the silhouette alone.</td><td>W / S</td><td>Duel rules, #5</td></tr>
-          <tr><td><strong>Slash</strong></td><td>A wind-up (the tell), then a single thin razor line flashes across the screen: ink for a miss or a block, red for a cut.</td><td>J</td><td>#5, hit feel #8</td></tr>
-          <tr><td><strong>Block / parry</strong></td><td>"Block" sticker, white paper chips, both fighters pushed apart. A parry adds a yellow glint and the attacker sways.</td><td>Guard at the right height</td><td>#5</td></tr>
-          <tr><td><strong>Dodge</strong></td><td>A quick hop back with a lean.</td><td>K</td><td>#5</td></tr>
-          <tr><td><strong>Tell</strong></td><td>A legal-yellow star glints on the blade just before a guard switch.</td><td>Read it, strike in the gap</td><td>Training dummy, #6</td></tr>
-          <tr><td><strong>Cuts 1 and 2</strong></td><td>The doll is sliced along the blade line. The red core shows and the cut half slips a little.</td><td>Land a clean cut</td><td>Paper damage, #7</td></tr>
-          <tr><td><strong>Finishing cut</strong></td><td>Steep diagonal split, slow motion, the camera moves in, the top half slides off and the rest falls. Red flecks stay on the floor.</td><td>Third clean cut</td><td>#7, #8</td></tr>
-          <tr><td><strong>Restart</strong></td><td>A fresh doll is folded in its place.</td><td>R / Start</td><td>#9</td></tr>
-          <tr><td><strong>Tuning panel</strong></td><td>A legal-pad sheet clipped to the corner, with sliders and handwritten labels.</td><td>Drag sliders</td><td>#9</td></tr>
+          <tr><td><strong>Move</strong></td><td>Walk along the lane across the spread; hakama legs swing.</td><td>A / D, left stick</td><td>#3</td></tr>
+          <tr><td><strong>Guard</strong></td><td>Blade high over the shoulder or low and forward, readable from the silhouette.</td><td>W / S</td><td>#5</td></tr>
+          <tr><td><strong>Slash</strong></td><td>Wind-up (the tell), then one thin razor line: ink for a miss or a block, red for a cut.</td><td>F</td><td>#5, #8</td></tr>
+          <tr><td><strong>Block / parry / clash</strong></td><td>"Block" sticker and white paper chips; parry adds a yellow glint and the attacker staggers; a clash bounces both blades.</td><td>Guard at the right height</td><td>#5</td></tr>
+          <tr><td><strong>Jump</strong></td><td>A paper hop; low slashes pass underneath.</td><td>Space</td><td>#5</td></tr>
+          <tr><td><strong>Dodge</strong></td><td>Quick hop back with a lean.</td><td>Q</td><td>#5</td></tr>
+          <tr><td><strong>Tell (dummy)</strong></td><td>A legal-yellow star glints on Sumi's blade just before a guard switch.</td><td>Read it, strike in the gap</td><td>#6</td></tr>
+          <tr><td><strong>Kill</strong></td><td>3D split along the blade line, red inside, slow motion, the camera swings to a three-quarter view.</td><td>Land a clean cut</td><td>#7, #8</td></tr>
+          <tr><td><strong>Refold</strong></td><td>The loser folds up out of the page ahead of the winner.</td><td>(automatic)</td><td>#7</td></tr>
+          <tr><td><strong>Page turn</strong></td><td>Everything folds flat, the page swings over the spine, the next spread's pop-ups rise.</td><td>Reach the edge while you have the way</td><td>new</td></tr>
+          <tr><td><strong>Win</strong></td><td>The last page turns onto the rival's marble cover at night.</td><td>Reach the cover</td><td>new</td></tr>
         </tbody>
       </table>
     </div>
@@ -371,80 +402,88 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
   <section>
     <div class="col stack">
       <h2>Technology</h2>
-      <p>No change of stack. The style fits Three.js unusually well: because the fighters are flat, a "real" cut is just a flat slice, which is cheap.</p>
-    </div>
-    <div class="layers">
-      <div class="layer"><b>Menus</b><span>HTML on top: title, arena select, tuning panel.</span><span class="tag alt">unchanged plan</span></div>
-      <div class="layer new"><b>Paper world</b><span>Three.js: flat-shape dolls with generated sticker borders, a paper diorama with real shadows, clipping-plane cuts.</span><span class="tag">new style</span></div>
-      <div class="layer"><b>Duel rules</b><span>Plain TypeScript with tests. It decides block, parry and cut; the paper world shows the result.</span><span class="tag alt">unchanged plan</span></div>
-      <div class="layer new"><b>Art files</b><span>Code-made shapes in Milestone 1; flat pieces from Blender (.glb) from Milestone 2.</span><span class="tag">new style</span></div>
+      <p>No new stack. Three.js does the 3D, and nothing in the look needs custom shaders: flat shading, inside-out outline copies and clipping planes are all built in.</p>
     </div>
     <div class="tablebox">
       <table>
         <thead><tr><th>Option</th><th>Verdict</th></tr></thead>
         <tbody>
-          <tr><td><strong>Three.js flat layered shapes + clipping-plane cuts</strong> <span class="tag">Recommended</span></td><td>Already the stack. Each piece is drawn as ink hairline, white border, red core and face, so borders are exact, and a cut slices along the blade's real line. It's what the mock-up above runs on.</td></tr>
-          <tr><td>Screen-space outline (post-processing)</td><td>One border around the whole body, so it loses the per-piece paper margins that make it look cut out. It's also an extra render pass, and a white-plus-ink double border is fiddly. Keep it for later scenery touches at most.</td></tr>
-          <tr><td>Real-time 3D mesh cutting</td><td>Not needed: on flat dolls a clipping plane already is a true cut. Revisit only for folded 3D props.</td></tr>
-          <tr><td>2D engine (PixiJS or canvas)</td><td>Loses the 3D pop-up diorama, real shadows and the rigging test-bed purpose of the game.</td></tr>
-          <tr><td>Rapier physics for falling halves</td><td>Not needed for Milestone 1. Scripted falls (as in the mock-up) look right and save about 1.5 MB. Add Rapier when pieces must bounce off scenery.</td></tr>
+          <tr><td><strong>Faceted shells + inverted-hull outline + clipping-plane cuts</strong> <span class="tag">Recommended</span></td><td>What the mock-up runs on. Works on any model, including skinned Blender ones. A cut is two clipped copies, and the red inside comes free from the shell's inner faces.</td></tr>
+          <tr><td>Screen-space outline (post-processing)</td><td>One outline around everything, which loses the per-piece "cut out" look. It adds a full-screen pass and struggles with a white-plus-ink double edge.</td></tr>
+          <tr><td>Real mesh cutting (3D boolean)</td><td>Gives true cut faces, but it's slow, fragile on skinned meshes and hard to keep in sync online. Clipping looks the same from the game's camera.</td></tr>
+          <tr><td>Toon shader with smooth models</td><td>Reads as cartoon, not paper. Folded facets are the identity.</td></tr>
+          <tr><td>Rapier physics for halves</td><td>Scripted tumbling (as in the mock-up) is enough for Milestone 1. Rapier comes in when halves should bounce off pop-ups (decision 3).</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="grid3">
-      <div class="card"><h3>Loading</h3><p>Under 2 MB to first duel. No image downloads in Milestone 1: every paper texture is generated in code.</p></div>
-      <div class="card"><h3>Geometry</h3><p>A doll is about 15 pieces of 6 flat layers, about 1,500 triangles. Whole scene under 20,000 triangles and 400 draw calls, even with Sumi cut in three.</p></div>
-      <div class="card"><h3>Frame rate</h3><p>60 fps on integrated laptop graphics, one 2048 shadow map. Hitstop and slow motion change game time only; input is read every frame.</p></div>
+    <div class="grid2">
+      <div class="card stack">
+        <h3>Built for online from day one</h3>
+        <ul class="clean">
+          <li>The duel runs on a fixed 60-step-a-second clock, decided only by the players' button presses. The mock-up already runs this way.</li>
+          <li>Rules live in plain code with tests, separate from drawing, so the same match can be replayed exactly.</li>
+          <li>Milestone 2 sends only button presses between two browsers (WebRTC), with rollback to hide lag, plus a tiny service to connect players by invite link.</li>
+          <li>Effects (flecks, camera, halves tumbling) are cosmetic and never affect who wins.</li>
+        </ul>
+      </div>
+      <div class="card stack">
+        <h3>Budgets</h3>
+        <ul class="clean">
+          <li><strong>Loading:</strong> under 2 MB to the first duel; paper textures are generated in code.</li>
+          <li><strong>Geometry:</strong> a fighter is about 15 parts, roughly 1,500 triangles with its outline copies. Scene under 30,000 triangles and 500 draw calls with halves on the page.</li>
+          <li><strong>Frame rate:</strong> 60 fps on integrated laptop graphics, one 2048 shadow map. Slow motion and hitstop change game time only; input is read every frame.</li>
+        </ul>
+      </div>
     </div>
   </section>
 
   <section>
     <div class="col stack">
       <h2>Making the art</h2>
-      <p>The style is built to be cheap: flat pieces with straight edges, two tones each, and the game adds the borders, the red core and the cuts. Drawing a new fighter means drawing about 15 flat shapes.</p>
+      <p>Low-poly on purpose: a fighter is about 15 simple folded shapes in one or two colors each. The game adds the outline and the red inside, so a model needs no special materials.</p>
     </div>
     <div class="grid3">
-      <div class="card"><h3>Milestone 1</h3><p>Kami and Sumi built from code shapes (like the mock-up). Feel gets tuned on these.</p></div>
-      <div class="card"><h3>Milestone 2</h3><p>Kami redrawn in Blender: one flat mesh per piece, parented to a bone, exported as .glb. The game generates border, hairline and core from each piece's outline.</p></div>
-      <div class="card"><h3>Later</h3><p>Once the duel is fun, an illustrator can draw character sheets in this style and we trace them in Blender.</p></div>
+      <div class="card"><h3>Milestone 1</h3><p>Kami and Sumi built from code shapes, as in the mock-up. Feel is tuned on these.</p></div>
+      <div class="card"><h3>Milestone 3</h3><p>Kami remade in Blender: low-poly parts, flat shading, one bone per part, exported as .glb. This is the rigging test bed.</p></div>
+      <div class="card"><h3>Later</h3><p>New fighters and blades follow the same piece list, so each one is a modeling job, not a coding job.</p></div>
     </div>
     <div class="grid2">
       <div class="card stack">
-        <h3>Making one fighter in Blender (preview)</h3>
+        <h3>One fighter in Blender (preview)</h3>
         <ol class="steps">
-          <li>Add the concept image as a reference (<code>Add › Image › Reference</code>), viewed from the front.</li>
-          <li>For each piece (head, hair, torso, arms, legs, feet, blade parts): <code>Add › Mesh › Plane</code>, then in Edit Mode move its corners to trace the piece. Straight edges only.</li>
-          <li>Name each piece from the list (<code>torso</code>, <code>head</code>, <code>armFU</code>…).</li>
-          <li>Add an armature with one bone per pin and parent each piece to its bone (<code>Ctrl+P › Bone</code>).</li>
-          <li>Export with <code>File › Export › glTF 2.0</code>. A full click-by-click guide comes with Milestone 2.</li>
+          <li>Load the concept image as a side-view reference.</li>
+          <li>Block each part from a low-poly primitive (a 4-sided cylinder for limbs and torso, a 6-sided one for the head). Keep facets big: no subdivision, no bevels.</li>
+          <li>Set every part to flat shading and give it one plain color.</li>
+          <li>Add an armature with one bone per part and parent each part to its bone.</li>
+          <li>Export with <code>File › Export › glTF 2.0</code>. A full click-by-click guide comes with that milestone.</li>
         </ol>
       </div>
       <div class="card stack">
         <h3>Concept prompt</h3>
-        <div class="prompt" id="promptText">Original paper-doll samurai character, side view facing right, made of flat angular white card pieces joined at pins, clean straight razor-sharp edges, no curves, thick white sticker border with a thin black hairline outside it, black ink hair with a topknot, white gi, wide white hakama with light grey folds, indigo sash, katana with an indigo-wrapped grip, standing on blue graph paper, soft paper drop shadow, flat colors, no gradients, no text, no red anywhere.</div>
+        <div class="prompt" id="promptText">Original low-poly papercraft samurai character, folded white paper with crisp flat facets like origami, three-quarter view, diamond-shaped torso and limbs, wide flared hakama trousers, black paper hair with a topknot, indigo sash, katana with an indigo-wrapped grip, thick white sticker outline with a thin black edge around each piece, standing on blue graph paper in an open notebook, soft drop shadow, flat colors, no text, no red anywhere.</div>
         <button class="copy" id="copyPrompt" type="button">Copy prompt</button>
-        <p class="muted small">Check the commercial-use terms of any image tool before using its output in the game, and don't name other franchises' characters in prompts.</p>
+        <p class="muted small">Check the commercial-use terms of any image tool before using its output, and don't name other franchises' characters in prompts.</p>
       </div>
     </div>
   </section>
 
   <section>
     <div class="col stack">
-      <h2>Conflicts with the design docs</h2>
-      <p>These places in the GDD and the Milestone 1 issues disagree with this direction. I haven't edited them yet. Once you approve, I'll update them and log the decisions in the same PR as the first visual work.</p>
+      <h2>What changes in the design docs</h2>
+      <p>You approved the style, 3D, PvP, the page match and jump, so these GDD changes are made on the <code>art/direction</code> branch, each logged in the Decision Log. The Milestone 1 issues on GitHub still describe the old plan, and I'll update them once you confirm.</p>
     </div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Where</th><th>Says today</th><th>Would say</th></tr></thead>
+        <thead><tr><th>Where</th><th>Said</th><th>Says now</th></tr></thead>
         <tbody>
-          <tr><td>GDD · Pitch</td><td class="now">Art reference: the flat, papercraft look of Paper Mario.</td><td>Sticker-border paper dolls with flat, angular samurai shapes, on a pop-up stage built from school stationery (the Notebook Dojo).</td></tr>
-          <tr><td>GDD · Pillar 1</td><td class="now">Damage is tears, hanging flaps, loose pieces.</td><td>Damage is razor-clean cuts that show a red paper core; halves slip and fall. Red appears only where paper is cut.</td></tr>
-          <tr><td>GDD · Pillar 4</td><td class="now">Handmade from paper and card, like a pop-up book stage.</td><td>A pop-up stage made of stationery: graph paper, ruled paper, legal pad, marble covers, kraft card.</td></tr>
-          <tr><td>GDD · Paper damage</td><td class="now">Torn edge via swapped texture, flap on a pin, Rapier physics halves.</td><td>A real cut along the blade line (clipping) shows the red core; cuts 1 and 2 slip, cut 3 splits; scripted falls.</td></tr>
-          <tr><td>GDD · Platform and tech</td><td class="now">Rapier for split pieces, debris, knockback.</td><td>Rapier waits until pieces must collide with scenery (decision 7).</td></tr>
-          <tr><td>GDD · First playable</td><td class="now">A grey-box lane and floor.</td><td>The Graph Paper Dojo floor and backdrop (cheap: generated textures).</td></tr>
-          <tr><td>GDD · Roadmap, Milestone 2</td><td class="now">Rigged doll and blade exported to glTF.</td><td>Flat pieces on bones; the game builds borders, core and cuts from each outline.</td></tr>
-          <tr><td>Issues #3, #4, #7</td><td class="now">Grey-box lane; doll from card shapes; tear, loose piece, split.</td><td>Graph Paper Dojo; Kami and Sumi with sticker border and red core; clipping cuts with slip and split.</td></tr>
+          <tr><td>Pitch and fantasy</td><td class="now">A paper swordfighter vs AI, Paper Mario look</td><td>Folded paper samurai, PvP, fighting across a 3D pop-up notebook</td></tr>
+          <tr><td>Core loop</td><td class="now">Best-of-3 duels against AI fighters</td><td>One cut kills, refold, push across pages, reach the rival's cover</td></tr>
+          <tr><td>Pillar 1 · Every cut shows</td><td class="now">Tears, hanging flaps, loose pieces</td><td>Every kill splits a fighter in 3D and shows the red inside; red only where paper is cut</td></tr>
+          <tr><td>Pillar 4</td><td class="now">Pop-up diorama</td><td>A 3D pop-up notebook made of stationery; pages really turn</td></tr>
+          <tr><td>Duel rules</td><td class="now">Three cuts, no jump</td><td>One cut kills; jump added; clash added; right of way and page turns</td></tr>
+          <tr><td>Opponents</td><td class="now">Dummy, then AI fighters, 2P maybe later</td><td>PvP: local in M1, online in M2; Sumi as a practice dummy; no AI bot for now</td></tr>
+          <tr><td>Tech</td><td class="now">Rapier for split pieces</td><td>Fixed-step, input-driven rules ready for rollback; Rapier deferred</td></tr>
+          <tr><td>Roadmap</td><td class="now">M2 Blender doll, M3 duel vs AI</td><td>M2 online duels, M3 Blender fighters, M4 the full notebook</td></tr>
         </tbody>
       </table>
     </div>
@@ -454,25 +493,21 @@ ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
     <div class="col stack">
       <h2>Plan</h2>
       <ol class="steps">
-        <li class="phase"><strong>Approve the look.</strong> GDD, Decision Log and issues #3, #4, #7 updated in the first build's PR.</li>
-        <li class="phase"><strong>Milestone 1 in this style.</strong> Setup and deploy (#2), Graph Paper Dojo (#3), Kami and Sumi dolls (#4), duel rules (#5), Sumi as the dummy with the glint tell (#6), cuts (#7), hit feel (#8), tuning panel (#9), playtest guide (#10).</li>
-        <li class="phase"><strong>Milestone 2.</strong> Kami redrawn in Blender with the piece list, plus the pipeline guide.</li>
-        <li class="phase"><strong>Milestone 3.</strong> Sumi as an AI rival, and Marble Cover Night as the second arena.</li>
-        <li class="phase"><strong>Later.</strong> Ruled Courtyard, Legal Pad Grove, more fighters and blades.</li>
+        <li><strong>Milestone 1, feel test (local PvP).</strong> Setup and deploy, the 3D notebook spread, Kami and Sumi from code shapes, duel rules with jump and clash, the dummy, cuts and refold, hit feel, page turns across three spreads, tuning panel, playtest guide.</li>
+        <li><strong>Milestone 2, online duels.</strong> Invite links, WebRTC, rollback.</li>
+        <li><strong>Milestone 3, Blender fighters.</strong> Kami remade in Blender and the pipeline guide.</li>
+        <li><strong>Milestone 4, the full notebook.</strong> More spreads and arenas, menus, more blades.</li>
       </ol>
     </div>
     <div class="decide col">
-      <h3 style="margin-bottom:14px">What I need from you</h3>
+      <h3 style="margin-bottom:14px">Still open</h3>
       <ol>
-        <li><b>World:</b> the Notebook Dojo (stationery pop-up, A), or the washi pop-up book (B)?</li>
-        <li><b>The red rule:</b> red appears only where paper is cut, because fighters are two-ply card with a red core. Agreed?</li>
-        <li><b>Cuts:</b> razor-clean cuts that slip (as in the mock-up) instead of torn edges?</li>
-        <li><b>Outline:</b> white sticker border with ink hairline, on fighters only (scenery gets no border)? Try the Outline button.</li>
-        <li><b>Motion:</b> smooth poses, or South Park-style stop-motion? Try the Motion button.</li>
-        <li><b>Names:</b> Kami for the player and Sumi for the rival?</li>
-        <li><b>Rapier:</b> leave it out of Milestone 1 and use scripted falls?</li>
+        <li><b>Names:</b> Kami for player 1 and Sumi for player 2?</li>
+        <li><b>Motion:</b> smooth poses, or stop-motion? Try the Motion button.</li>
+        <li><b>Rapier:</b> leave it out of Milestone 1 and use scripted tumbling?</li>
+        <li><b>Go:</b> update the Milestone 1 issues to this plan and open the PR?</li>
       </ol>
-      <p class="muted small" style="margin-top:14px">Risks: art is still the slowest part (the Blender step in Milestone 2 is the real test), and white-on-white can wash out, which is why every fighter keeps the ink hairline and a drop shadow.</p>
+      <p class="muted small" style="margin-top:14px">Risks: online play is the biggest technical job (Milestone 2), and 3D models are slower to make than flat pieces. Keeping parts low-poly and letting the game add outlines and the red inside keeps that manageable.</p>
     </div>
   </section>
 </div>
@@ -487,9 +522,8 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 
 $('#copyPrompt').addEventListener('click', () => {
   const txt = $('#promptText').textContent;
-  const done = () => { $('#copyPrompt').textContent = 'Copied'; setTimeout(() => $('#copyPrompt').textContent = 'Copy prompt', 1600); };
-  try { navigator.clipboard.writeText(txt).then(done, () => selectPrompt()); } catch (e) { selectPrompt(); }
-  function selectPrompt() { const r = document.createRange(); r.selectNodeContents($('#promptText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  const sel = () => { const r = document.createRange(); r.selectNodeContents($('#promptText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+  try { navigator.clipboard.writeText(txt).then(() => { $('#copyPrompt').textContent = 'Copied'; setTimeout(() => $('#copyPrompt').textContent = 'Copy prompt', 1600); }, sel); } catch (e) { sel(); }
 });
 
 let renderer;
@@ -499,9 +533,8 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.localClippingEnabled = true;
-
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 140);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 160);
 
 // ---------- palette ----------
 const C = {
@@ -509,8 +542,8 @@ const C = {
   steel: '#E9EEF2', indigo: '#2E3F8F', gold: '#D9A21B', kraft: '#B98B5E', legal: '#F6E27F',
   marble: '#141316', white: '#FFFFFF',
 };
-const KAMI = { gi: C.paper, giFold: C.fold, hakama: C.paper, hakamaFold: C.fold, pleat: C.fold, sash: C.indigo, hair: C.ink, grip: C.indigo };
-const SUMI = { gi: C.paper, giFold: C.fold, hakama: C.ink, hakamaFold: '#2B2A31', pleat: '#3B3A42', sash: C.gold, hair: C.ink, grip: C.gold };
+const KAMI = { name: 'Kami', gi: C.paper, giFold: C.fold, hakama: C.paper, hakamaFold: '#E6E2D9', sash: C.indigo, hair: C.ink, grip: C.indigo };
+const SUMI = { name: 'Sumi', gi: C.paper, giFold: C.fold, hakama: '#26252B', hakamaFold: '#1E1D22', sash: C.gold, hair: C.ink, grip: C.gold };
 
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -518,688 +551,664 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const easeIn = (k) => k * k;
 const easeOut = (k) => 1 - (1 - k) * (1 - k);
 const easeIO = (k) => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+const backOut = (k) => { const c = 1.9; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
+const D = Math.PI / 180;
 
-// ---------- paper textures (all generated, no downloads) ----------
+// ---------- paper textures (generated, no downloads) ----------
 function canvasTex(size, draw) {
-  const c = document.createElement('canvas'); c.width = c.height = size;
-  draw(c.getContext('2d'), size);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  return t;
+  const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); return t;
 }
-function grain(g, s, seed, dark = 'rgba(70,60,50,', a = .05) {
-  const r = mulberry32(seed);
-  for (let i = 0; i < s * s / 70; i++) { g.fillStyle = dark + (a * r()).toFixed(3) + ')'; g.fillRect(r() * s, r() * s, 1.5, 1.5); }
-}
-function ruled(bg, line, seed) {
-  return canvasTex(512, (g, s) => {
-    g.fillStyle = bg; g.fillRect(0, 0, s, s); grain(g, s, seed);
-    g.fillStyle = line; for (let i = 0; i < 8; i++) g.fillRect(0, i * s / 8 + s / 16, s, 3);
-  });
-}
+function grain(g, s, seed, a = .05) { const r = mulberry32(seed); for (let i = 0; i < s * s / 70; i++) { g.fillStyle = `rgba(70,60,50,${(a * r()).toFixed(3)})`; g.fillRect(r() * s, r() * s, 1.5, 1.5); } }
+function ruled(bg, line, seed) { return canvasTex(512, (g, s) => { g.fillStyle = bg; g.fillRect(0, 0, s, s); grain(g, s, seed); g.fillStyle = line; for (let i = 0; i < 8; i++) g.fillRect(0, i * s / 8 + s / 16, s, 3); }); }
 const TEX = {
-  graph: canvasTex(512, (g, s) => {
-    g.fillStyle = C.paper; g.fillRect(0, 0, s, s); grain(g, s, 3);
-    const n = 10, st = s / n;
-    for (let i = 0; i < n; i++) {
-      const major = i % 5 === 0; g.fillStyle = major ? '#86B2D4' : '#B7D2E7';
-      const w = major ? 3 : 1.6; g.fillRect(i * st, 0, w, s); g.fillRect(0, i * st, s, w);
-    }
-  }),
+  graph: canvasTex(512, (g, s) => { g.fillStyle = C.paper; g.fillRect(0, 0, s, s); grain(g, s, 3); const n = 10, st = s / n; for (let i = 0; i < n; i++) { const m = i % 5 === 0; g.fillStyle = m ? '#86B2D4' : '#B7D2E7'; const w = m ? 3 : 1.6; g.fillRect(i * st, 0, w, s); g.fillRect(0, i * st, s, w); } }),
   lined: ruled(C.paper, '#8FB0D3', 5),
   legal: ruled(C.legal, '#7FA3CC', 7),
-  marble: canvasTex(512, (g, s) => {
-    g.fillStyle = C.marble; g.fillRect(0, 0, s, s);
-    const r = mulberry32(11);
-    const blob = (x, y, rad, col) => { g.fillStyle = col; g.beginPath(); const k = 3 + Math.floor(r() * 4); for (let i = 0; i < k; i++) { const a = i / k * Math.PI * 2 + r() * .6; const rr = rad * (.5 + r() * .8); g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); };
-    for (let i = 0; i < 900; i++) { const x = r() * s, y = r() * s; for (const ox of [-s, 0, s]) for (const oy of [-s, 0, s]) { /* wrap so the tile repeats */ if (Math.abs(ox) + Math.abs(oy) === 0 || (x + ox > -12 && x + ox < s + 12 && y + oy > -12 && y + oy < s + 12)) blob(x + ox, y + oy, 1 + r() * 5, r() < .78 ? '#F1EFE8' : '#8E8B94'); } }
+  cover: canvasTex(512, (g, s) => {
+    g.fillStyle = C.marble; g.fillRect(0, 0, s, s); const r = mulberry32(11);
+    const blob = (x, y, rad, col) => { g.fillStyle = col; g.beginPath(); const k = 3 + Math.floor(r() * 4); for (let i = 0; i < k; i++) { const a = i / k * Math.PI * 2 + r() * .6, rr = rad * (.5 + r() * .8); g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); };
+    for (let i = 0; i < 900; i++) { const x = r() * s, y = r() * s, rad = 1 + r() * 5, col = r() < .78 ? '#F1EFE8' : '#8E8B94'; for (const ox of [-s, 0, s]) for (const oy of [-s, 0, s]) if (x + ox > -12 && x + ox < s + 12 && y + oy > -12 && y + oy < s + 12) blob(x + ox, y + oy, rad, col); }
   }),
-  kraft: canvasTex(256, (g, s) => {
-    g.fillStyle = C.kraft; g.fillRect(0, 0, s, s); const r = mulberry32(13);
-    for (let i = 0; i < 700; i++) { g.strokeStyle = `rgba(${r() < .5 ? '90,60,30' : '230,200,160'},${.18 * r()})`; g.lineWidth = 1; g.beginPath(); const x = r() * s, y = r() * s, a = r() * Math.PI; g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 9, y + Math.sin(a) * 9); g.stroke(); }
-  }),
+  kraft: canvasTex(256, (g, s) => { g.fillStyle = C.kraft; g.fillRect(0, 0, s, s); const r = mulberry32(13); for (let i = 0; i < 700; i++) { g.strokeStyle = `rgba(${r() < .5 ? '90,60,30' : '230,200,160'},${.18 * r()})`; g.beginPath(); const x = r() * s, y = r() * s, a = r() * Math.PI; g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 9, y + Math.sin(a) * 9); g.stroke(); } }),
+  edges: canvasTex(256, (g, s) => { g.fillStyle = '#F2EEE4'; g.fillRect(0, 0, s, s); for (let y = 0; y < s; y += 4) { g.fillStyle = y % 8 ? '#DCD6C8' : '#E8E3D7'; g.fillRect(0, y, s, 1.5); } }),
 };
-function texRepeat(key, rx, ry) { const t = TEX[key].clone(); t.needsUpdate = true; t.repeat.set(rx, ry); return t; }
-
-// ---------- materials ----------
+const texCache = new Map();
+function texRepeat(key, rx, ry) { const k = key + rx + ',' + ry; if (!texCache.has(k)) { const t = TEX[key].clone(); t.needsUpdate = true; t.repeat.set(rx, ry); texCache.set(k, t); } return texCache.get(k); }
 const lambertCache = new Map();
-function lambert(color, map) {
-  const k = color + (map ? map.uuid : '');
-  if (!lambertCache.has(k)) lambertCache.set(k, new THREE.MeshLambertMaterial({ color, map: map || null, side: THREE.DoubleSide }));
-  return lambertCache.get(k);
-}
+function lambert(color, map = null, flat = false) { const k = color + (map ? map.uuid : '') + flat; if (!lambertCache.has(k)) lambertCache.set(k, new THREE.MeshLambertMaterial({ color, map, flatShading: flat })); return lambertCache.get(k); }
 
-// ---------- polygon helpers ----------
-function area(p) { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[(i + 1) % p.length]; a += p[i][0] * q[1] - q[0] * p[i][1]; } return a / 2; }
-function ccw(p) { return area(p) < 0 ? p.slice().reverse() : p; }
-function offsetPoly(pts, d) {
-  const p = ccw(pts), n = p.length, out = [];
-  for (let i = 0; i < n; i++) {
-    const a = p[(i - 1 + n) % n], b = p[i], c = p[(i + 1) % n];
-    let e1 = [b[0] - a[0], b[1] - a[1]], e2 = [c[0] - b[0], c[1] - b[1]];
-    const l1 = Math.hypot(...e1), l2 = Math.hypot(...e2); e1 = [e1[0] / l1, e1[1] / l1]; e2 = [e2[0] / l2, e2[1] / l2];
-    const n1 = [e1[1], -e1[0]], n2 = [e2[1], -e2[0]];
-    let m = [n1[0] + n2[0], n1[1] + n2[1]]; const ml = Math.hypot(...m) || 1; m = [m[0] / ml, m[1] / ml];
-    const cosH = Math.max(m[0] * n1[0] + m[1] * n1[1], .38);
-    out.push([b[0] + m[0] * d / cosH, b[1] + m[1] * d / cosH]);
-  }
-  return out;
+// ---------- folded-paper fighter ----------
+function frustum(rt, rb, h, seg, pivot, sz = 1) { const g = new THREE.CylinderGeometry(rt, rb, h, seg, 1); g.translate(0, pivot === 'top' ? -h / 2 : h / 2, 0); g.scale(1, 1, sz); return g; }
+function limb(r0, r1, len) { const g = new THREE.CylinderGeometry(r1, r0, len, 4, 1); g.rotateZ(-Math.PI / 2); g.translate(len / 2, 0, 0); return g; }
+function box(w, h, d, x = 0, y = 0, z = 0) { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z); return g; }
+function merge(...gs) {
+  const pos = [], nor = [];
+  for (const g0 of gs) { const g = g0.index ? g0.toNonIndexed() : g0; g.computeVertexNormals(); pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array); }
+  const m = new THREE.BufferGeometry(); m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); return m;
 }
-function shapeGeo(pts) { return new THREE.ShapeGeometry(new THREE.Shape(pts.map((q) => new THREE.Vector2(q[0], q[1])))); }
-function ngon(r, k = 16, rot = 0) { const p = []; for (let i = 0; i < k; i++) { const a = rot + i / k * Math.PI * 2; p.push([Math.cos(a) * r, Math.sin(a) * r]); } return p; }
-
-// ---------- the paper doll ----------
-// One entry per piece. pts are in the piece's own space, measured from its pin. Straight edges only.
-const UPPER = [[-0.06, -0.065], [0.32, -0.05], [0.33, 0.055], [-0.06, 0.075]];
-const LOWER = [[-0.03, -0.045], [0.29, -0.04], [0.345, 0.0], [0.29, 0.042], [-0.03, 0.05]];
-const LEG = [[-0.15, 0.04], [0.13, 0.04], [0.22, -0.9], [-0.24, -0.9]];
-const FOOT = [[-0.07, 0], [0.18, 0], [0.16, 0.075], [-0.05, 0.075]];
-const PIECES = [
-  { n: 'legB', z: 0.00, pts: LEG, face: 'hakamaFold', det: [[[[-0.02, 0.0], [0.0, 0.0], [0.02, -0.88], [0.0, -0.88]], 'pleat']] },
-  { n: 'footB', z: 0.01, pts: FOOT, face: 'ink' },
-  { n: 'armBU', z: 0.02, pts: UPPER, face: 'giFold' },
-  { n: 'armBL', z: 0.03, pts: LOWER, face: 'giFold' },
-  { n: 'legF', z: 0.05, pts: LEG, face: 'hakama', det: [[[[-0.03, 0.0], [-0.01, 0.0], [0.0, -0.88], [-0.02, -0.88]], 'pleat'], [[[0.07, 0.0], [0.09, 0.0], [0.13, -0.88], [0.11, -0.88]], 'pleat']] },
-  { n: 'footF', z: 0.06, pts: FOOT, face: 'ink' },
-  { n: 'torso', z: 0.07, pts: [[-0.2, -0.04], [0.19, -0.04], [0.25, 0.76], [-0.23, 0.76]], face: 'gi', det: [
-    [[[-0.2, -0.04], [-0.07, -0.04], [-0.11, 0.76], [-0.23, 0.76]], 'giFold'],
-    [[[0.0, 0.76], [0.21, 0.76], [0.1, 0.48]], 'giFold'],
-    [[[0.093, 0.48], [0.107, 0.48], [0.215, 0.76], [0.195, 0.76]], 'ink'],
-    [[[-0.205, 0.03], [0.2, 0.03], [0.205, 0.14], [-0.21, 0.14]], 'sash'],
-  ] },
-  { n: 'head', z: 0.09, pts: [[-0.15, 0.02], [0.06, 0.0], [0.17, 0.12], [0.17, 0.34], [0.1, 0.44], [-0.14, 0.44], [-0.18, 0.3]], face: 'gi', det: [
-    [[[-0.075, 0.16], [-0.01, 0.16], [-0.01, 0.27], [-0.075, 0.27]], 'giFold'],
-    [[[0.06, 0.25], [0.15, 0.235], [0.15, 0.268], [0.072, 0.292]], 'ink'],
-    [[[0.03, 0.302], [0.17, 0.284], [0.17, 0.312], [0.04, 0.33]], 'ink'],
-    [[[0.1, 0.1], [0.155, 0.112], [0.155, 0.125], [0.1, 0.116]], 'ink'],
-  ] },
-  { n: 'knot', z: 0.095, pts: [[-0.07, 0.46], [0.0, 0.46], [0.05, 0.67], [-0.03, 0.61]], face: 'hair' },
-  { n: 'hair', z: 0.10, pts: [[-0.21, 0.2], [0.15, 0.37], [0.13, 0.5], [-0.17, 0.5], [-0.23, 0.33]], face: 'hair' },
-  { n: 'handle', z: 0.12, pts: [[-0.3, -0.03], [0.0, -0.03], [0.0, 0.03], [-0.3, 0.03]], face: 'ink', det: [0, 1, 2, 3].map((k) => { const x = -0.275 + k * 0.068; return [[[x, 0], [x + 0.03, -0.022], [x + 0.06, 0], [x + 0.03, 0.022]], 'grip']; }) },
-  { n: 'blade', z: 0.125, pts: [[0.04, -0.024], [1.1, -0.024], [1.21, 0.022], [0.04, 0.024]], face: 'steel', border: 0.022, det: [[[[0.06, 0.004], [1.07, 0.004], [1.12, 0.013], [0.06, 0.013]], 'white']] },
-  { n: 'tsuba', z: 0.13, pts: [[0.0, -0.066], [0.045, -0.066], [0.045, 0.066], [0.0, 0.066]], face: 'ink' },
-  { n: 'armFU', z: 0.15, pts: UPPER, face: 'gi' },
-  { n: 'armFL', z: 0.16, pts: LOWER, face: 'gi', det: [[[[0.0, -0.04], [0.06, -0.04], [0.06, 0.047], [0.0, 0.048]], 'giFold']] },
+// Inverted hull: push every vertex out along the average normal of all faces that share its position.
+const hullCache = new Map();
+function hullOf(geo, d) {
+  const key = geo.uuid + d; if (hullCache.has(key)) return hullCache.get(key);
+  const g = geo.clone(); g.computeVertexNormals();
+  const pos = g.attributes.position, nor = g.attributes.normal, acc = new Map(), k = (i) => pos.getX(i).toFixed(4) + ',' + pos.getY(i).toFixed(4) + ',' + pos.getZ(i).toFixed(4);
+  for (let i = 0; i < pos.count; i++) { const a = acc.get(k(i)) || [0, 0, 0]; a[0] += nor.getX(i); a[1] += nor.getY(i); a[2] += nor.getZ(i); acc.set(k(i), a); }
+  const out = [];
+  for (let i = 0; i < pos.count; i++) { const a = acc.get(k(i)), l = Math.hypot(...a) || 1; out.push([pos.getX(i) + a[0] / l * d, pos.getY(i) + a[1] / l * d, pos.getZ(i) + a[2] / l * d]); }
+  out.forEach((p, i) => pos.setXYZ(i, ...p)); pos.needsUpdate = true; hullCache.set(key, g); return g;
+}
+const bladeShape = new THREE.Shape([[0.04, -0.026], [1.1, -0.026], [1.22, 0.024], [0.04, 0.026]].map((p) => new THREE.Vector2(...p)));
+const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, { depth: 0.018, bevelEnabled: false }); bladeGeo.translate(0, 0, -0.009);
+const LEG = frustum(0.1, 0.23, 0.9, 4, 'top', 0.72);
+const UP = limb(0.07, 0.056, 0.32), LOW = merge(limb(0.056, 0.046, 0.3), box(0.085, 0.085, 0.08, 0.32, 0, 0));
+const FOOT = box(0.26, 0.075, 0.13, 0.06, 0.0375, 0);
+const HEAD = frustum(0.155, 0.13, 0.36, 6, 'bottom', 0.9);
+// parts: [name, z, meshes [[geo, colorKey, outline scale]], details [[geo, colorKey]]]
+const PARTS = [
+  ['legB', -0.11, [[LEG, 'hakamaFold']]],
+  ['footB', -0.11, [[FOOT, 'ink']]],
+  ['armBU', -0.15, [[UP, 'giFold']]],
+  ['armBL', -0.15, [[LOW, 'giFold']]],
+  ['legF', 0.11, [[LEG, 'hakama']]],
+  ['footF', 0.11, [[FOOT, 'ink']]],
+  ['torso', 0, [[frustum(0.28, 0.2, 0.78, 4, 'bottom', 0.66), 'gi']], [[frustum(0.218, 0.207, 0.13, 4, 'bottom', 0.7).translate(0, 0.03, 0), 'sash']]],
+  ['head', 0, [[HEAD, 'gi']], [
+    [box(0.06, 0.026, 0.012, 0.05, 0.21, 0.122).rotateZ(-0.12), 'ink'], [box(0.06, 0.026, 0.012, 0.05, 0.21, -0.122).rotateZ(-0.12), 'ink'],
+    [box(0.085, 0.022, 0.012, 0.045, 0.258, 0.124).rotateZ(-0.2), 'ink'], [box(0.085, 0.022, 0.012, 0.045, 0.258, -0.124).rotateZ(-0.2), 'ink'],
+  ]],
+  ['hair', 0, [[frustum(0.168, 0.16, 0.15, 6, 'bottom', 0.92).translate(-0.025, 0.285, 0), 'hair']]],
+  ['knot', 0, [[new THREE.ConeGeometry(0.045, 0.22, 4).translate(-0.05, 0.53, 0), 'hair']]],
+  ['handle', 0.02, [[box(0.3, 0.052, 0.046, -0.15, 0, 0), 'ink', 0.7]], [0, 1, 2, 3].map((k) => [box(0.026, 0.058, 0.052, -0.26 + k * 0.07, 0, 0), 'grip'])],
+  ['tsuba', 0.02, [[box(0.036, 0.14, 0.11, 0.018, 0, 0), 'ink', 0.7]]],
+  ['blade', 0.02, [[bladeGeo, 'steel', 0.45]]],
+  ['armFU', 0.17, [[UP, 'gi']]],
+  ['armFL', 0.17, [[LOW, 'gi']]],
 ];
-const BORDER = 0.04, HAIR = 0.011, GAP = 0.016;
-const LAYERS = ['outer', 'border', 'hair', 'core', 'face', 'det'];
-const geoCache = new Map();
-function pieceGeo(def, layer, i = 0) {
-  const k = def.n + layer + i;
-  if (geoCache.has(k)) return geoCache.get(k);
-  const B = def.border ?? BORDER;
-  let g;
-  if (layer === 'outer') g = shapeGeo(offsetPoly(def.pts, B + HAIR));
-  else if (layer === 'border') g = shapeGeo(offsetPoly(def.pts, B));
-  else if (layer === 'hair') g = shapeGeo(def.pts);
-  else if (layer === 'core' || layer === 'face') g = shapeGeo(offsetPoly(def.pts, -HAIR));
-  else g = shapeGeo(def.det[i][0]);
-  geoCache.set(k, g); return g;
-}
-function colorOf(cfg, key) { return cfg[key] ?? C[key] ?? key; }
+const HULL_W = 0.026, HULL_I = 0.04, GAP = 0.02;
 let outlineMode = 'sticker';
-function buildRig(cfg, mf) {
-  const root = new THREE.Group(); const parts = {};
-  for (const def of PIECES) {
-    const g = new THREE.Group(); g.position.z = def.z;
-    const add = (layer, color, kind, i, dz) => {
-      const m = new THREE.Mesh(pieceGeo(def, layer, i), mf(color, kind));
-      m.position.z = dz; m.userData.layer = layer;
-      m.castShadow = layer === 'outer' || layer === 'hair';
-      if (layer === 'outer' || layer === 'border') m.visible = outlineMode === 'sticker';
-      g.add(m);
-    };
-    add('outer', C.ink, 'skin', 0, 0);
-    add('border', C.white, 'skin', 0, 0.0015);
-    add('hair', C.ink, 'skin', 0, 0.003);
-    add('core', C.red, 'core', 0, 0.0045);
-    add('face', colorOf(cfg, def.face), 'skin', 0, 0.006);
-    (def.det || []).forEach((d, i) => add('det', colorOf(cfg, d[1]), 'skin', i, 0.0075 + i * 0.0002));
-    root.add(g); parts[def.n] = g;
+function colorOf(cfg, key) { return cfg[key] ?? C[key] ?? key; }
+function buildRig(cfg, mf, cut = false) {
+  const root = new THREE.Group(), body = new THREE.Group(); root.add(body); const parts = {};
+  for (const [n, z, meshes, det = []] of PARTS) {
+    const g = new THREE.Group(); g.position.z = z; body.add(g); parts[n] = g;
+    for (const [geo, key, os = 1] of meshes) {
+      const shell = new THREE.Mesh(geo, mf(colorOf(cfg, key), 'shell')); shell.castShadow = true; g.add(shell);
+      if (cut) { g.add(new THREE.Mesh(geo, mf(C.red, 'back'))); const core = new THREE.Mesh(geo, mf(C.red, 'core')); core.scale.setScalar(0.9); g.add(core); }
+      const hw = new THREE.Mesh(hullOf(geo, HULL_W * os), mf(C.white, 'hullW')); hw.userData.outline = 'w'; hw.visible = outlineMode === 'sticker'; g.add(hw);
+      const hi = new THREE.Mesh(hullOf(geo, (outlineMode === 'sticker' ? HULL_I : 0.014) * os), mf(C.ink, 'hullI')); hi.userData.outline = 'i'; hi.userData.geo = geo; hi.userData.os = os; g.add(hi);
+    }
+    for (const [geo, key] of det) g.add(new THREE.Mesh(geo, mf(colorOf(cfg, key), 'shell')));
   }
-  return { root, parts, cfg };
+  return { root, body, parts };
 }
-const basicCache = new Map();
-function sharedMat(color) {
-  if (!basicCache.has(color)) basicCache.set(color, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
-  return basicCache.get(color);
+function matFor(color, kind, planes) {
+  const o = planes ? { clippingPlanes: planes, clipShadows: true } : {};
+  if (kind === 'shell') return new THREE.MeshLambertMaterial({ color, flatShading: true, ...o });
+  if (kind === 'back') return new THREE.MeshBasicMaterial({ color, side: THREE.BackSide, ...o });
+  if (kind === 'core') return new THREE.MeshBasicMaterial({ color: C.redDeep, ...o });
+  return new THREE.MeshBasicMaterial({ color, side: THREE.BackSide, ...o });
 }
+const sharedMats = new Map();
+const sharedMF = (color, kind) => { const k = color + kind; if (!sharedMats.has(k)) sharedMats.set(k, matFor(color, kind)); return sharedMats.get(k); };
 
-// 2D forward kinematics: the pose places every piece directly under the root.
+// 2D forward kinematics in the fighter's side plane.
 const rot = (a, v) => { const c = Math.cos(a), s = Math.sin(a); return [c * v[0] - s * v[1], s * v[0] + c * v[1]]; };
 const vadd = (a, b) => [a[0] + b[0], a[1] + b[1]];
 function setPart(p, pos, r) { p.position.x = pos[0]; p.position.y = pos[1]; p.rotation.z = r; }
 function ik(S, G, L1, L2) {
-  const dx = G[0] - S[0], dy = G[1] - S[1];
-  const d = clamp(Math.hypot(dx, dy), 0.05, L1 + L2 - 1e-3);
-  const base = Math.atan2(dy, dx);
-  const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1));
-  const up = base - A; const E = vadd(S, [L1 * Math.cos(up), L1 * Math.sin(up)]);
+  const dx = G[0] - S[0], dy = G[1] - S[1], d = clamp(Math.hypot(dx, dy), 0.05, L1 + L2 - 1e-3), base = Math.atan2(dy, dx);
+  const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1)), up = base - A, E = vadd(S, [L1 * Math.cos(up), L1 * Math.sin(up)]);
   return { up, E, lo: Math.atan2(G[1] - E[1], G[0] - E[0]) };
 }
-function applyPose(rig, P, jit = 0, rnd = Math.random) {
-  const pr = rig.parts, hip = [0, P.hipY];
-  const hb = vadd(hip, [-0.05, 0]), hf = vadd(hip, [0.05, 0]);
+function applyPose(rig, P, jit = 0) {
+  const pr = rig.parts, hip = [0, P.hipY], hb = vadd(hip, [-0.05, 0]), hf = vadd(hip, [0.05, 0]);
   setPart(pr.legB, hb, P.legB); setPart(pr.legF, hf, P.legF);
-  const fb = vadd(hb, rot(P.legB, [0, -0.9])), ff = vadd(hf, rot(P.legF, [0, -0.9]));
-  setPart(pr.footB, [fb[0] - 0.04, 0], 0); setPart(pr.footF, [ff[0] - 0.04, 0], 0);
+  const fb = vadd(hb, rot(P.legB, [0, -0.88])), ff = vadd(hf, rot(P.legF, [0, -0.88]));
+  setPart(pr.footB, [fb[0] - 0.04, Math.max(0, fb[1] - 0.04)], 0); setPart(pr.footF, [ff[0] - 0.04, Math.max(0, ff[1] - 0.04)], 0);
   setPart(pr.torso, hip, P.lean);
-  const neck = vadd(hip, rot(P.lean, [0.02, 0.74])), hr = P.lean * 0.6 + P.head;
+  const neck = vadd(hip, rot(P.lean, [0.02, 0.76])), hr = P.lean * 0.6 + P.head;
   for (const k of ['head', 'hair', 'knot']) setPart(pr[k], neck, hr);
   const H = vadd(hip, rot(P.lean, P.hilt)), a = P.sword + P.lean;
-  for (const k of ['handle', 'blade', 'tsuba']) setPart(pr[k], H, a);
-  const SF = vadd(hip, rot(P.lean, [0.07, 0.66])), SB = vadd(hip, rot(P.lean, [-0.07, 0.66]));
-  const GF = vadd(H, rot(a, [-0.07, 0])), GB = vadd(H, rot(a, [-0.22, 0]));
-  let k = ik(SF, GF, 0.32, 0.31); setPart(pr.armFU, SF, k.up); setPart(pr.armFL, k.E, k.lo);
-  k = ik(SB, GB, 0.32, 0.31); setPart(pr.armBU, SB, k.up); setPart(pr.armBL, k.E, k.lo);
-  if (jit) for (const n in pr) pr[n].rotation.z += (rnd() - .5) * jit;
+  for (const k of ['handle', 'tsuba', 'blade']) setPart(pr[k], H, a);
+  const SF = vadd(hip, rot(P.lean, [0.07, 0.68])), SB = vadd(hip, rot(P.lean, [-0.07, 0.68]));
+  let k = ik(SF, vadd(H, rot(a, [-0.07, 0])), 0.32, 0.31); setPart(pr.armFU, SF, k.up); setPart(pr.armFL, k.E, k.lo);
+  k = ik(SB, vadd(H, rot(a, [-0.22, 0])), 0.32, 0.31); setPart(pr.armBU, SB, k.up); setPart(pr.armBL, k.E, k.lo);
+  if (jit) for (const n in pr) pr[n].rotation.z += (Math.random() - .5) * jit;
 }
-const D = Math.PI / 180;
 const POSE = {
   guard: {
-    high: { hipY: 0.96, lean: -0.05, legB: 0.24, legF: -0.26, hilt: [0.3, 0.6], sword: 68 * D, head: 0.02 },
+    high: { hipY: 0.95, lean: -0.05, legB: 0.24, legF: -0.26, hilt: [0.3, 0.62], sword: 68 * D, head: 0.02 },
     low: { hipY: 0.9, lean: -0.13, legB: 0.3, legF: -0.32, hilt: [0.3, 0.3], sword: -12 * D, head: 0.08 },
   },
   wind: {
-    high: { hipY: 0.97, lean: 0.08, legB: 0.22, legF: -0.24, hilt: [0.0, 0.98], sword: 140 * D, head: -0.04 },
-    low: { hipY: 0.88, lean: 0.02, legB: 0.3, legF: -0.3, hilt: [-0.12, 0.22], sword: -160 * D, head: 0.04 },
+    high: { hipY: 0.96, lean: 0.08, legB: 0.22, legF: -0.24, hilt: [0.0, 0.98], sword: 140 * D, head: -0.04 },
+    low: { hipY: 0.87, lean: 0.02, legB: 0.3, legF: -0.3, hilt: [-0.12, 0.22], sword: -160 * D, head: 0.04 },
   },
   strike: {
     high: { hipY: 0.9, lean: -0.24, legB: 0.38, legF: -0.4, hilt: [0.42, 0.3], sword: -40 * D, head: 0.12 },
     low: { hipY: 0.88, lean: -0.18, legB: 0.36, legF: -0.38, hilt: [0.42, 0.52], sword: 40 * D, head: 0.06 },
   },
 };
-function lerpPose(a, b, k, out = {}) {
-  for (const key of ['hipY', 'lean', 'legB', 'legF', 'sword', 'head']) out[key] = lerp(a[key], b[key], k);
-  out.hilt = [lerp(a.hilt[0], b.hilt[0], k), lerp(a.hilt[1], b.hilt[1], k)];
-  return out;
-}
+function lerpPose(a, b, k, out = {}) { for (const key of ['hipY', 'lean', 'legB', 'legF', 'sword', 'head']) out[key] = lerp(a[key], b[key], k); out.hilt = [lerp(a.hilt[0], b.hilt[0], k), lerp(a.hilt[1], b.hilt[1], k)]; return out; }
 const copyPose = (p) => lerpPose(p, p, 0);
 
-// ---------- arena ----------
-const hemi = new THREE.HemisphereLight(0xffffff, 0xe6e0d6, 1);
-scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffffff, 1);
-sun.position.set(-4, 9, 8); sun.target.position.set(0, 0, -1.5);
+// ---------- the notebook ----------
+const PW = 8.6, PD = 5.8, PZ = -0.7, EDGE = 7.7;
+const hemi = new THREE.HemisphereLight(0xffffff, 0xe6e0d6, 1.5); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+sun.position.set(-5, 10, 8); sun.target.position.set(0, 0, -1);
 sun.castShadow = true; sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
-Object.assign(sun.shadow.camera, { left: -11, right: 11, top: 9, bottom: -5, near: 1, far: 32 });
-sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
-scene.add(sun, sun.target);
-let arenaGroup = null, arenaLights = [];
+Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 10, bottom: -6, near: 1, far: 34 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03; scene.add(sun, sun.target);
+scene.fog = new THREE.Fog(0xe9e4da, 26, 70);
 
-function sweepGeo(tile) {
-  const prof = [[2.7, 0], [-2.0, 0]]; const r = 1.0;
-  for (let i = 1; i <= 12; i++) { const t = i / 12 * Math.PI / 2; prof.push([-2.0 - r * Math.sin(t), r - r * Math.cos(t)]); }
-  prof.push([-3.0, 9]);
-  const pos = [], uv = [], idx = []; let s = 0;
-  prof.forEach((p, i) => {
-    if (i) s += Math.hypot(p[0] - prof[i - 1][0], p[1] - prof[i - 1][1]);
-    for (const x of [-11, 11]) { pos.push(x, p[1], p[0]); uv.push((x + 11) / tile, s / tile); }
-  });
-  for (let i = 0; i < prof.length - 1; i++) { const a = 2 * i, b = a + 1, c = a + 2, d = a + 3; idx.push(a, b, c, b, d, c); }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  g.setIndex(idx); g.computeVertexNormals(); return g;
+function pageGeo(side) {
+  const g = new THREE.PlaneGeometry(PW, PD, 32, 1); g.rotateX(-Math.PI / 2); g.translate(side * PW / 2, 0, PZ);
+  const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setY(i, -0.09 * Math.exp(-Math.abs(x) * 1.5) + 0.02 * Math.pow(Math.abs(x) / PW, 2)); }
+  g.computeVertexNormals(); return g;
 }
-// A flat cut-out standing on the page, with a thin ink hairline and a kraft tab glued to the floor.
-function flat(parent, pts, mat, x, y, z, { hair = true, tab = true, sc = 1 } = {}) {
-  const g = new THREE.Group(); g.position.set(x, y, z); g.scale.setScalar(sc);
-  const m = new THREE.Mesh(shapeGeo(pts), mat); m.castShadow = true; m.receiveShadow = true; m.position.z = 0.004; g.add(m);
-  if (hair) { const h = new THREE.Mesh(shapeGeo(offsetPoly(pts, 0.014)), lambert(C.ink)); h.castShadow = true; g.add(h); }
-  if (tab && y < 0.05) {
-    let minx = Infinity, maxx = -Infinity; for (const p of pts) if (p[1] < 0.05) { minx = Math.min(minx, p[0]); maxx = Math.max(maxx, p[0]); }
-    if (minx < maxx) { const t = new THREE.Mesh(new THREE.BoxGeometry((maxx - minx) * 0.8, 0.012, 0.16), lambert('#FFFFFF', texRepeat('kraft', 1, 1))); t.position.set((minx + maxx) / 2, 0.006, 0.09); t.receiveShadow = true; g.add(t); }
+const book = new THREE.Group(); scene.add(book);
+const pageL = new THREE.Mesh(pageGeo(-1), lambert('#FFFFFF')), pageR = new THREE.Mesh(pageGeo(1), lambert('#FFFFFF'));
+pageL.receiveShadow = pageR.receiveShadow = true; book.add(pageL, pageR);
+for (const s of [-1, 1]) {
+  const stack = new THREE.Mesh(new THREE.BoxGeometry(PW - 0.1, 0.24, PD - 0.06), [lambert('#FFFFFF', texRepeat('edges', 1, 1)), lambert('#FFFFFF', texRepeat('edges', 1, 1)), lambert('#F2EEE4'), lambert('#F2EEE4'), lambert('#FFFFFF', texRepeat('edges', 3, 1)), lambert('#FFFFFF', texRepeat('edges', 3, 1))]);
+  stack.position.set(s * (PW / 2 + 0.02), -0.235, PZ); stack.receiveShadow = true; book.add(stack);
+  const cover = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.3, 0.07, PD + 0.45), lambert('#FFFFFF', texRepeat('cover', 2.5, 1.6)));
+  cover.position.set(s * (PW / 2 + 0.12), -0.39, PZ); cover.castShadow = cover.receiveShadow = true; book.add(cover);
+}
+{ const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, PD + 0.45, 8, 1, true, Math.PI / 2, Math.PI), lambert(C.ink)); spine.rotation.x = Math.PI / 2; spine.position.set(0, -0.4, PZ); book.add(spine);
+  const desk = new THREE.Mesh(new THREE.PlaneGeometry(90, 60), lambert('#FFFFFF', texRepeat('kraft', 18, 12))); desk.rotation.x = -Math.PI / 2; desk.position.y = -0.43; desk.receiveShadow = true; scene.add(desk);
+  const pencil = new THREE.Group(); const body = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 5.2, 6), lambert(C.legal, null, true)); body.rotation.z = Math.PI / 2; pencil.add(body);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.4, 6), lambert('#E9D3B0', null, true)); tip.rotation.z = -Math.PI / 2; tip.position.x = 2.8; pencil.add(tip);
+  const lead = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.12, 6), lambert(C.ink, null, true)); lead.rotation.z = -Math.PI / 2; lead.position.x = 3.02; pencil.add(lead);
+  pencil.position.set(-3, -0.32, 3.4); pencil.rotation.y = 0.18; pencil.traverse((o) => { o.castShadow = true; }); scene.add(pencil); }
+
+const PAGES = [
+  { key: 'cover', name: "Kami's cover", short: 'Kami cover', night: true },
+  { key: 'legal', name: 'Legal Pad Grove', short: 'Legal' },
+  { key: 'graph', name: 'Graph Paper Dojo', short: 'Graph' },
+  { key: 'lined', name: 'Ruled Courtyard', short: 'Ruled' },
+  { key: 'cover', name: "Sumi's cover", short: 'Sumi cover', night: true },
+];
+function paperMat(key) { return lambert('#FFFFFF', texRepeat(key, PW / 2.6, PD / 2.6)); }
+
+// pop-ups: everything here folds flat when the page turns
+let popups = null;
+function flatCut(pts, mat) { const s = new THREE.Shape(pts.map((p) => new THREE.Vector2(...p))); const m = new THREE.Mesh(new THREE.ShapeGeometry(s), mat); m.castShadow = true; m.receiveShadow = true; return m; }
+function ngon(r, k = 16) { const p = []; for (let i = 0; i < k; i++) { const a = Math.PI / k + i / k * Math.PI * 2; p.push([Math.cos(a) * r, Math.sin(a) * r]); } return p; }
+function addFlat(par, pts, mat, x, y, z, hair = true) {
+  const g = new THREE.Group(); g.position.set(x, y, z); const m = flatCut(pts, mat); m.position.z = 0.01; g.add(m);
+  if (hair) { const s = 1 + 0.04; const h = flatCut(pts.map((p) => [p[0] * s, p[1] * s]), lambert(C.ink)); g.add(h); }
+  par.add(g); return g;
+}
+function backdrop(par, key) {
+  // a V-fold pop-up standing at the back of the spread, hinged on the spine
+  for (const s of [-1, 1]) {
+    const g = new THREE.PlaneGeometry(PW * 0.94, 4.6, 1, 1);
+    g.translate(s * PW * 0.47, 2.3, 0);
+    const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * PW * 0.94 / 2.6, uv.getY(i) * 4.6 / 2.6);
+    const m = new THREE.Mesh(g, lambert('#FFFFFF', TEX[key])); m.receiveShadow = true;
+    const holder = new THREE.Group(); holder.position.set(0, 0, PZ - PD / 2 + 0.25); holder.rotation.y = -s * 0.2; holder.add(m);
+    const hairline = new THREE.Mesh(new THREE.PlaneGeometry(PW * 0.94 + 0.06, 4.66), lambert(C.ink)); hairline.position.set(s * PW * 0.47, 2.3, -0.01); holder.add(hairline);
+    holder.userData.side = s; par.add(holder);
   }
-  parent.add(g); return g;
+  return par.children.filter((c) => c.userData.side);
 }
-function papMat(key, tile) { return lambert('#FFFFFF', texRepeat(key, 1 / tile, 1 / tile)); }
-function mountain(par, key, x, z, w, h, peak = 0.1) {
-  flat(par, [[-w / 2, 0], [w / 2, 0], [w * peak, h]], papMat(key, 2.2), x, 0, z, { tab: true });
-  // shadow facet: a darker sliver on the right face
-  const f = new THREE.Mesh(shapeGeo([[w * peak, h], [w / 2, 0], [w * 0.22, 0]]), new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.18, side: THREE.DoubleSide }));
-  f.position.set(x, 0, z + 0.008); par.add(f);
-}
-function torii(par, x, z, sc, faceMat) {
+function pyramid(par, key, x, z, r, h, rotY = 0.3) { const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 4), lambert('#FFFFFF', texRepeat(key, 0.7, 0.7), true)); m.position.set(x, h / 2, z); m.rotation.y = rotY; m.castShadow = m.receiveShadow = true; par.add(m); }
+function torii(par, x, z, sc, mat) {
   const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(sc); par.add(g);
-  flat(g, [[-0.85, 0], [-0.68, 0], [-0.7, 2.0], [-0.83, 2.0]], faceMat, 0, 0, 0);
-  flat(g, [[0.68, 0], [0.85, 0], [0.83, 2.0], [0.7, 2.0]], faceMat, 0, 0, 0);
-  flat(g, [[-1.05, 0], [1.05, 0], [1.05, 0.14], [-1.05, 0.14]], faceMat, 0, 1.62, 0.01, { tab: false });
-  flat(g, [[-1.45, 0.12], [-1.25, 0], [1.25, 0], [1.45, 0.12], [1.5, 0.28], [-1.5, 0.28]], faceMat, 0, 2.02, 0.01, { tab: false });
-  flat(g, [[-0.07, 0], [0.07, 0], [0.07, 0.4], [-0.07, 0.4]], faceMat, 0, 1.64, 0.02, { tab: false });
+  const add = (geo, px, py, pz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(px, py, pz); m.castShadow = true; g.add(m); };
+  add(new THREE.CylinderGeometry(0.08, 0.09, 2.1, 6), -0.78, 1.05); add(new THREE.CylinderGeometry(0.08, 0.09, 2.1, 6), 0.78, 1.05);
+  add(new THREE.BoxGeometry(2.2, 0.14, 0.16), 0, 1.66); add(new THREE.BoxGeometry(2.9, 0.18, 0.24), 0, 2.08); add(new THREE.BoxGeometry(0.14, 0.4, 0.12), 0, 1.86);
 }
-function cloudStrip(par, key, x, y, z, L) { flat(par, [[0, 0], [L, 0], [L + 0.3, 0.24], [0.3, 0.24]], papMat(key, 1.2), x, y, z, { tab: false }); }
-function bamboo(par, x, z, h, w, r) {
+function bamboo(par, x, z, h, r, rng) {
   const g = new THREE.Group(); g.position.set(x, 0, z); par.add(g);
-  flat(g, [[-w / 2, 0], [w / 2, 0], [w / 2, h], [-w / 2, h]], lambert('#E8CD5E'), 0, 0, 0);
-  for (let y = 0.7 + r() * 0.4; y < h; y += 0.8 + r() * 0.4) { const n = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.04, 0.035), lambert(C.ink)); n.position.set(0, y, 0.01); g.add(n); }
-  for (let i = 0; i < 3; i++) { const y = h * (0.45 + r() * 0.5), s = r() < .5 ? -1 : 1; flat(g, [[0, 0], [s * 0.7, 0.18], [s * 0.66, 0.24]], lambert('#D4B640'), 0, y, 0.02, { tab: false }); }
-}
-function grassStrip(par, z, colMat) {
-  const pts = [[-11, 0]]; for (let x = -11; x <= 11; x += 0.36) { pts.push([x + 0.12, 0.2], [x + 0.24, 0.02]); } pts.push([11, 0]);
-  const m = new THREE.Mesh(shapeGeo(pts), colMat); m.position.set(0, 0, z); m.castShadow = true; par.add(m);
-}
-function lantern(par, x, y, z) {
-  const g = new THREE.Group(); g.position.set(x, y, z); par.add(g);
-  flat(g, [[-0.03, 0.4], [0.03, 0.4], [0.03, 2.4], [-0.03, 2.4]], lambert(C.ink), 0, -y, 0, { tab: false });
-  const body = new THREE.Mesh(shapeGeo([[-0.22, 0], [0.22, 0], [0.26, 0.42], [-0.26, 0.42]]), new THREE.MeshBasicMaterial({ color: '#F9E58E' })); body.position.z = 0.03; g.add(body);
-  for (const yy of [0, 0.42]) { const c = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.06), lambert(C.ink)); c.position.set(0, yy, 0.04); g.add(c); }
-  const L = new THREE.PointLight(0xffd98a, 6, 6, 1.6); L.position.set(0, 0.2, 0.6); g.add(L); arenaLights.push(L);
-}
-function polySun(par, color, x, y, z, r, matOverride) {
-  const g = new THREE.Group(); g.position.set(x, y, z); par.add(g);
-  const m = new THREE.Mesh(shapeGeo(ngon(r, 16, Math.PI / 16)), matOverride || new THREE.MeshBasicMaterial({ color })); m.position.z = 0.004; g.add(m);
-  const h = new THREE.Mesh(shapeGeo(ngon(r + 0.03, 16, Math.PI / 16)), lambert(C.ink)); g.add(h);
+  const st = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 6), lambert('#E8CD5E', null, true)); st.position.y = h / 2; st.castShadow = true; g.add(st);
+  for (let y = 0.7 + rng() * 0.4; y < h; y += 0.8 + rng() * 0.4) { const n = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.12, r * 1.12, 0.04, 6), lambert(C.ink)); n.position.y = y; g.add(n); }
+  for (let i = 0; i < 3; i++) { const lf = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.8, 3), lambert('#D4B640', null, true)); lf.position.set(0, h * (0.5 + rng() * 0.45), 0); lf.rotation.set(rng() * 2, rng() * 6, Math.PI / 2 + (rng() - .5)); lf.castShadow = true; g.add(lf); }
 }
 function castle(par, x, z) {
   const g = new THREE.Group(); g.position.set(x, 0, z); par.add(g);
-  const wall = papMat('lined', 1.4);
-  flat(g, [[-1.2, 0], [1.2, 0], [1.0, 1.1], [-1.0, 1.1]], lambert('#D9D4C8'), 0, 0, 0);
-  flat(g, [[-0.8, 0], [0.8, 0], [0.8, 0.8], [-0.8, 0.8]], wall, 0, 1.1, 0.02, { tab: false });
-  flat(g, [[-1.3, 0], [1.3, 0], [0.9, 0.36], [-0.9, 0.36]], lambert(C.ink), 0, 1.9, 0.03, { tab: false });
-  flat(g, [[-0.5, 0], [0.5, 0], [0.5, 0.6], [-0.5, 0.6]], wall, 0, 2.26, 0.02, { tab: false });
-  flat(g, [[-0.9, 0], [0.9, 0], [0.4, 0.4], [-0.4, 0.4]], lambert(C.ink), 0, 2.86, 0.03, { tab: false });
-  for (const wx of [-0.45, 0, 0.45]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.22), lambert(C.ink)); w.position.set(wx, 1.5, 0.06); g.add(w); }
+  const add = (geo, mat, py, ry = 0) => { const m = new THREE.Mesh(geo, mat); m.position.y = py; m.rotation.y = ry; m.castShadow = m.receiveShadow = true; g.add(m); };
+  const wall = lambert('#FFFFFF', texRepeat('lined', 0.6, 0.6), true);
+  add(new THREE.BoxGeometry(2.4, 1.0, 1.6), lambert('#D9D4C8', null, true), 0.5);
+  add(new THREE.BoxGeometry(1.6, 0.8, 1.1), wall, 1.4);
+  add(new THREE.ConeGeometry(1.45, 0.5, 4), lambert(C.ink, null, true), 2.05, Math.PI / 4);
+  add(new THREE.BoxGeometry(1.0, 0.6, 0.8), wall, 2.5);
+  add(new THREE.ConeGeometry(0.95, 0.45, 4), lambert(C.ink, null, true), 3.0, Math.PI / 4);
 }
-
-const ARENAS = [
-  { id: 'graph', name: 'Graph Paper Dojo', floor: 'graph', tile: 2.5, sky: '#EAF1F6', hemi: [0xffffff, 0xe6e0d6, 1.55], sun: [0xffffff, 1.9],
-    build(g) {
-      polySun(g, C.legal, 3.6, 5.0, -2.92, 0.9);
-      cloudStrip(g, 'lined', -5.2, 4.7, -2.85, 2.6); cloudStrip(g, 'lined', 4.6, 3.6, -2.85, 1.8); cloudStrip(g, 'lined', -1.2, 5.6, -2.88, 1.4);
-      mountain(g, 'marble', -4.6, -2.55, 6.4, 3.4, 0.05); mountain(g, 'marble', 3.0, -2.45, 7.6, 2.7, -0.12); mountain(g, 'marble', -0.6, -2.7, 4.2, 2.1, 0.15);
-      torii(g, -4.4, -1.4, 1.25, lambert(C.ink));
-      grassStrip(g, 2.2, lambert(C.paper));
-    } },
-  { id: 'lined', name: 'Ruled Courtyard', floor: 'lined', tile: 2.5, sky: '#EEF2F6', hemi: [0xffffff, 0xe6e0d6, 1.55], sun: [0xffffff, 1.85],
-    build(g) {
-      polySun(g, C.ink, -3.8, 5.0, -2.92, 0.75);
-      cloudStrip(g, 'graph', 2.0, 5.1, -2.85, 2.8); cloudStrip(g, 'graph', -6.4, 4.0, -2.85, 2.0);
-      castle(g, 3.8, -2.3);
-      mountain(g, 'graph', -3.0, -2.6, 7.0, 2.4, 0.1);
-      torii(g, -5.0, -1.5, 1.1, papMat('graph', 1.2));
-      grassStrip(g, 2.2, lambert('#DCE8F1'));
-    } },
-  { id: 'legal', name: 'Legal Pad Grove', floor: 'legal', tile: 2.5, sky: '#FBF3C8', hemi: [0xffffff, 0xf0e3b0, 1.45], sun: [0xfff6dd, 1.8],
-    build(g) {
-      polySun(g, C.ink, 4.2, 5.2, -2.92, 0.7);
-      const r = mulberry32(21);
-      for (let i = 0; i < 26; i++) { let x = -10 + r() * 20; if (Math.abs(x) < 2.6) x += x < 0 ? -2.6 : 2.6; bamboo(g, x, -1.2 - r() * 1.6, 4.5 + r() * 3.5, 0.16 + r() * 0.1, r); }
-      grassStrip(g, 2.2, lambert('#F2D86A'));
-    } },
-  { id: 'marble', name: 'Marble Cover Night', floor: 'marble', tile: 3, sky: '#0D0C10', hemi: [0x9aa8d0, 0x1a1a24, 0.8], sun: [0xc9d6ff, 1.1],
-    build(g) {
-      polySun(g, null, -3.4, 5.1, -2.92, 0.85, new THREE.MeshBasicMaterial({ color: '#F3F1EA' }));
-      mountain(g, 'lined', -4.2, -2.55, 6.6, 3.0, 0.08); mountain(g, 'lined', 3.6, -2.5, 7.2, 2.4, -0.1);
-      torii(g, 4.6, -1.5, 1.2, lambert(C.paper));
-      lantern(g, -2.6, 1.9, -0.9); lantern(g, 2.4, 1.9, -0.9);
-      grassStrip(g, 2.2, lambert('#3A3842'));
-    } },
-];
-let arenaIndex = 0;
-function setArena(i) {
-  arenaIndex = (i + ARENAS.length) % ARENAS.length; const A = ARENAS[arenaIndex];
-  if (arenaGroup) { scene.remove(arenaGroup); }
-  arenaLights = [];
-  arenaGroup = new THREE.Group(); scene.add(arenaGroup);
-  const page = new THREE.Mesh(sweepGeo(A.tile), lambert('#FFFFFF', TEX[A.floor])); page.receiveShadow = true; arenaGroup.add(page);
-  const base = new THREE.Mesh(new THREE.BoxGeometry(22.4, 0.3, 6.0), lambert('#FFFFFF', texRepeat('kraft', 10, 3))); base.position.set(0, -0.152, 0.1); base.receiveShadow = true; arenaGroup.add(base);
-  A.build(arenaGroup);
-  scene.background = new THREE.Color(A.sky);
-  hemi.color.set(A.hemi[0]); hemi.groundColor.set(A.hemi[1]); hemi.intensity = A.hemi[2];
-  sun.color.set(A.sun[0]); sun.intensity = A.sun[1];
-  $('#arenaName').textContent = A.name;
-  stageEl.style.background = A.sky;
+function lantern(par, x, z) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); par.add(g);
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.9, 0.06), lambert(C.ink)); post.position.y = 0.95; g.add(post);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.46, 6), new THREE.MeshBasicMaterial({ color: '#F9E58E' })); body.position.y = 2.1; g.add(body);
+  for (const yy of [1.85, 2.35]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.05, 6), lambert(C.ink)); c.position.y = yy; g.add(c); }
+  const L = new THREE.PointLight(0xffd98a, 9, 7, 1.6); L.position.set(0, 2.1, 0.5); g.add(L);
+}
+function tufts(par, mat, seed) { const r = mulberry32(seed); for (let i = 0; i < 46; i++) { const m = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.22 + r() * 0.16, 3), mat); const s = r() < .5 ? -1 : 1; m.position.set(s * (0.6 + r() * (PW - 1.2)), 0.12, PZ + PD / 2 - 0.3 - r() * 0.7); m.castShadow = true; par.add(m); } }
+function buildPopups(page) {
+  const P = PAGES[page], g = new THREE.Group();
+  const [bl, br] = backdrop(g, P.key === 'cover' ? 'cover' : P.key);
+  const mb = (s) => (s < 0 ? bl : br);
+  if (P.key === 'graph') {
+    addFlat(mb(1), ngon(0.85), new THREE.MeshBasicMaterial({ color: C.legal }), 4.3, 3.4, 0.05);
+    addFlat(mb(-1), [[0, 0], [2.6, 0], [2.9, 0.24], [0.3, 0.24]], lambert('#FFFFFF', texRepeat('lined', 1, 0.3)), -6.6, 3.8, 0.05);
+    addFlat(mb(1), [[0, 0], [1.8, 0], [2.1, 0.24], [0.3, 0.24]], lambert('#FFFFFF', texRepeat('lined', 1, 0.3)), 1.2, 3.0, 0.05);
+    pyramid(g, 'cover', -4.6, PZ - 1.9, 1.7, 2.8, 0.2); pyramid(g, 'cover', 3.4, PZ - 2.1, 2.1, 2.3, 0.5); pyramid(g, 'cover', -1.4, PZ - 2.3, 1.3, 1.8, 0.1);
+    torii(g, -5.6, PZ - 0.6, 1.15, lambert(C.ink, null, true));
+  } else if (P.key === 'lined') {
+    addFlat(mb(-1), ngon(0.7), new THREE.MeshBasicMaterial({ color: C.ink }), -4.4, 3.4, 0.05, false);
+    addFlat(mb(1), [[0, 0], [2.6, 0], [2.9, 0.24], [0.3, 0.24]], lambert('#FFFFFF', texRepeat('graph', 1, 0.3)), 0.8, 3.9, 0.05);
+    castle(g, 4.4, PZ - 1.6);
+    pyramid(g, 'graph', -3.6, PZ - 2.0, 1.9, 2.4, 0.4);
+    torii(g, -6.1, PZ - 0.5, 1.05, lambert('#FFFFFF', texRepeat('graph', 0.5, 0.5), true));
+  } else if (P.key === 'legal') {
+    addFlat(mb(1), ngon(0.7), new THREE.MeshBasicMaterial({ color: C.ink }), 4.6, 3.6, 0.05, false);
+    const r = mulberry32(21);
+    for (let i = 0; i < 24; i++) { let x = -8 + r() * 16; if (Math.abs(x) < 2.2) x += x < 0 ? -2.2 : 2.2; bamboo(g, x, PZ - 0.9 - r() * 1.7, 3.6 + r() * 2.4, 0.08 + r() * 0.05, r); }
+  } else {
+    addFlat(mb(-1), ngon(0.8), new THREE.MeshBasicMaterial({ color: '#F3F1EA' }), -4.0, 3.5, 0.05);
+    pyramid(g, 'lined', -4.4, PZ - 1.9, 1.8, 2.6, 0.3); pyramid(g, 'lined', 3.8, PZ - 2.1, 2.0, 2.2, 0.6);
+    torii(g, 5.2, PZ - 0.6, 1.1, lambert(C.paper, null, true));
+    lantern(g, -2.6, PZ - 0.5); lantern(g, 2.6, PZ - 0.5);
+  }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+const LIGHT = {
+  day: { hemi: [0xffffff, 0xe6e0d6, 1.5], sun: [0xffffff, 1.8], sky: '#E9E4DA' },
+  legal: { hemi: [0xffffff, 0xf0e3b0, 1.45], sun: [0xfff6dd, 1.8], sky: '#EFE6CC' },
+  night: { hemi: [0x9aa8d0, 0x1a1a24, 0.75], sun: [0xc9d6ff, 1.0], sky: '#0D0C10' },
+};
+let page = 2;
+function setSpread(p, which = 'both') {
+  const P = PAGES[p], mat = paperMat(P.key);
+  if (which !== 'right') pageL.material = mat;
+  if (which !== 'left') pageR.material = mat;
+}
+function setPageScene(p) {
+  if (popups) scene.remove(popups);
+  popups = buildPopups(p); scene.add(popups);
+  const L = PAGES[p].night ? LIGHT.night : PAGES[p].key === 'legal' ? LIGHT.legal : LIGHT.day;
+  hemi.color.set(L.hemi[0]); hemi.groundColor.set(L.hemi[1]); hemi.intensity = L.hemi[2]; sun.color.set(L.sun[0]); sun.intensity = L.sun[1];
+  scene.background = new THREE.Color(L.sky); scene.fog.color.set(L.sky); stageEl.style.background = L.sky;
+  renderTrack();
+}
+function renderTrack() {
+  $('#track').innerHTML = PAGES.map((P, i) => `<span class="${P.key === 'cover' ? 'cov ' : ''}${i === page ? 'on' : ''}">${P.short}</span>`).join('');
 }
 
 // ---------- fighters ----------
-const REACH = 1.75, WIND_T = 0.15, ACT_T = 0.07, REC_T = 0.3, WALK = 2.3;
-const player = { cfg: KAMI, x: -1.7, y: 0, facing: 1, stance: 'high', state: 'guard', t: 0, pose: copyPose(POSE.guard.high), from: null, walk: 0, moving: 0, rig: null, dodgeFrom: 0 };
-player.rig = buildRig(KAMI, sharedMat); scene.add(player.rig.root);
-
-const dummy = { cfg: SUMI, x: 1.5, home: 1.5, y: 0, facing: -1, stance: 'low', pose: copyPose(POSE.guard.low), timer: 2.6, tell: 0, cuts: 0, regions: [], down: false, fin: null };
-function makeRegion(local, slip) {
-  const reg = { local, core: local.map(() => new THREE.Plane()), skin: local.map(() => new THREE.Plane()), slip, mats: new Map() };
-  const mf = (color, kind) => {
-    const k = color + kind;
-    if (!reg.mats.has(k)) reg.mats.set(k, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, clippingPlanes: kind === 'core' ? reg.core : reg.skin, clipShadows: true }));
-    return reg.mats.get(k);
-  };
-  reg.rig = buildRig(SUMI, mf);
-  scene.add(reg.rig.root);
-  placeRegion(reg); applyPose(reg.rig, dummy.pose);
-  return reg;
+const REACH = 1.75, WIND_T = 0.15, ACT_T = 0.07, REC_T = 0.3, WALK = 2.4, PARRY_WIN = 0.12, GRAV = 15, JUMP_V = 5.6;
+function makeFighter(id, cfg, x, goalDir) {
+  const f = { id, cfg, x, y: 0, vy: 0, vx: 0, goalDir, facing: goalDir, yaw: goalDir > 0 ? 0 : Math.PI, stance: 'high', stanceAt: -9, state: 'guard', t: 0, slash: 'high',
+    pose: copyPose(POSE.guard.high), alive: true, respawn: 0, unfold: 1, tell: 0, timer: 2.4, halves: null, walk: 0, bob: 0, stagger: 0 };
+  f.rig = buildRig(cfg, sharedMF); scene.add(f.rig.root); return f;
 }
-function dropRegion(reg) { reg.rig.root.removeFromParent(); reg.mats.forEach((m) => m.dispose()); }
-function placeRegion(reg) {
-  if (dummy.fin && reg.rig.root.parent !== scene) return;
-  reg.rig.root.position.set(dummy.x + reg.slip.x, dummy.y + reg.slip.y, 0);
-  reg.rig.root.scale.x = dummy.facing;
-}
-function updatePlanes(reg) {
-  reg.rig.root.updateMatrixWorld(true);
-  reg.local.forEach((lp, i) => {
-    reg.core[i].copy(lp).applyMatrix4(reg.rig.root.matrixWorld);
-    reg.skin[i].copy(lp); reg.skin[i].constant -= GAP; reg.skin[i].applyMatrix4(reg.rig.root.matrixWorld);
-  });
-}
-function resetDummy() {
-  dummy.regions.forEach(dropRegion);
-  if (dummy.fin) { dummy.fin.groups.forEach((g) => scene.remove(g)); dummy.fin = null; }
-  Object.assign(dummy, { x: dummy.home, y: 0, stance: 'low', timer: 2.4, tell: 0, cuts: 0, down: false });
-  dummy.pose = copyPose(POSE.guard.low);
-  dummy.regions = [makeRegion([], new THREE.Vector3())];
-}
-
-// Sample points along every piece outline that are still inside the region: used to tell
-// whether a new cut actually crosses this region, so empty slivers are never kept.
-const _v = new THREE.Vector3();
-function regionSide(reg, wp) {
-  updatePlanes(reg); let pos = 0, neg = 0;
-  for (const def of PIECES) {
-    const part = reg.rig.parts[def.n]; const p = def.pts, n = p.length;
-    for (let i = 0; i < n; i++) for (let k = 0; k < 5; k++) {
-      const a = p[i], b = p[(i + 1) % n], t = k / 5;
-      _v.set(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, 0).applyMatrix4(part.matrixWorld);
-      if (!reg.core.every((pl) => pl.distanceToPoint(_v) >= 0)) continue;
-      if (wp.distanceToPoint(_v) >= 0) pos++; else neg++;
-    }
-  }
-  if (!pos && !neg) return 'empty';
-  return pos && neg ? 0 : (pos ? 1 : -1);
-}
-function cutDummy(P, ang, slip) {
-  const n = new THREE.Vector3(-Math.sin(ang), Math.cos(ang), 0);
-  const wp = new THREE.Plane().setFromNormalAndCoplanarPoint(n, new THREE.Vector3(P[0], P[1], 0));
-  let d = new THREE.Vector3(Math.cos(ang), Math.sin(ang), 0); if (d.y > 0) d.negate();
-  const slipVec = d.multiplyScalar(slip).addScaledVector(n, slip * 0.25);
-  const next = [];
-  for (const reg of dummy.regions) {
-    const side = regionSide(reg, wp);
-    if (side === 'empty') { dropRegion(reg); continue; }
-    if (side !== 0) { reg.side = side; if (side > 0) reg.slip.add(slipVec); next.push(reg); continue; }
-    const inv = reg.rig.root.matrixWorld.clone().invert();
-    const lp = wp.clone().applyMatrix4(inv);
-    const up = makeRegion([...reg.local, lp], reg.slip.clone().add(slipVec)); up.side = 1;
-    const lo = makeRegion([...reg.local, lp.clone().negate()], reg.slip.clone()); lo.side = -1;
-    dropRegion(reg); next.push(up, lo);
-  }
-  dummy.regions = next;
-}
+const kami = makeFighter(0, KAMI, -1.8, 1), sumi = makeFighter(1, SUMI, 1.8, -1);
+const fighters = [kami, sumi];
+const other = (f) => (f === kami ? sumi : kami);
+let p2Human = false, rightOfWay = null, matchOver = false;
+let simClock = 0;
 
 // ---------- effects ----------
-const fx = [];
-const lineGeo = new THREE.PlaneGeometry(1, 1);
+const fx = [], lineGeo = new THREE.PlaneGeometry(1, 1);
 function razor(P, ang, color, len = 3.6) {
   const m = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthTest: false }));
-  m.renderOrder = 10; m.position.set(P[0], P[1], 0.6); m.rotation.z = ang; scene.add(m);
-  const halo = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, depthTest: false, opacity: .9 }));
-  halo.renderOrder = 9; halo.position.copy(m.position); halo.position.z = 0.59; halo.rotation.z = ang; scene.add(halo);
-  fx.push({ t: 0, dur: 0.32, real: true, fn(k) { const g = easeOut(Math.min(1, k * 5)); m.scale.set(len * g, 0.022 * (1 - k * 0.7), 1); halo.scale.set(len * g, 0.06 * (1 - k), 1); m.material.opacity = 1 - easeIn(k); halo.material.opacity = 0.9 * (1 - k); }, done() { scene.remove(m, halo); m.material.dispose(); halo.material.dispose(); } });
+  const halo = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, depthTest: false }));
+  m.renderOrder = 10; halo.renderOrder = 9; m.position.set(P[0], P[1], 0.7); halo.position.set(P[0], P[1], 0.69); m.rotation.z = halo.rotation.z = ang; scene.add(m, halo);
+  fx.push({ t: 0, dur: 0.32, fn(k) { const g = easeOut(Math.min(1, k * 5)); m.scale.set(len * g, 0.024 * (1 - k * 0.7), 1); halo.scale.set(len * g, 0.07 * (1 - k), 1); m.material.opacity = 1 - easeIn(k); halo.material.opacity = 0.9 * (1 - k); }, done() { scene.remove(m, halo); m.material.dispose(); halo.material.dispose(); } });
 }
-const fleckGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.045, -0.03, 0), new THREE.Vector3(0.05, -0.02, 0), new THREE.Vector3(0.0, 0.05, 0)]);
+const fleckGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.045, -0.03, 0), new THREE.Vector3(0.05, -0.02, 0), new THREE.Vector3(0, 0.05, 0)]);
 const flecks = [];
 function burst(P, colors, count, dir) {
   for (let i = 0; i < count; i++) {
-    const m = new THREE.Mesh(fleckGeo, sharedMat(colors[i % colors.length])); m.position.set(P[0], P[1], 0.3 + Math.random() * 0.3);
-    m.castShadow = true; m.scale.setScalar(0.7 + Math.random() * 0.9); scene.add(m);
-    flecks.push({ m, v: new THREE.Vector3(dir * (0.6 + Math.random() * 2.2), 0.6 + Math.random() * 2.4, (Math.random() - .5) * 2.2), s: new THREE.Vector3(Math.random() * 12, Math.random() * 12, Math.random() * 12), rest: false });
+    const m = new THREE.Mesh(fleckGeo, new THREE.MeshBasicMaterial({ color: colors[i % colors.length], side: THREE.DoubleSide })); m.position.set(P[0], P[1], (Math.random() - .5) * 0.5); m.castShadow = true; m.scale.setScalar(0.7 + Math.random()); scene.add(m);
+    flecks.push({ m, v: new THREE.Vector3(dir * (0.6 + Math.random() * 2.2), 0.6 + Math.random() * 2.6, (Math.random() - .5) * 2.6), s: new THREE.Vector3(Math.random() * 12, Math.random() * 12, Math.random() * 12), rest: false });
   }
-  while (flecks.length > 220) { const f = flecks.shift(); scene.remove(f.m); }
+  while (flecks.length > 260) { const f = flecks.shift(); scene.remove(f.m); }
 }
 const glint = new THREE.Group();
 { const star = [[0, 0.16], [0.035, 0.035], [0.16, 0], [0.035, -0.035], [0, -0.16], [-0.035, -0.035], [-0.16, 0], [-0.035, 0.035]];
-  const o = new THREE.Mesh(shapeGeo(offsetPoly(star, 0.02)), sharedMat(C.ink)); const f = new THREE.Mesh(shapeGeo(star), sharedMat(C.legal)); f.position.z = 0.002; glint.add(o, f); }
-glint.renderOrder = 8; glint.visible = false; scene.add(glint);
-
-const labelsEl = $('#labels');
-const _p = new THREE.Vector3();
-function popLabel(text, P, cls) {
+  const o = flatCut(star.map((p) => [p[0] * 1.25, p[1] * 1.25]), new THREE.MeshBasicMaterial({ color: C.ink, depthTest: false })); const f = flatCut(star, new THREE.MeshBasicMaterial({ color: C.legal, depthTest: false })); f.position.z = 0.002; o.renderOrder = 11; f.renderOrder = 12; glint.add(o, f); }
+glint.visible = false; scene.add(glint);
+const labelsEl = $('#labels'), _p = new THREE.Vector3();
+function popLabel(text, P, cls = '') {
   const el = document.createElement('div'); el.className = 'wlabel pop ' + cls; el.textContent = text;
-  _p.set(P[0], P[1], 0).project(camera);
-  el.style.left = ((_p.x + 1) / 2 * stageEl.clientWidth) + 'px'; el.style.top = ((1 - _p.y) / 2 * stageEl.clientHeight) + 'px';
+  _p.set(P[0], P[1], 0).project(camera); el.style.left = ((_p.x + 1) / 2 * stageEl.clientWidth) + 'px'; el.style.top = ((1 - _p.y) / 2 * stageEl.clientHeight) + 'px';
   labelsEl.appendChild(el); setTimeout(() => el.remove(), 1100);
 }
 const toastEl = $('#toast'); let toastTimer = 0;
 function toast(html, ms = 4200) { toastEl.innerHTML = html; toastEl.dataset.show = '1'; clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.dataset.show = '0', ms); }
 
-// ---------- sound (made in code, plays only after you press something) ----------
+// ---------- sound (made in code; plays only after you press something) ----------
 let actx = null, soundOn = true;
 function ac() { if (!soundOn) return null; if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } } if (actx.state === 'suspended') actx.resume(); return actx; }
-function noise(dur, type, freq, q, gain) {
-  const a = ac(); if (!a) return; const len = Math.floor(a.sampleRate * dur); const buf = a.createBuffer(1, len, a.sampleRate); const d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
-  const s = a.createBufferSource(); s.buffer = buf; const f = a.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; const g = a.createGain(); g.gain.value = gain;
-  s.connect(f).connect(g).connect(a.destination); s.start();
-}
-function tone(f0, f1, dur, type, gain) {
-  const a = ac(); if (!a) return; const o = a.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, a.currentTime); o.frequency.exponentialRampToValueAtTime(f1, a.currentTime + dur);
-  const g = a.createGain(); g.gain.setValueAtTime(gain, a.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + dur);
-}
+function noise(dur, type, freq, q, gain) { const a = ac(); if (!a) return; const len = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2); const s = a.createBufferSource(); s.buffer = buf; const f = a.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; const g = a.createGain(); g.gain.value = gain; s.connect(f).connect(g).connect(a.destination); s.start(); }
+function tone(f0, f1, dur, type, gain) { const a = ac(); if (!a) return; const o = a.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, a.currentTime); o.frequency.exponentialRampToValueAtTime(f1, a.currentTime + dur); const g = a.createGain(); g.gain.setValueAtTime(gain, a.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + dur); }
 const sfx = {
-  whoosh() { noise(0.13, 'bandpass', 1100, 0.9, 0.22); },
-  cut() { noise(0.08, 'highpass', 3800, 0.7, 0.55); tone(2600, 1300, 0.09, 'triangle', 0.07); },
-  block() { tone(380, 260, 0.08, 'square', 0.05); noise(0.05, 'lowpass', 1400, 0.7, 0.35); },
-  finish() { noise(0.4, 'highpass', 2200, 0.5, 0.6); tone(1800, 360, 0.45, 'sawtooth', 0.04); },
-  hop() { noise(0.09, 'lowpass', 600, 0.7, 0.2); },
+  whoosh() { noise(0.13, 'bandpass', 1100, 0.9, 0.2); }, cut() { noise(0.4, 'highpass', 2200, 0.5, 0.6); tone(1800, 360, 0.45, 'sawtooth', 0.04); },
+  block() { tone(380, 260, 0.08, 'square', 0.05); noise(0.05, 'lowpass', 1400, 0.7, 0.35); }, parry() { tone(1500, 2400, 0.12, 'triangle', 0.08); noise(0.06, 'highpass', 3000, 0.7, 0.3); },
+  hop() { noise(0.09, 'lowpass', 600, 0.7, 0.2); }, page() { noise(0.6, 'bandpass', 700, 0.4, 0.35); }, fold() { noise(0.25, 'bandpass', 1600, 0.6, 0.2); },
 };
 
-// ---------- game state ----------
-let hitstop = 0, shake = 0, timeScale = 1, slowmo = 0, motion = 'smooth', stepClock = 0, lastStep = -1;
-const held = { left: false, right: false };
-function slashLine(attacker, stance) {
-  const base = stance === 'high' ? -22 * D : 14 * D;
-  return { ang: attacker.facing * base, y: stance === 'high' ? 1.6 : 0.62 };
-}
-function startSlash() {
-  if (player.state !== 'guard' || dummy.fin) return;
-  player.state = 'wind'; player.t = 0; player.slash = player.stance; player.from = copyPose(player.pose); sfx.whoosh();
-}
-function resolveHit() {
-  const L = slashLine(player, player.slash);
-  const dx = Math.abs(dummy.x - player.x);
-  const tipX = player.x + player.facing * 1.25;
-  if (dx > REACH || dummy.down) { razor([tipX, L.y], L.ang, C.ink, 2.4); return; }
-  const P = [dummy.x - player.facing * 0.05, L.y + (Math.random() - .5) * 0.08];
-  const open = dummy.tell > 0;
-  if (dummy.stance === player.slash && !open) {
-    razor(P, L.ang, C.ink, 2.2); burst(P, [C.paper, C.paper, C.ink], 8, player.facing);
-    popLabel('Block', [P[0], P[1] + 0.5], 'blk'); sfx.block();
-    hitstop = 0.06; shake = 0.06; player.x -= player.facing * 0.25; dummy.x += player.facing * 0.2;
-    return;
-  }
-  dummy.cuts++;
-  if (dummy.cuts >= 3) return finisher();
-  const ang = L.ang + (Math.random() - .5) * 8 * D;
-  cutDummy(P, ang, dummy.cuts === 1 ? 0.04 : 0.075);
-  razor(P, ang, C.red, 3.8); burst(P, [C.red, C.red, C.paper, C.redDeep], 16, player.facing);
-  popLabel('Cut', [P[0], P[1] + 0.55], 'cut'); sfx.cut();
-  hitstop = 0.11; shake = 0.13; dummy.x += player.facing * 0.12;
-  if (dummy.cuts === 1) toast('One clean cut. The red core shows where the paper was sliced. <em>Two more.</em>', 3200);
-}
-function finisher() {
-  const P = [dummy.x, 1.25], ang = player.facing * -40 * D;
-  cutDummy(P, ang, 0);
-  razor(P, ang, C.red, 5.5); burst(P, [C.red, C.redDeep, C.paper, C.red], 30, player.facing); sfx.finish();
-  popLabel('Cut', [P[0], P[1] + 0.9], 'cut');
-  hitstop = 0.14; shake = 0.2; slowmo = 1.1; dummy.down = true; glint.visible = false; dummy.tell = 0;
-  // Split the regions into the half that slides off and the half that falls.
-  const pivotFly = new THREE.Vector3(P[0], P[1], 0), pivotFall = new THREE.Vector3(dummy.x - dummy.facing * 0.32, 0, 0);
-  const fly = new THREE.Group(), fall = new THREE.Group(); fly.position.copy(pivotFly); fall.position.copy(pivotFall); scene.add(fly, fall);
-  for (const reg of dummy.regions) {
-    const root = reg.rig.root, target = reg.side > 0 ? fly : fall;
-    root.position.sub(target.position); target.add(root);
-  }
-  let d = new THREE.Vector3(Math.cos(ang), Math.sin(ang), 0); if (d.y > 0) d.negate();
-  dummy.fin = { groups: [fly, fall], fly, fall, t: 0, v: d.multiplyScalar(1.1).add(new THREE.Vector3(0, 0.9, 0)), w: -dummy.facing * 2.2, landed: false };
-  setTimeout(() => toast('Sumi is cut in three. Press <em>R</em> or Reset to fold a new one.', 6000), 900);
-}
-function dodge() { if (player.state !== 'guard') return; player.state = 'dodge'; player.t = 0; player.dodgeFrom = player.x; sfx.hop(); }
-function setStance(s) { if (player.state === 'guard' || player.state === 'dodge') player.stance = s; else player.queued = s; }
-function resetAll() {
-  player.x = -1.7; player.state = 'guard'; player.stance = 'high'; player.pose = copyPose(POSE.guard.high);
-  flecks.forEach((f) => scene.remove(f.m)); flecks.length = 0;
-  slowmo = 0; resetDummy(); toast('A fresh Sumi, folded and ready.', 2000);
-}
-
-function updatePlayer(dt) {
-  const p = player; p.t += dt;
-  const dir = (held.right ? 1 : 0) - (held.left ? 1 : 0);
-  if (p.state === 'guard') {
-    p.x += dir * WALK * dt; p.moving = dir;
-    if (dir) p.walk += dt * 9;
-    const tgt = POSE.guard[p.stance];
-    const k = 1 - Math.exp(-dt * 20);
-    lerpPose(p.pose, tgt, k, p.pose);
-    const sw = dir ? Math.sin(p.walk) * 0.22 : 0;
-    p.pose.legB = lerp(p.pose.legB, tgt.legB + sw, 0.5); p.pose.legF = lerp(p.pose.legF, tgt.legF - sw, 0.5);
-    p.bob = dir ? Math.abs(Math.sin(p.walk)) * 0.03 : Math.sin(clock * 2.2) * 0.006;
-  } else if (p.state === 'wind') {
-    lerpPose(p.from, POSE.wind[p.slash], easeIO(Math.min(1, p.t / WIND_T)), p.pose);
-    if (p.t >= WIND_T) { p.state = 'active'; p.t = 0; resolveHit(); }
-  } else if (p.state === 'active') {
-    lerpPose(POSE.wind[p.slash], POSE.strike[p.slash], easeOut(Math.min(1, p.t / ACT_T)), p.pose);
-    if (p.t >= ACT_T) { p.state = 'recover'; p.t = 0; }
-  } else if (p.state === 'recover') {
-    lerpPose(POSE.strike[p.slash], POSE.guard[p.stance], easeIO(Math.min(1, p.t / REC_T)), p.pose);
-    if (p.t >= REC_T) { p.state = 'guard'; if (p.queued) { p.stance = p.queued; p.queued = null; } }
-  } else if (p.state === 'dodge') {
-    const k = Math.min(1, p.t / 0.26);
-    p.x = p.dodgeFrom - p.facing * 1.1 * easeOut(k); p.y = Math.sin(k * Math.PI) * 0.22;
-    lerpPose(p.pose, { ...POSE.guard[p.stance], lean: 0.18, legB: 0.1, legF: -0.5 }, 1 - Math.exp(-dt * 25), p.pose);
-    if (k >= 1) { p.state = 'guard'; p.y = 0; }
-  }
-  p.x = clamp(p.x, -6.5, dummy.down ? 6.5 : dummy.x - 0.95);
-}
-function updateDummy(dt) {
-  if (dummy.fin) return;
-  dummy.x = lerp(dummy.x, dummy.home, 1 - Math.exp(-dt * 1.2));
-  dummy.timer -= dt;
-  if (dummy.timer < 0.5 && dummy.tell === 0) { dummy.tell = 0.5; }
-  if (dummy.tell > 0) { dummy.tell -= dt; if (dummy.tell <= 0) { dummy.tell = 0; dummy.stance = dummy.stance === 'high' ? 'low' : 'high'; dummy.timer = 1.6 + Math.random() * 1.8; } }
-  const tgt = POSE.guard[dummy.stance];
-  lerpPose(dummy.pose, tgt, 1 - Math.exp(-dt * 14), dummy.pose);
-  if (dummy.tell > 0) dummy.pose.sword += Math.sin(clock * 40) * 0.03;
-  dummy.pose.hipY = tgt.hipY + Math.sin(clock * 1.8 + 1) * 0.006;
-}
-function updateFinale(dt) {
-  const F = dummy.fin; if (!F) return; F.t += dt;
-  if (F.t > 0.18) {
-    F.v.y -= 7 * dt; F.fly.position.addScaledVector(F.v, dt); F.fly.rotation.z += F.w * dt;
-    if (F.fly.position.y < 0.32) { F.fly.position.y = 0.32; F.v.multiplyScalar(0.3); F.v.y = Math.abs(F.v.y) * 0.25; F.w *= 0.4; }
-  }
-  const k = clamp((F.t - 0.35) / 0.9, 0, 1);
-  F.fall.rotation.z = dummy.facing * (Math.PI / 2) * easeIn(k) * (k < 1 ? 1 : 1);
-  if (k >= 1 && !F.landed) { F.landed = true; shake = 0.08; burst([dummy.x - dummy.facing * 0.8, 0.1], [C.paper, C.red], 8, -dummy.facing); }
-}
-function updateFlecks(dt) {
-  for (const f of flecks) {
-    if (f.rest) continue;
-    f.v.y -= 7.5 * dt; f.v.multiplyScalar(1 - dt * 1.4); f.m.position.addScaledVector(f.v, dt);
-    f.m.rotation.x += f.s.x * dt; f.m.rotation.y += f.s.y * dt; f.m.rotation.z += f.s.z * dt;
-    if (f.m.position.y < 0.004) { f.m.position.y = 0.004 + Math.random() * 0.002; f.m.rotation.set(-Math.PI / 2, 0, Math.random() * 6); f.m.castShadow = false; f.rest = true; }
-  }
-}
-
-// ---------- camera ----------
-const cam = { x: 0, y: 1.1, dist: 10 };
-function updateCamera(dt, real) {
-  const a = player.x, b = dummy.x;
-  let cx = (a + b) / 2, cy = 1.1;
-  const vf = THREE.MathUtils.degToRad(camera.fov / 2), aspect = camera.aspect;
-  const portrait = aspect < 1;
-  const half = Math.abs(a - b) / 2 + (portrait ? 1.2 : 1.9), vhalf = portrait ? 1.6 : 1.55;
-  let dist = Math.max(half / (Math.tan(vf) * aspect), vhalf / Math.tan(vf));
-  if (dummy.fin && dummy.fin.t < 1.4) { cx = lerp(cx, dummy.x, 0.7); cy = 1.2; dist *= 0.58; }
-  const k = 1 - Math.exp(-real * (dummy.fin ? 6 : 4));
-  cam.x = lerp(cam.x, cx, k); cam.y = lerp(cam.y, cy, k); cam.dist = lerp(cam.dist, dist, k);
-  const s = shake * (reduceMotion ? 0.3 : 1);
-  const sx = (Math.random() - .5) * s, sy = (Math.random() - .5) * s;
-  camera.position.set(cam.x + sx, cam.y + cam.dist * 0.17 + sy, cam.dist);
-  camera.lookAt(cam.x + sx * 0.5, cam.y, 0);
-}
-
-// ---------- input ----------
+// ---------- input: keyboard, chips, gamepads ----------
+const input = [{ left: 0, right: 0, q: [] }, { left: 0, right: 0, q: [] }];
+const KEYS = {
+  KeyA: [0, 'left'], KeyD: [0, 'right'], KeyW: [0, 'high'], KeyS: [0, 'low'], KeyF: [0, 'slash'], Space: [0, 'jump'], KeyQ: [0, 'dodge'],
+  ArrowLeft: [1, 'left'], ArrowRight: [1, 'right'], ArrowUp: [1, 'high'], ArrowDown: [1, 'low'], Slash: [1, 'slash'], ShiftRight: [1, 'jump'], Period: [1, 'dodge'],
+  Numpad1: [1, 'slash'], Numpad2: [1, 'jump'], Numpad3: [1, 'dodge'],
+};
 let stageActive = false;
 stageEl.addEventListener('pointerdown', () => { stageActive = true; ac(); });
 document.addEventListener('pointerdown', (e) => { if (!stageEl.contains(e.target)) stageActive = false; });
-const keyAct = { KeyW: 'high', ArrowUp: 'high', KeyS: 'low', ArrowDown: 'low', KeyJ: 'slash', KeyK: 'dodge', KeyR: 'reset' };
+const who = (p) => (p === 1 && !p2Human ? 0 : p);
 addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.code.startsWith('Arrow')) { if (!stageActive) return; e.preventDefault(); }
-  if (e.code === 'KeyA' || e.code === 'ArrowLeft') held.left = true;
-  else if (e.code === 'KeyD' || e.code === 'ArrowRight') held.right = true;
-  else if (keyAct[e.code] && !e.repeat) act(keyAct[e.code]);
-  else return;
-  ac();
+  if (e.code === 'KeyR' && !e.repeat) { restart(); return; }
+  const k = KEYS[e.code]; if (!k) return;
+  if (/^Arrow|Space/.test(e.code)) { if (!stageActive) return; e.preventDefault(); }
+  const p = who(k[0]); ac();
+  if (k[1] === 'left' || k[1] === 'right') input[p][k[1]] |= 1 << k[0];
+  else if (!e.repeat) input[p].q.push(k[1]);
 });
-addEventListener('keyup', (e) => { if (e.code === 'KeyA' || e.code === 'ArrowLeft') held.left = false; if (e.code === 'KeyD' || e.code === 'ArrowRight') held.right = false; });
-addEventListener('blur', () => { held.left = held.right = false; });
-function act(a) { if (a === 'high' || a === 'low') setStance(a); else if (a === 'slash') startSlash(); else if (a === 'dodge') dodge(); else if (a === 'reset') resetAll(); }
+addEventListener('keyup', (e) => { const k = KEYS[e.code]; if (!k || (k[1] !== 'left' && k[1] !== 'right')) return; for (const p of [0, 1]) input[p][k[1]] &= ~(1 << k[0]); });
+addEventListener('blur', () => { for (const i of input) i.left = i.right = 0; });
 for (const b of document.querySelectorAll('.chip')) {
-  if (b.dataset.act) b.addEventListener('click', () => { ac(); act(b.dataset.act); });
+  if (b.dataset.act) b.addEventListener('click', () => { ac(); if (b.dataset.act === 'reset') restart(); else input[0].q.push(b.dataset.act); });
   if (b.dataset.hold) {
-    const on = (e) => { e.preventDefault(); held[b.dataset.hold] = true; ac(); };
-    const off = () => { held[b.dataset.hold] = false; };
+    const bit = 1 << 3, on = (e) => { e.preventDefault(); input[0][b.dataset.hold] |= bit; ac(); }, off = () => { input[0][b.dataset.hold] &= ~bit; };
     b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off);
   }
 }
-$('#bArena').addEventListener('click', () => setArena(arenaIndex + 1));
+const padPrev = [{}, {}];
+function pollPads() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (let i = 0; i < 2; i++) {
+    const g = pads[i]; if (!g) continue; const p = who(i), prev = padPrev[i], bit = 1 << (4 + i);
+    const ax = g.axes[0] || 0, ay = g.axes[1] || 0;
+    input[p].left = ax < -0.35 ? input[p].left | bit : input[p].left & ~bit; input[p].right = ax > 0.35 ? input[p].right | bit : input[p].right & ~bit;
+    const now = { high: ay < -0.6 || g.buttons[12]?.pressed, low: ay > 0.6 || g.buttons[13]?.pressed, slash: g.buttons[2]?.pressed, jump: g.buttons[0]?.pressed, dodge: g.buttons[1]?.pressed };
+    for (const a in now) { if (now[a] && !prev[a]) input[p].q.push(a); prev[a] = now[a]; }
+  }
+}
+
+// ---------- duel rules (fixed 60 Hz step, input-driven) ----------
+let hitstop = 0, shake = 0, slowmo = 0, killCam = 0, motion = 'smooth', turning = null;
+function slashLine(att) { const base = att.slash === 'high' ? -22 * D : 14 * D; return { ang: att.facing * base, y: (att.slash === 'high' ? 1.6 : 0.62) + att.y }; }
+function act(f, a, inp) {
+  if (!f.alive || f.unfold < 1 || matchOver || turning) return;
+  if (a === 'high' || a === 'low') { if (f.stance !== a) { f.stance = a; f.stanceAt = simClock; } return; }
+  if (f.state !== 'guard' || f.stagger > 0) return;
+  if (a === 'slash') { f.state = 'wind'; f.t = 0; f.slash = f.stance; f.from = copyPose(f.pose); sfx.whoosh(); }
+  else if (a === 'jump' && f.y <= 0) { f.vy = JUMP_V; f.vx = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * WALK; sfx.hop(); }
+  else if (a === 'dodge' && f.y <= 0) { f.state = 'dodge'; f.t = 0; f.dodgeFrom = f.x; sfx.hop(); }
+}
+function resolve(att) {
+  const def = other(att), L = slashLine(att), tipX = att.x + att.facing * 1.25;
+  if (!def.alive || def.unfold < 1 || Math.abs(def.x - att.x) > REACH) { razor([tipX, L.y], L.ang, C.ink, 2.4); return; }
+  const P = [def.x - att.facing * 0.05, L.y];
+  if (att.slash === 'low' && def.y > 0.3) { razor([tipX, L.y], L.ang, C.ink, 2.4); popLabel('Over', [def.x, def.y + 2.2], 'gold'); return; }
+  if (def.state === 'active' && def.slash === att.slash) {
+    razor(P, L.ang, C.ink, 2.2); burst(P, [C.paper, C.ink], 10, -att.facing); popLabel('Clash', [P[0], P[1] + 0.6]); sfx.block();
+    hitstop = 0.08; shake = 0.08; att.x -= att.facing * 0.35; def.x += att.facing * 0.35; return;
+  }
+  const guarding = def.state === 'guard' && def.tell <= 0 && def.stagger <= 0;
+  if (guarding && def.stance === att.slash) {
+    if (simClock - def.stanceAt < PARRY_WIN) {
+      razor(P, L.ang, C.legal, 2.4); burst(P, [C.legal, C.paper], 10, att.facing); popLabel('Parry', [P[0], P[1] + 0.6], 'gold'); sfx.parry();
+      hitstop = 0.1; shake = 0.06; att.stagger = 0.5; att.x -= att.facing * 0.3; return;
+    }
+    razor(P, L.ang, C.ink, 2.2); burst(P, [C.paper, C.paper, C.ink], 8, att.facing); popLabel('Block', [P[0], P[1] + 0.6]); sfx.block();
+    hitstop = 0.06; shake = 0.06; att.x -= att.facing * 0.25; def.x += att.facing * 0.2; return;
+  }
+  kill(att, def, P, L.ang + (Math.random() - .5) * 8 * D);
+}
+function kill(att, def, P, ang) {
+  razor(P, ang, C.red, 4.6); burst(P, [C.red, C.redDeep, C.paper, C.red], 30, att.facing); popLabel('Cut', [P[0], P[1] + 0.8], 'cut'); sfx.cut();
+  hitstop = 0.12; shake = 0.2; slowmo = 1.0; killCam = 1.5;
+  splitFighter(def, P, ang, att.facing);
+  def.alive = false; def.respawn = 1.6; def.state = 'guard'; def.tell = 0;
+  const first = rightOfWay !== att; rightOfWay = att; updateWay();
+  if (first) setTimeout(() => toast(`<em>${att.cfg.name}</em> has the way. Run ${att.goalDir > 0 ? 'right' : 'left'} to the page edge before ${def.cfg.name} refolds in front.`, 3800), 700);
+}
+// The split: the fighter is redrawn twice, each copy clipped on one side of the cut plane.
+const halvesOnPage = [];
+function splitFighter(f, P, ang, dirAway) {
+  f.rig.root.updateMatrixWorld(true);
+  const inv = f.rig.root.matrixWorld.clone().invert();
+  const n = new THREE.Vector3(-Math.sin(ang), Math.cos(ang), 0), wp = new THREE.Plane().setFromNormalAndCoplanarPoint(n, new THREE.Vector3(P[0], P[1], 0));
+  const lp = wp.clone().applyMatrix4(inv);
+  for (const side of [1, -1]) {
+    const h = { local: side > 0 ? lp : lp.clone().negate(), core: new THREE.Plane(), skin: new THREE.Plane(), mats: [], side, t: 0 };
+    const mf = (color, kind) => { const m = matFor(color, kind, kind === 'back' || kind === 'core' ? [h.core] : [h.skin]); h.mats.push(m); return m; };
+    h.rig = buildRig(f.cfg, mf, true); h.holder = new THREE.Group(); h.holder.position.set(P[0], P[1], 0); scene.add(h.holder); h.holder.add(h.rig.root);
+    h.rig.root.position.copy(f.rig.root.position).sub(h.holder.position); h.rig.root.rotation.copy(f.rig.root.rotation); h.rig.root.scale.copy(f.rig.root.scale);
+    applyPose(h.rig, f.pose);
+    h.base = h.holder.position.clone(); h.dir = dirAway;
+    if (side > 0) { h.v = new THREE.Vector3(dirAway * 1.4, 1.3, (Math.random() - .5) * 1.6); h.w = new THREE.Vector3((Math.random() - .5) * 5, (Math.random() - .5) * 4, -dirAway * 3.2); }
+    halvesOnPage.push(h);
+  }
+  scene.remove(f.rig.root); f.rig.root.position.y = -50;
+  while (halvesOnPage.length > 8) dropHalf(halvesOnPage.shift());
+}
+function dropHalf(h) { scene.remove(h.holder); h.mats.forEach((m) => m.dispose()); }
+function updateHalves(dt) {
+  for (const h of halvesOnPage) {
+    h.t += dt;
+    if (h.side > 0) {
+      if (h.t < 0.12) continue;
+      h.v.y -= GRAV * 0.55 * dt; h.holder.position.addScaledVector(h.v, dt);
+      h.holder.rotation.x += h.w.x * dt; h.holder.rotation.y += h.w.y * dt; h.holder.rotation.z += h.w.z * dt;
+      if (h.holder.position.y < 0.32) { h.holder.position.y = 0.32; h.v.multiplyScalar(0.35); h.v.y = Math.abs(h.v.y) * 0.3; h.w.multiplyScalar(0.45); }
+    } else {
+      const k = clamp((h.t - 0.3) / 0.8, 0, 1);
+      h.holder.rotation.z = -h.dir * (Math.PI / 2) * 0.94 * easeIn(k);
+      h.holder.position.y = lerp(h.base.y, 0.3, easeIn(k)); h.holder.position.x = h.base.x + h.dir * 0.35 * easeIn(k);
+      if (k >= 1 && !h.landed) { h.landed = true; shake = Math.max(shake, 0.07); burst([h.holder.position.x + h.dir * 0.6, 0.1], [C.paper, C.red], 8, h.dir); }
+    }
+  }
+}
+function respawn(f) {
+  const w = other(f);
+  const x = clamp(w.x + w.goalDir * 4.2, -EDGE + 0.6, EDGE - 0.6);
+  Object.assign(f, { x: Math.abs(x - w.x) < 1.4 ? clamp(w.x + w.goalDir * 1.6, -EDGE + 0.3, EDGE - 0.3) : x, y: 0, vy: 0, vx: 0, alive: true, unfold: 0, state: 'guard', stance: 'low', stagger: 0, timer: 2.2, tell: 0 });
+  f.pose = copyPose(POSE.guard.low); scene.add(f.rig.root); sfx.fold();
+}
+function step(dt) {
+  simClock += dt;
+  for (const f of fighters) {
+    const inp = input[f.id === 1 && !p2Human ? 9 : f.id] || { left: 0, right: 0, q: [] };
+    if (f.id === 1 && !p2Human) { input[1].q.length = 0; }
+    for (const a of inp.q) act(f, a, inp); inp.q.length = 0;
+    if (!f.alive) { f.respawn -= dt; if (f.respawn <= 0 && !matchOver && !turning) respawn(f); continue; }
+    if (f.unfold < 1) { f.unfold = Math.min(1, f.unfold + dt / 0.45); }
+    const o = other(f);
+    if (o.alive && Math.abs(o.x - f.x) > 0.05) f.facing = Math.sign(o.x - f.x);
+    f.stagger = Math.max(0, f.stagger - dt);
+    const dir = turning || matchOver || f.unfold < 1 || f.stagger > 0 ? 0 : (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+    f.t += dt;
+    if (f.state === 'guard') {
+      if (f.y <= 0) { f.x += dir * WALK * dt; if (dir) f.walk += dt * 9; }
+      else f.x += f.vx * dt;
+      const tgt = POSE.guard[f.stance]; lerpPose(f.pose, tgt, 1 - Math.exp(-dt * 20), f.pose);
+      const sw = dir && f.y <= 0 ? Math.sin(f.walk) * 0.22 : 0;
+      if (f.y > 0) { f.pose.legB = lerp(f.pose.legB, 0.7, 0.3); f.pose.legF = lerp(f.pose.legF, -0.2, 0.3); }
+      else { f.pose.legB = lerp(f.pose.legB, tgt.legB + sw, 0.5); f.pose.legF = lerp(f.pose.legF, tgt.legF - sw, 0.5); }
+      f.bob = dir && f.y <= 0 ? Math.abs(Math.sin(f.walk)) * 0.03 : Math.sin(simClock * 2.2 + f.id) * 0.006;
+      if (f.stagger > 0) f.pose.lean = lerp(f.pose.lean, 0.3, 0.2);
+    } else if (f.state === 'wind') {
+      lerpPose(f.from, POSE.wind[f.slash], easeIO(Math.min(1, f.t / WIND_T)), f.pose);
+      if (f.y > 0) f.x += f.vx * dt;
+      if (f.t >= WIND_T) { f.state = 'active'; f.t = 0; resolve(f); }
+    } else if (f.state === 'active') {
+      lerpPose(POSE.wind[f.slash], POSE.strike[f.slash], easeOut(Math.min(1, f.t / ACT_T)), f.pose);
+      if (f.t >= ACT_T) { f.state = 'recover'; f.t = 0; }
+    } else if (f.state === 'recover') {
+      lerpPose(POSE.strike[f.slash], POSE.guard[f.stance], easeIO(Math.min(1, f.t / REC_T)), f.pose);
+      if (f.t >= REC_T) f.state = 'guard';
+    } else if (f.state === 'dodge') {
+      const k = Math.min(1, f.t / 0.26); f.x = f.dodgeFrom - f.facing * 1.1 * easeOut(k); f.y = Math.sin(k * Math.PI) * 0.22;
+      lerpPose(f.pose, { ...POSE.guard[f.stance], lean: 0.18, legB: 0.1, legF: -0.5 }, 1 - Math.exp(-dt * 25), f.pose);
+      if (k >= 1) { f.state = 'guard'; f.y = 0; }
+    }
+    if (f.state !== 'dodge') { if (f.y > 0 || f.vy > 0) { f.vy -= GRAV * dt; f.y += f.vy * dt; if (f.y <= 0) { f.y = 0; f.vy = 0; f.vx = 0; } } }
+    // the practice dummy: switches guard on a timer, with a glint first
+    if (f.id === 1 && !p2Human) {
+      f.timer -= dt; if (f.timer < 0.5 && f.tell === 0) f.tell = 0.5;
+      if (f.tell > 0) { f.tell -= dt; if (f.tell <= 0) { f.tell = 0; f.stance = f.stance === 'high' ? 'low' : 'high'; f.stanceAt = -9; f.timer = 1.5 + Math.random() * 1.8; } }
+      if (f.tell > 0) f.pose.sword += Math.sin(simClock * 40) * 0.03;
+    }
+  }
+  // fighters can't walk through each other; jumping over is allowed
+  if (kami.alive && sumi.alive && kami.y < 0.35 && sumi.y < 0.35) {
+    const dx = sumi.x - kami.x, gap = 0.85;
+    if (Math.abs(dx) < gap) { const push = (gap - Math.abs(dx)) / 2 * Math.sign(dx || 1); kami.x -= push; sumi.x += push; }
+  }
+  for (const f of fighters) {
+    if (!f.alive) continue;
+    const mayPass = rightOfWay === f && !matchOver;
+    const lo = mayPass && f.goalDir < 0 ? -99 : -EDGE, hi = mayPass && f.goalDir > 0 ? 99 : EDGE;
+    f.x = clamp(f.x, lo, hi);
+    if (mayPass && !turning && f.x * f.goalDir > EDGE + 0.3) startTurn(f.goalDir);
+  }
+  updateHalves(dt);
+}
+
+// ---------- page turns ----------
+let leaf = null;
+function startTurn(dir) {
+  const to = page + dir; turning = { t: 0, dir, to, swapped: false, built: false }; sfx.page();
+  for (const i of [input[0], input[1], input[9]]) i.q.length = 0;
+}
+function updateTurn(real) {
+  const T = turning; T.t += real;
+  const t = T.t;
+  // 0-0.35 fold flat, 0.35-1.15 flip, 1.15-1.6 pop up
+  const fold = t < 0.35 ? 1 - easeIn(t / 0.35) : t < 1.15 ? 0 : easeOut(Math.min(1, (t - 1.15) / 0.45));
+  setFold(Math.max(0.001, fold));
+  if (t >= 0.35 && !leaf) {
+    const geo = new THREE.PlaneGeometry(PW, PD); geo.rotateX(-Math.PI / 2); geo.translate(T.dir * PW / 2, 0.02, PZ);
+    leaf = new THREE.Group();
+    const top = new THREE.Mesh(geo, paperMat(PAGES[page].key)), under = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: paperMat(PAGES[T.to].key).map, side: THREE.BackSide }));
+    top.castShadow = true; leaf.add(top, under); scene.add(leaf);
+    setSpread(T.to, T.dir > 0 ? 'right' : 'left');
+  }
+  if (leaf) { const k = clamp((t - 0.35) / 0.8, 0, 1); leaf.rotation.z = T.dir * Math.PI * easeIO(k); leaf.position.y = Math.sin(k * Math.PI) * 0.15; }
+  if (t >= 1.15 && !T.built) {
+    T.built = true; scene.remove(leaf); leaf = null;
+    page = T.to; setSpread(page); setPageScene(page); setFold(0.001);
+    halvesOnPage.splice(0).forEach(dropHalf); flecks.splice(0).forEach((f) => scene.remove(f.m));
+    const w = rightOfWay, l = other(w);
+    w.x = -T.dir * (EDGE - 1.0); w.y = 0; w.vy = 0; w.state = 'guard';
+    if (PAGES[page].key === 'cover') {
+      matchOver = true; l.alive = false; scene.remove(l.rig.root); w.x = 0;
+      $('#bannerText').innerHTML = `${w.cfg.name} wins<small>${w.cfg.name} turned the last page onto ${l.cfg.name}'s cover. Press R for a new match.</small>`; $('#banner').hidden = false;
+    } else {
+      if (!l.alive) { l.respawn = 0; l.alive = true; scene.add(l.rig.root); }
+      Object.assign(l, { x: w.x + T.dir * 4.2, y: 0, vy: 0, state: 'guard', unfold: 1, stagger: 0 });
+      toast(`${PAGES[page].name}. ${w.cfg.name} still has the way: ${l.cfg.name} has to cut back to take it.`, 3600);
+    }
+  }
+  if (t >= 1.6) { turning = null; setFold(1); }
+}
+let foldNow = 1;
+function setFold(v) { foldNow = v; if (popups) popups.scale.y = v; }
+
+// ---------- camera ----------
+const cam = { x: 0, y: 1.1, dist: 11, yaw: 0.16, pitch: 0.2 };
+const drag = { yaw: 0, pitch: 0, active: false, idle: 9, lx: 0, ly: 0, id: null };
+canvas.addEventListener('pointerdown', (e) => { drag.active = true; drag.lx = e.clientX; drag.ly = e.clientY; drag.id = e.pointerId; });
+addEventListener('pointermove', (e) => { if (!drag.active || e.pointerId !== drag.id) return; const dx = e.clientX - drag.lx, dy = e.clientY - drag.ly; drag.lx = e.clientX; drag.ly = e.clientY; if (e.pointerType === 'touch' && Math.abs(dy) > Math.abs(dx)) return; drag.yaw = clamp(drag.yaw - dx * 0.006, -1.3, 1.3); drag.pitch = clamp(drag.pitch + dy * 0.004, -0.15, 0.8); drag.idle = 0; });
+addEventListener('pointerup', () => { drag.active = false; });
+function updateCamera(real) {
+  const alive = fighters.filter((f) => f.alive);
+  const xs = alive.length ? alive.map((f) => f.x) : [0];
+  let cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = 1.1, yaw = 0.16, pitch = 0.2;
+  const vf = THREE.MathUtils.degToRad(camera.fov / 2), aspect = camera.aspect, portrait = aspect < 1;
+  const half = (Math.max(...xs) - Math.min(...xs)) / 2 + (portrait ? 1.3 : 2.1), vhalf = portrait ? 1.7 : 1.6;
+  let dist = Math.max(half / (Math.tan(vf) * aspect), vhalf / Math.tan(vf));
+  if (killCam > 0 && halvesOnPage.length) { const h = halvesOnPage[halvesOnPage.length - 1]; cx = h.base.x + h.dir * 0.4; cy = 0.95; dist *= 0.82; yaw = 0.72 * h.dir; pitch = 0.18; }
+  if (turning) { cx = 0; cy = 0.4; dist = Math.max(dist, portrait ? 26 : 17); pitch = 0.62; yaw = 0.12; }
+  if (matchOver && !turning) { cx = 0; cy = 1.2; yaw = 0.5; pitch = 0.25; dist = Math.max(dist * 0.8, 8); }
+  if (!drag.active) { drag.idle += real; if (drag.idle > 1.6) { drag.yaw *= Math.exp(-real * 2); drag.pitch *= Math.exp(-real * 2); } }
+  const k = 1 - Math.exp(-real * (killCam > 0 || turning ? 5 : 4));
+  cam.x = lerp(cam.x, cx, k); cam.y = lerp(cam.y, cy, k); cam.dist = lerp(cam.dist, dist, k); cam.yaw = lerp(cam.yaw, yaw, k); cam.pitch = lerp(cam.pitch, pitch, k);
+  const Y = cam.yaw + drag.yaw, Pt = clamp(cam.pitch + drag.pitch, -0.05, 1.1);
+  const s = shake * (reduceMotion ? 0.3 : 1), sx = (Math.random() - .5) * s, sy = (Math.random() - .5) * s;
+  camera.position.set(cam.x + Math.sin(Y) * Math.cos(Pt) * cam.dist + sx, cam.y + Math.sin(Pt) * cam.dist + sy, Math.cos(Y) * Math.cos(Pt) * cam.dist);
+  camera.lookAt(cam.x + sx * 0.5, cam.y, 0);
+}
+
+// ---------- buttons ----------
+function updateWay() { $('#way').innerHTML = rightOfWay ? `<b>${rightOfWay.cfg.name}</b> has the way ${rightOfWay.goalDir > 0 ? '→' : '←'}` : 'No one has the way'; }
+$('#bP2').addEventListener('click', () => { p2Human = !p2Human; $('#bP2 b').textContent = p2Human ? 'Player 2' : 'Dummy'; sumi.tell = 0; toast(p2Human ? 'Sumi is player 2: arrows to move and guard, <em>/</em> slash, <em>Right Shift</em> jump, <em>.</em> dodge. Or plug in a second gamepad.' : 'Sumi is a practice dummy again.', 4200); });
 $('#bOutline').addEventListener('click', () => {
-  outlineMode = outlineMode === 'sticker' ? 'ink' : 'sticker';
-  $('#bOutline b').textContent = outlineMode === 'sticker' ? 'Sticker' : 'Ink only';
-  scene.traverse((o) => { if (o.userData.layer === 'outer' || o.userData.layer === 'border') o.visible = outlineMode === 'sticker'; });
+  outlineMode = outlineMode === 'sticker' ? 'ink' : 'sticker'; $('#bOutline b').textContent = outlineMode === 'sticker' ? 'Sticker' : 'Ink only';
+  scene.traverse((o) => { if (o.userData.outline === 'w') o.visible = outlineMode === 'sticker'; if (o.userData.outline === 'i') o.geometry = hullOf(o.userData.geo, (outlineMode === 'sticker' ? HULL_I : 0.014) * o.userData.os); });
 });
 $('#bMotion').addEventListener('click', () => { motion = motion === 'smooth' ? 'stop' : 'smooth'; $('#bMotion b').textContent = motion === 'smooth' ? 'Smooth' : 'Stop-motion'; });
 $('#bSound').addEventListener('click', () => { soundOn = !soundOn; $('#bSound b').textContent = soundOn ? 'On' : 'Off'; });
+function restart() {
+  halvesOnPage.splice(0).forEach(dropHalf); flecks.splice(0).forEach((f) => scene.remove(f.m));
+  if (leaf) { scene.remove(leaf); leaf = null; } turning = null; matchOver = false; rightOfWay = null; slowmo = 0; killCam = 0; $('#banner').hidden = true;
+  page = 2; setSpread(page); setPageScene(page); setFold(1); updateWay();
+  for (const [f, x] of [[kami, -1.8], [sumi, 1.8]]) { if (!f.rig.root.parent) scene.add(f.rig.root); Object.assign(f, { x, y: 0, vy: 0, alive: true, unfold: 1, state: 'guard', stance: f === kami ? 'high' : 'low', stagger: 0, tell: 0, timer: 2.4, respawn: 0 }); f.pose = copyPose(POSE.guard[f.stance]); }
+}
 
 // ---------- loop ----------
-let clock = 0, last = performance.now(), visible = true, running = true;
+let last = performance.now(), visible = true, running = true, acc = 0, stepClock = 0, lastStep = -1;
+const STEP = 1 / 60;
 new IntersectionObserver((es) => { visible = es[0].isIntersecting; }).observe(stageEl);
 document.addEventListener('visibilitychange', () => { running = !document.hidden; last = performance.now(); });
-function resize() {
-  const w = stageEl.clientWidth, h = stageEl.clientHeight;
-  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
-}
+function resize() { const w = stageEl.clientWidth, h = stageEl.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(stageEl);
-
+input[9] = { left: 0, right: 0, q: [] }; // the dummy's (empty) controls
+const _tip = new THREE.Vector3();
 function frame(now) {
   requestAnimationFrame(frame);
   const real = Math.min(0.05, (now - last) / 1000); last = now;
   if (!visible || !running) return;
-  if (slowmo > 0) { slowmo -= real; timeScale = slowmo > 0.25 ? 0.22 : lerp(1, 0.22, slowmo / 0.25); } else timeScale = 1;
-  let dt = real * timeScale;
-  if (hitstop > 0) { hitstop -= real; dt = 0; }
-  shake = Math.max(0, shake - real * 0.9);
-  clock += dt;
-  updatePlayer(dt); updateDummy(dt); updateFinale(dt); updateFlecks(dt);
-  // glint tell on Sumi's blade tip
-  if (dummy.tell > 0 && !dummy.down && dummy.regions[0]) {
-    const tip = new THREE.Vector3(1.15, 0, 0).applyMatrix4(dummy.regions[0].rig.parts.blade.matrixWorld);
-    glint.position.set(tip.x, tip.y, 0.5); glint.visible = true;
-    const k = 1 - dummy.tell / 0.5; glint.scale.setScalar(0.4 + Math.sin(k * Math.PI) * 1.1); glint.rotation.z = k * 2;
+  pollPads();
+  let scale = 1;
+  if (slowmo > 0) { slowmo -= real; scale = slowmo > 0.25 ? 0.22 : lerp(1, 0.22, slowmo / 0.25); }
+  if (hitstop > 0) { hitstop -= real; scale = 0; }
+  killCam = Math.max(0, killCam - real); shake = Math.max(0, shake - real * 0.9);
+  if (turning) updateTurn(real);
+  acc += real * scale;
+  while (acc >= STEP) { step(STEP); acc -= STEP; }
+  for (const f of flecks) {
+    if (f.rest) continue; const dt = real * scale;
+    f.v.y -= 7.5 * dt; f.v.multiplyScalar(1 - dt * 1.4); f.m.position.addScaledVector(f.v, dt); f.m.rotation.x += f.s.x * dt; f.m.rotation.y += f.s.y * dt; f.m.rotation.z += f.s.z * dt;
+    if (f.m.position.y < 0.004) { f.m.position.y = 0.006 + Math.random() * 0.004; f.m.rotation.set(-Math.PI / 2, 0, Math.random() * 6); f.m.castShadow = false; f.rest = true; }
+  }
+  stepClock += real; const st = Math.floor(stepClock * 12), doPose = motion === 'smooth' || st !== lastStep; lastStep = st;
+  for (const f of fighters) {
+    if (!f.alive) continue;
+    const r = f.rig.root, ty = f.facing > 0 ? 0 : Math.PI;
+    f.yaw = lerp(f.yaw, ty, 1 - Math.exp(-real * 14));
+    r.position.set(f.x, f.y + f.bob, 0); r.rotation.y = f.yaw;
+    const u = backOut(f.unfold); r.scale.set(1, Math.max(0.001, u * foldNow), 1); r.rotation.x = -(1 - Math.min(1, f.unfold * 1.4)) * 1.2;
+    if (doPose) applyPose(f.rig, f.pose, motion === 'stop' ? 0.025 : 0);
+  }
+  for (const h of halvesOnPage) h.holder.scale.y = Math.max(0.001, foldNow);
+  for (const f of flecks) f.m.visible = foldNow > 0.5;
+  if (!p2Human && sumi.alive && sumi.tell > 0) {
+    _tip.set(1.15, 0, 0).applyMatrix4(sumi.rig.parts.blade.matrixWorld); glint.position.set(_tip.x, _tip.y, _tip.z + 0.3); glint.visible = true;
+    const k = 1 - sumi.tell / 0.5; glint.scale.setScalar(0.4 + Math.sin(k * Math.PI) * 1.1); glint.rotation.z = k * 2; glint.quaternion.copy(camera.quaternion); glint.rotateZ(k * 2);
   } else glint.visible = false;
-  // poses: smooth, or stepped at 12 poses a second for the stop-motion look
-  stepClock += real; const step = Math.floor(stepClock * 12);
-  const doPose = motion === 'smooth' || step !== lastStep; lastStep = step;
-  const jit = motion === 'stop' ? 0.025 : 0;
-  player.rig.root.position.set(player.x, player.y + (player.bob || 0), 0); player.rig.root.scale.x = player.facing;
-  if (doPose) applyPose(player.rig, player.pose, jit);
-  for (const reg of dummy.regions) { placeRegion(reg); if (doPose && !dummy.fin) applyPose(reg.rig, dummy.pose, jit); }
   for (let i = fx.length - 1; i >= 0; i--) { const f = fx[i]; f.t += real; const k = Math.min(1, f.t / f.dur); f.fn(k); if (k >= 1) { f.done(); fx.splice(i, 1); } }
-  updateCamera(dt, real);
+  updateCamera(real);
   scene.updateMatrixWorld();
-  dummy.regions.forEach(updatePlanes);
+  for (const h of halvesOnPage) { h.rig.root.updateMatrixWorld(true); const M = h.rig.root.matrixWorld; h.core.copy(h.local).applyMatrix4(M); h.skin.copy(h.local); h.skin.constant -= GAP; h.skin.applyMatrix4(M); }
   renderer.render(scene, camera);
 }
 
-// start in the viewer's theme: night arena for dark pages
-const dark = document.documentElement.dataset.theme === 'dark' || (document.documentElement.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
-setArena(dark ? 3 : 0);
-resetDummy();
-resize();
+setSpread(page); setPageScene(page); updateWay(); resize();
 stageEl.classList.add('ready');
 requestAnimationFrame((t) => { last = t; frame(t); });
-setTimeout(() => toast('Watch Sumi\'s guard. Slash at the <em>other</em> height, or strike when the blade <em>glints</em>: that\'s the moment Sumi switches.', 6500), 600);
+setTimeout(() => toast('Kami fights toward <em>Sumi\'s cover</em> (right). One clean cut kills: slash at the height Sumi isn\'t guarding, or strike when the blade <em>glints</em>.', 6500), 600);
 // test hooks (used by the screenshot script only)
-window.__pc = { player, dummy, act, held, setArena, forceStance(s) { dummy.stance = s; dummy.timer = 99; dummy.tell = 0; } };
+window.__pc = { kami, sumi, input, step, get page() { return page; }, get turning() { return turning; }, get matchOver() { return matchOver; }, get halves() { return halvesOnPage.length; }, restart, setP2(v) { if (v !== p2Human) $('#bP2').click(); } };
 </script>

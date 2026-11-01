@@ -1,58 +1,77 @@
-# Papercut — Art direction proposal
-_Draft, 2026-10-30, for Marz. Not approved yet: the GDD is unchanged until the decisions at the bottom are answered._
+# Papercut — Art direction (v2: 3D)
+_v2, 2026-11-01. v1 (2026-10-30) was a flat side-view look; Marz liked the style and asked to go all out on 3D while keeping PvP, the page match and jump. Decisions are logged in the [GDD](GDD.md)._
 
-Playable mock-up: [art/papercut-mockup.html](art/papercut-mockup.html) (open it in a browser). It's a look test; timings and hit rules are placeholders.
+Playable mock-up: [art/papercut-mockup.html](art/papercut-mockup.html) (open it in a desktop browser). Two players on one keyboard, or Kami against Sumi as a dummy. It's a look test: timings and rules are placeholders that Milestone 1 tunes.
 
 ## The short version
-- **World:** the Notebook Dojo, a feudal-Japan pop-up stage built from school stationery: graph paper floors, marble-cover mountains, legal-pad bamboo.
-- **Fighters:** paper samurai with flat, angular, straight-edged shapes and a white sticker border. Every piece is cut card on a pin.
-- **The red rule:** the world is white, ink and paper colors. Red appears only where paper is cut: fighters are two-ply card with a red core.
-- **Technology:** Three.js flat shapes. The game draws each border itself, and cuts are real: the doll is sliced along the blade's line with clipping planes.
-- **Making the art:** code-made dolls for Milestone 1. From Milestone 2, flat pieces drawn in Blender; the game adds borders, core and cuts.
+- **World:** the Notebook Dojo. A pop-up feudal Japan built from stationery, now a real 3D book open on a desk. Each spread is a different paper: graph, ruled, legal pad, marble cover.
+- **Fighters:** folded low-poly papercraft samurai with crisp facets, a white sticker outline and an ink edge around every part.
+- **The red rule:** every fighter is a hollow paper shell, white outside and red inside. A cut opens the shell, so red only appears where paper is cut.
+- **The match:** one clean cut kills; the winner gets the way and runs for the page edge; turn the last page onto the rival's cover to win.
+- **Technology:** Three.js, no new stack. Faceted shells, an inverted-hull outline, clipping-plane cuts, and a fixed-step game loop ready for online play.
+- **Making the art:** code-made fighters for Milestone 1, then low-poly models rigged in Blender. The game adds the outline and the red inside to any model.
 
-References Marz shared (style inspiration only, nothing copied): Kartana (white/red origami blade), the Samurai Jack poster (flat angular shapes, thin lines), Paper Mario (white sticker border), ruled and graph paper, a marble composition notebook, South Park's cut-paper look.
+References Marz shared (style inspiration only, nothing copied): Kartana (white/red folded blade), the Samurai Jack poster (flat angular shapes, thin lines), Paper Mario (white sticker border), ruled and graph paper, a marble composition notebook, South Park's cut-paper look.
 
-## Setting
-**A. The Notebook Dojo (recommended).** A pop-up feudal Japan built from a kid's desk. The floor is a sheet of graph paper bent up into a backdrop; mountains are cut from a marble notebook cover, the sun from a legal pad, clouds from ruled paper, gates from black card. Each arena is a different paper. It uses everything Marz sent, gives every arena an identity at almost no art cost, and white fighters read instantly on grid or ruled paper.
+## Fighters in 3D
+Each body part is a low-poly folded shape (diamond-section torso and limbs, a faceted head, flared hakama legs), flat-shaded so every fold shows as a lighter and a darker facet. From the same model the game builds:
 
-**B. Washi pop-up book (lower risk, less ours).** Rice paper, ink-wash mountains, origami props. Prettier alone, but close to many existing papercraft games, it drops the stationery ideas, and soft ink-wash backdrops compete with white fighters.
+| Layer | What it is |
+|---|---|
+| Ink edge | A slightly bigger copy drawn inside out in ink: the thin outer hairline |
+| Sticker | A bigger copy drawn inside out in white: the sticker border, so every part looks cut out |
+| Paper shell | The model itself, flat-shaded white (or the fighter's accent color) |
+| Red inside | The shell's inside faces plus a slightly smaller core, in cut red; invisible until a cut opens the shell (only built on cut fighters) |
 
-| Today | New name | Why |
+A cut is a plane through the whole fighter along the blade's path. The fighter is drawn twice, once on each side of the plane, with the white layers stopping a hair short of it, so a thin red line opens along the cut. As the halves tumble apart you see into the red inside. Halves stay on the page until it turns, so a long fight litters the spread with red.
+
+Readability first: a side-on camera with a slight angle to show volume, an outline on every part against any paper, and guard height readable from the blade alone.
+
+## The match: across the notebook
+| Kami's cover | Legal Pad Grove | Graph Paper Dojo | Ruled Courtyard | Sumi's cover |
+|---|---|---|---|---|
+| Sumi wins here | Bamboo | Start | Castle | Kami wins here |
+
+- **One clean cut kills.** The loser splits, then refolds a moment later ahead of the winner, standing in the way.
+- **Whoever cut last has the way.** Only they can run off the page edge toward the rival's cover; the page turns and the fight goes on.
+- **Block** (same height), **parry** (switch to that height at the last moment: the attacker staggers), **clash** (same-height slashes at the same moment bounce).
+- **Jump** clears a low slash or hops a blocker. **Dodge** hops back.
+- Depth: few buttons, many reads (high or low, strike or wait, jump the low slash, bait a parry, or just run when you have the way). The page push is a classic duel structure, told through our notebook: pages turn, covers close, the red stays on the paper.
+
+## Setting and names
+| Thing | Name | Notes |
 |---|---|---|
-| Player fighter | **Kami** | 紙, "paper". White gi and hakama, indigo sash and grip. |
-| Training dummy / first rival | **Sumi** | 墨, "ink". Black hakama, gold sash. |
-| Grey-box lane | **Graph Paper Dojo** | First arena (Milestone 1). |
-| Night arena (later) | **Marble Cover Night** | White fighters glow on a black marble floor. |
-| Later arenas | **Ruled Courtyard**, **Legal Pad Grove** | Ruled paper with a white castle; yellow legal paper with bamboo. |
+| Player 1 | **Kami** | 紙, "paper". White gi and hakama, indigo sash and grip |
+| Player 2 / practice dummy | **Sumi** | 墨, "ink". Black hakama, gold sash |
+| Middle spread (start) | **Graph Paper Dojo** | Folded marble mountains, black torii, legal-yellow sun |
+| Toward Sumi | **Ruled Courtyard** | A white castle, ink sun |
+| Toward Kami | **Legal Pad Grove** | Bamboo rolled from yellow pad paper |
+| The goals | **Kami's cover** / **Sumi's cover** | Marble covers at night: paper moon, lanterns |
 
 Code IDs will be short English (`kami`, `sumi`, `graph_dojo`), so display names can change freely.
 
 **Tone rules**
-- Samurai film, school-desk materials: stern, quiet characters; the humour lives in the materials.
-- Straight lines only: everything is cut with a blade. Even the sun and moon are 16-sided polygons.
+- Samurai film, school-desk materials: stern, quiet characters; the charm lives in the materials.
+- Straight lines and flat facets only: no smooth curves, even on the sun and moon.
 - Red is paper, not blood: cuts read as dramatic, never gory.
-- Reference, not copy: no characters, faces, logos or signature shapes from the references; no real brand names (the marble cover has no label).
+- Reference, not copy: no characters, faces, logos or signature shapes from the references; no real brand names (the marble covers have no label).
 - Japan as seasoning: names, torii, katana, hakama. Any visible Japanese text gets checked by a native speaker before release.
 
-## Palette
-World colors (never used for small text):
-
+## Palette (unchanged from v1)
 | Name | Hex | Role |
 |---|---|---|
-| Paper white | `#FBFAF6` | Fighters' faces; the main color |
-| Fold grey | `#DCD8CF` | Folds, far limbs, facets |
-| Sumi ink | `#18171C` | Hairlines, hair, gates |
-| Cut red | `#D7262E` | The paper core. Only where cut |
-| Core shadow | `#8F1219` | Inside deep cuts |
+| Paper white | `#FBFAF6` | Fighter shells; the main color |
+| Fold grey | `#DCD8CF` | Far limbs, shaded facets |
+| Sumi ink | `#18171C` | Edges, hair, gates |
+| Cut red | `#D7262E` | The inside of the paper. Only where cut |
+| Core shadow | `#8F1219` | Deep inside the cut |
 | Blade steel | `#E9EEF2` | Blades |
 | Graph blue | `#9CC0DC` | Grid and ruled lines |
 | Legal yellow | `#F6E27F` | Sun, glints, tells |
-| Marble black | `#141316` | Night floors, mountains |
-| Kraft card | `#B98B5E` | Stage base, pop-up tabs |
+| Marble black | `#141316` | Covers, night |
+| Kraft card | `#B98B5E` | The desk |
 | Indigo | `#2E3F8F` | Kami's accent |
 | Gold | `#D9A21B` | Sumi's accent |
-
-Each fighter gets one non-red accent, so red stays unique to cuts; the notebook's usual red margin line becomes blue.
 
 Menu tokens (all text passes WCAG AA; lowest pair 5.6:1):
 
@@ -68,76 +87,52 @@ Menu tokens (all text passes WCAG AA; lowest pair 5.6:1):
 ## Type and icons
 - **Display:** Big Shoulders Stencil Display (stencil letters are cut from paper).
 - **Body:** Atkinson Hyperlegible.
-- **Margin notes:** Caveat, sparingly, for hints written in the notebook margin.
+- **Margin notes:** Caveat, sparingly.
 
-Icons in `art/icons/` (katana, high, low, clean cut, dodge). Rules: flat paper shapes with straight edges; white sticker border with an ink hairline outside it and another at the piece edge; at most two tones per piece; side view; red only on a cut; on a light graph-paper tile so they read in both themes.
-
-## How the doll is built
-Each piece (about 15: legs, feet, arms, torso, head, hair, topknot, grip, blade, guard) is a flat polygon on a pin, drawn as six stacked layers: ink hairline, white sticker border, ink edge line, red core, face, details. Scenery gets only a thin ink hairline and never a sticker border, so fighters always stand out. Arms reach the grip with simple two-bone IK, so poses only need a grip position and a blade angle.
-
-**Cuts:** the doll is split by a plane along the blade's line. The face layers are clipped a hair short of the line, so a thin strip of the red core shows. Cuts 1 and 2 slip the cut part a little along the line; cut 3 is a steep diagonal split where the top slides off and the rest falls back, in slow motion with a camera punch-in. Red flecks stay on the floor.
+Icons in `art/icons/` (katana, high, low, jump, clean cut, dodge): flat paper shapes, straight edges, white sticker border with an ink hairline, two tones at most, side view, red only on a cut, on a light graph-paper tile. Menus and icons stay flat paper; only the world is 3D.
 
 ## Interaction map
-| System | How it looks | Player does | Builds on |
+| System | How it looks | Player does | M1 issue |
 |---|---|---|---|
-| Move | Walk the graph-paper lane; hakama pleats swing | A / D | #3 |
-| Stance | Blade high over the shoulder or low and forward | W / S | #5 |
-| Slash | Wind-up (tell), then one thin razor line across the screen: ink for miss/block, red for a cut | J | #5, #8 |
-| Block / parry | "Block" sticker, white chips, fighters pushed apart; parry adds a yellow glint and a sway | Guard at the right height | #5 |
-| Dodge | Quick hop back with a lean | K | #5 |
-| Tell | A legal-yellow star glints on the blade just before a guard switch | Read it, strike in the gap | #6 |
-| Cuts 1–2 | Sliced along the blade line; red core shows; the part slips | Land a clean cut | #7 |
-| Finishing cut | Diagonal split, slow motion, camera moves in, halves fall | Third clean cut | #7, #8 |
-| Restart | A fresh doll folded in place | R / Start | #9 |
-| Tuning panel | A legal-pad sheet with sliders and handwritten labels | Drag sliders | #9 |
+| Move | Walk the lane; hakama legs swing | A / D | #3 |
+| Guard | Blade high over the shoulder or low and forward | W / S | #5 |
+| Slash | Wind-up, then one thin razor line: ink for a miss or block, red for a cut | F | #5, #8 |
+| Block / parry / clash | "Block" sticker and paper chips; parry adds a yellow glint and a stagger; clash bounces both | Guard at the right height | #5 |
+| Jump | A paper hop; low slashes pass underneath | Space | #5 |
+| Dodge | Quick hop back | Q | #5 |
+| Tell (dummy) | A legal-yellow star glints on Sumi's blade before a guard switch | Read it, strike in the gap | #6 |
+| Kill | 3D split along the blade line, red inside, slow motion, camera swings to three-quarter view | Land a clean cut | #7, #8 |
+| Refold | The loser folds up out of the page ahead of the winner | (automatic) | #7 |
+| Page turn | Everything folds flat, the page swings over the spine, the next spread's pop-ups rise | Reach the edge with the way | new |
+| Win | The last page turns onto the rival's marble cover at night | Reach the cover | new |
 
 ## Technology
 | Option | Verdict |
 |---|---|
-| **Three.js flat layered shapes + clipping-plane cuts (recommended)** | Already the stack. Exact borders, real cuts along the blade line. The mock-up runs on it. |
-| Screen-space outline (post-processing) | One border around the whole body, losing the per-piece paper margins; extra pass; fiddly double border. |
-| Real-time 3D mesh cutting | Not needed: on flat dolls a clipping plane is a true cut. |
-| 2D engine (PixiJS / canvas) | Loses the 3D diorama, shadows and the rigging test-bed purpose. |
-| Rapier for falling halves | Not needed in Milestone 1; scripted falls look right and save about 1.5 MB. Add when pieces must hit scenery. |
+| **Faceted shells + inverted-hull outline + clipping-plane cuts (recommended)** | What the mock-up runs on. Works on any model, including skinned Blender ones. A cut is two clipped copies; the red inside comes free from the shell's inner faces. |
+| Screen-space outline (post-processing) | One outline around everything loses the per-part "cut out" look; extra full-screen pass; fiddly white-plus-ink double edge. |
+| Real mesh cutting (3D boolean) | True cut faces, but slow, fragile on skinned meshes and hard to keep in sync online. Clipping looks the same from the game's camera. |
+| Toon shader with smooth models | Reads as cartoon, not paper. Folded facets are the identity. |
+| Rapier physics for halves | Scripted tumbling is enough for Milestone 1; Rapier when halves should bounce off pop-ups. |
 
-Budgets: under 2 MB to first duel, no image downloads (paper textures are generated); a doll is about 1,500 triangles, scene under 20,000 triangles and 400 draw calls even with Sumi cut in three; 60 fps on integrated laptop graphics with one 2048 shadow map.
+**Built for online from day one:** fixed 60-steps-per-second rules decided only by inputs, in tested code separate from drawing; cosmetic effects never affect results. Milestone 2 sends only inputs between two browsers (WebRTC) with rollback, plus a small service to connect players by invite link.
+
+Budgets: under 2 MB to the first duel (generated paper textures); a fighter is about 15 parts, roughly 1,500 triangles with outlines; scene under 30,000 triangles and 500 draw calls with halves on the page; 60 fps on integrated laptop graphics with one 2048 shadow map.
 
 ## Making the art
 - **Milestone 1:** Kami and Sumi from code shapes (as in the mock-up).
-- **Milestone 2:** Kami redrawn in Blender: one flat mesh per piece, traced with straight edges, named from the piece list, parented to one bone per pin, exported as `.glb`. The game generates border, hairline and core from each outline. A full click-by-click guide comes with Milestone 2.
-- **Later:** an illustrator draws character sheets in this style; we trace them in Blender.
+- **Milestone 3:** Kami remade in Blender: low-poly parts from 4- and 6-sided cylinders, big facets (no subdivision or bevels), flat shading, one plain color per part, one bone per part, exported as `.glb`. A full click-by-click guide comes with that milestone.
+- **Later:** new fighters and blades follow the same part list, so each one is a modeling job, not a coding job.
 
 Concept prompt:
-> Original paper-doll samurai character, side view facing right, made of flat angular white card pieces joined at pins, clean straight razor-sharp edges, no curves, thick white sticker border with a thin black hairline outside it, black ink hair with a topknot, white gi, wide white hakama with light grey folds, indigo sash, katana with an indigo-wrapped grip, standing on blue graph paper, soft paper drop shadow, flat colors, no gradients, no text, no red anywhere.
+> Original low-poly papercraft samurai character, folded white paper with crisp flat facets like origami, three-quarter view, diamond-shaped torso and limbs, wide flared hakama trousers, black paper hair with a topknot, indigo sash, katana with an indigo-wrapped grip, thick white sticker outline with a thin black edge around each piece, standing on blue graph paper in an open notebook, soft drop shadow, flat colors, no text, no red anywhere.
 
 Check the commercial-use terms of any image tool, and don't name other franchises' characters in prompts.
 
-## Conflicts with the design docs (not edited yet)
-| Where | Says today | Would say |
-|---|---|---|
-| GDD · Pitch | Art reference: the flat papercraft look of Paper Mario | Sticker-border paper dolls with flat, angular samurai shapes, on a pop-up stage of school stationery (the Notebook Dojo) |
-| GDD · Pillar 1 | Tears, hanging flaps, loose pieces | Razor-clean cuts showing a red paper core; halves slip and fall. Red only where paper is cut |
-| GDD · Pillar 4 | Handmade from paper and card, like a pop-up book | A pop-up stage made of stationery: graph, ruled, legal pad, marble covers, kraft card |
-| GDD · Paper damage | Swapped torn texture, flap on a pin, Rapier halves | Real cut along the blade line (clipping), red core; cuts 1–2 slip, cut 3 splits; scripted falls |
-| GDD · Platform and tech | Rapier for split pieces, debris, knockback | Rapier waits until pieces must collide with scenery |
-| GDD · First playable | Grey-box lane and floor | Graph Paper Dojo floor and backdrop |
-| GDD · Roadmap M2 | Rigged doll exported to glTF | Flat pieces on bones; the game builds borders, core and cuts |
-| Issues #3, #4, #7 | Grey-box lane; card-shape doll; tear, loose piece, split | Graph Paper Dojo; Kami and Sumi with sticker border and red core; clipping cuts |
+## Still open
+1. Names: Kami for player 1 and Sumi for player 2?
+2. Motion: smooth poses, or stop-motion (the mock-up's Motion button)?
+3. Rapier: leave it out of Milestone 1 and use scripted tumbling?
+4. Go: update the Milestone 1 issues on GitHub to the new plan and open the PR?
 
-## Plan
-1. Approve the look; GDD, Decision Log and issues #3, #4, #7 updated in the first build's PR.
-2. Milestone 1 in this style (#2–#10).
-3. Milestone 2: Kami in Blender plus the pipeline guide.
-4. Milestone 3: Sumi as an AI rival and Marble Cover Night.
-5. Later: Ruled Courtyard, Legal Pad Grove, more fighters and blades.
-
-## Decisions for Marz
-1. World: Notebook Dojo (A) or washi pop-up book (B)?
-2. The red rule: red only where paper is cut (two-ply card with a red core)?
-3. Cuts: razor-clean slips instead of torn edges?
-4. Outline: white sticker border with ink hairline on fighters only?
-5. Motion: smooth poses, or South Park-style stop-motion?
-6. Names: Kami (player) and Sumi (rival)?
-7. Rapier: leave it out of Milestone 1 and use scripted falls?
-
-Risks: art is still the slowest part (the Blender step in Milestone 2 is the real test), and white-on-white can wash out, which is why fighters keep the ink hairline and a drop shadow.
+Risks: online play is the biggest technical job (Milestone 2), and 3D models are slower to make than flat pieces; keeping parts low-poly and letting the game add outlines and the red inside keeps that manageable.
