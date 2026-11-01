@@ -1,7 +1,0 @@
-# Papercut's block for the hub's Caddyfile (on the server: /opt/hub/Caddyfile). See docs/deploy.md, step 2.
-# Caddy gets the HTTPS certificate by itself and passes WebSockets (/ws) through.
-
-papercut.marz.gg {
-	encode gzip
-	reverse_proxy papercut:8790
-}
