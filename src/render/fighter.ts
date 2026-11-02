@@ -25,7 +25,9 @@ const MAX_PILES = 5; // Endless: halves of the last 5 cut bots stay on the page
 const BACK = new Set<PieceName>(['legB', 'footB', 'armBU', 'armBL']);
 const THIN = new Set<PieceName>(['sword']);
 const L2 = 0.31; // forearm pin to the middle of the fist
-const GRIP_F = -0.07, GRIP_B = -0.22; // where each hand holds the handle, from the sword's pin
+// Where each hand holds the handle, measured back from the guard: the hand nearer the camera at the end of
+// the handle, the far hand just below the guard (Marz's pick, as in a kendo stance seen from this side).
+const GRIP_F = -0.22, GRIP_B = -0.07;
 
 // ---------- building flat pieces ----------
 // Double-sided: mirrored fighters (and halves cut from them) flip their triangles' winding.
@@ -121,20 +123,20 @@ function applyPose(pr: Record<PieceName, THREE.Group>, P: Pose, d: Dims) {
   let k = ik(SF, vadd(H, rot(a, [GRIP_F, 0])), d.l1F, L2); setPart(pr.armFU, SF, k.up); setPart(pr.armFL, k.E, k.lo);
   k = ik(SB, vadd(H, rot(a, [GRIP_B, 0])), d.l1B, L2); setPart(pr.armBU, SB, k.up); setPart(pr.armBL, k.E, k.lo);
 }
-// A kendo stance: arms held out, both hands on the grip. High guard points the sword up at the rival's head,
-// low guard down at the knees. The high wind-up is overhead (jodan), the low one held back and low (waki).
+// A kendo stance: arms nearly straight, hands close in at the waist, both on the grip. High guard points the
+// sword up at the rival's head, low guard down at the knees. The high wind-up is overhead (jodan), the low one held back and low (waki).
 const POSE = {
   guard: {
-    high: { hipY: 0.95, lean: -0.02, legB: 0.2, legF: -0.16, hilt: [0.58, 0.5], sword: 35 * D, head: 0 },
-    low: { hipY: 0.92, lean: -0.06, legB: 0.24, legF: -0.2, hilt: [0.5, 0.22], sword: -26 * D, head: 0.06 },
+    high: { hipY: 0.95, lean: -0.02, legB: 0.2, legF: -0.16, hilt: [0.33, 0.26], sword: 40 * D, head: 0 },
+    low: { hipY: 0.92, lean: -0.06, legB: 0.24, legF: -0.2, hilt: [0.27, 0.12], sword: -26 * D, head: 0.06 },
   },
   wind: {
-    high: { hipY: 0.97, lean: 0.04, legB: 0.2, legF: -0.18, hilt: [0.14, 1.22], sword: 128 * D, head: -0.02 },
-    low: { hipY: 0.9, lean: 0.06, legB: 0.26, legF: -0.26, hilt: [0.0, 0.26], sword: -168 * D, head: 0.03 },
+    high: { hipY: 0.97, lean: 0.04, legB: 0.2, legF: -0.18, hilt: [0.38, 1.1], sword: 130 * D, head: -0.02 },
+    low: { hipY: 0.9, lean: 0.06, legB: 0.26, legF: -0.26, hilt: [0.08, 0.14], sword: -168 * D, head: 0.03 },
   },
   strike: {
-    high: { hipY: 0.88, lean: -0.2, legB: 0.42, legF: -0.4, hilt: [0.62, 0.42], sword: -18 * D, head: 0.08 },
-    low: { hipY: 0.86, lean: -0.16, legB: 0.4, legF: -0.38, hilt: [0.6, 0.34], sword: 14 * D, head: 0.05 },
+    high: { hipY: 0.88, lean: -0.2, legB: 0.42, legF: -0.4, hilt: [0.46, 0.3], sword: -18 * D, head: 0.08 },
+    low: { hipY: 0.86, lean: -0.16, legB: 0.4, legF: -0.38, hilt: [0.36, 0.2], sword: 14 * D, head: 0.05 },
   },
 } as Record<'guard' | 'wind' | 'strike', Record<'high' | 'low', Pose>>;
 // How far toward the full wind-up / strike each move's key pose goes (lights are smaller motions).

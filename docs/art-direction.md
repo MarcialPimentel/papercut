@@ -55,7 +55,7 @@ Each fighter reads as **one flat cut-out**, like a Paper Mario sticker or a Game
 | Print | Details on the paper (hair, face, collar, sash, pleats, grip), on both sides |
 | Slash marks | A red six-sided slash where a hit crossed the paper, cut through every piece it passes (torso, sleeves, arms) |
 
-**The kendo stance:** arms held out, both hands on the grip. High guard points the sword up at the rival's head, low guard down at the knees; the high wind-up is overhead (jodan), the low one held back and low (waki). With straight arms the blade tips cross at close range, as in real kendo.
+**The kendo stance:** arms nearly straight, hands close in at the waist, both on the grip: the hand nearer the camera at the end of the handle, the far hand just below the guard. Sleeves are plain, straight to the elbow. High guard points the sword up at the rival's head, low guard down at the knees; the high wind-up is overhead (jodan), the low one held back and low (waki). With straight arms the blade tips cross at close range, as in real kendo.
 
 **Motion (pose snaps):** each moment of a move has one key pose (guard, wind-up, strike, follow-through, stun, landing, dash, walk steps, jump). The puppet holds it and snaps to the next with a single in-between, like cut-out animation; the body still glides across the page, so spacing reads. A held wind-up is easier to read than a smooth one, which keeps pillar 3. **Turning around**, the card flips through edge-on in two held steps.
 
