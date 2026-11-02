@@ -5,6 +5,8 @@ import type { State } from './sim/sim';
 import { LOOKS } from './render/common';
 
 const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
+/** Health as a share of the full strip, in %. */
+const pct = (hp: number) => (hp / RULES.maxHp) * 100;
 
 export class Hud {
   private bars = [$('#bar0'), $('#bar1')];
@@ -18,6 +20,11 @@ export class Hud {
   you: number | null = null;
   online = false;
 
+  constructor() {
+    // One round diamond per win needed.
+    for (const bar of this.bars) bar.querySelector('.pips')!.innerHTML = '<b></b>'.repeat(RULES.winsNeeded);
+  }
+
   setNames() {
     this.bars.forEach((bar, i) => {
       const nm = bar.querySelector('.nm')!;
@@ -26,8 +33,9 @@ export class Hud {
     });
   }
 
-  strip(seat: number, hp: number, lost: number) {
+  strip(seat: number, hpLeft: number, lostHp: number) {
     const strip = this.bars[seat].querySelector('.strip')!;
+    const hp = pct(hpLeft), lost = pct(lostHp);
     (strip.querySelector('i') as HTMLElement).style.width = hp + '%';
     if (lost > 0) {
       const s = document.createElement('span'); s.className = 'sliver'; s.style.width = lost + '%';
@@ -39,7 +47,7 @@ export class Hud {
   /** Bring the HUD in line with the fight (cheap to call every frame). */
   update(s: State, mySeat: number | null) {
     s.f.forEach((f, i) => {
-      (this.bars[i].querySelector('.strip i') as HTMLElement).style.width = f.hp + '%';
+      (this.bars[i].querySelector('.strip i') as HTMLElement).style.width = pct(f.hp) + '%';
       this.bars[i].querySelectorAll('.pips b').forEach((b, k) => b.classList.toggle('on', k < f.wins));
     });
     const secs = Math.ceil(s.clock / 60);

@@ -36,7 +36,7 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 - **Feint bait:** start a heavy (right click) and cancel it with a left click. Does your rival swing into it?
 - **Counter cut:** hit someone while their heavy winds up, or right after they miss: instant K.O.
 - **Jump a low slash.**
-- **A full match:** best of 3, the page turns between rounds, the winner stands on the back cover.
+- **A full match:** best of 5 (first to 3), the page turns between rounds, the winner stands on the back cover.
 
 ## What to report
 

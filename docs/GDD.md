@@ -11,7 +11,7 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 
 ## Core loop (30 seconds / one match / one session / long term)
 - **30 seconds:** dance in and out of range, poke with light slashes, move the cursor to guard high or low, feint a heavy to bait them, and wait for the rival to commit or miss. Hit them mid-attack and it's a counter cut: instant K.O.
-- **One match:** best of 3 rounds of 60 seconds. Every hit slices the rival's paper health strip and leaves a red cut on their body; a K.O. splits them. Between rounds the notebook's page turns to the next spread.
+- **One match:** best of 5 rounds of 60 seconds. Every hit slices the rival's paper health strip and leaves a red cut on their body; a K.O. splits them. Between rounds the notebook's page turns to the next spread.
 - **One session:** a few online matches against friends (since the first build). Sumi doubles as a practice dummy; a computer fighter comes later.
 - **Long term:** new fighters with their own moves and specials, new blades and spreads, each a new Blender model and rig to test. Kept small on purpose: the game is also a test bed.
 
@@ -46,7 +46,7 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 - **Hit stun:** a clean hit staggers the defender briefly (longer for heavies) and pushes them back.
 - **Jump:** low slashes pass underneath; slashes in the air cut high.
 - **Dash and backdash:** double-tap toward or away from the rival.
-- **Rounds:** 60 seconds. A K.O. or the most strip left at time wins the round; a tie replays it. Best of 3. The page turns between rounds.
+- **Rounds:** 60 seconds. A K.O. or the most strip left at time wins the round; a tie replays it. Best of 5 (first to 3 rounds). The page turns between rounds; rounds 4 and 5 reuse the graph and ruled spreads.
 - **Camera:** side-on with a slight angle to show volume, framing both fighters. On a K.O. it swings to a three-quarter view with slow motion; on a page turn it pulls up to show the whole book.
 - **Controls (the mouse fights, the keyboard moves):**
 
@@ -68,7 +68,7 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 
 ## Paper damage (approach)
 - **Hits:** a clean hit leaves a red cut on the body part it struck (torso for high slashes, legs for low). The cut is a thin red band that follows the slash's angle and wraps around the folded paper (a copy of that part, clipped to a thin band). Heavy hits leave wider cuts across two parts.
-- **Health strip:** a strip of paper in the HUD; each hit slices a piece off its end, which falls away.
+- **Health strip:** a strip of paper in the HUD; each hit slices a piece off its end, which falls away. A full strip is 80 health: a light cut takes 10 (an eighth), a heavy or riposte 35, a blocked heavy chips 3.
 - **K.O.:** a plane through the whole fighter along the blade's path. The fighter is drawn twice, once on each side of the plane (clipping planes); the white layers stop a hair short of the plane, so a thin red line opens, and the halves show the red inside of the shell as they fall. Earlier cuts stay on the halves.
 - **Physics:** the halves are Rapier physics bodies from Milestone 1: they tumble, bounce off pop-ups and pile up on the page. Physics is cosmetic only: it never decides who wins, so online play only has to sync inputs. Halves and flecks clear when the page turns.
 
@@ -83,7 +83,7 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 
 ## Scope for the first playable (Milestone 1: "Feel test")
 The one question it answers: **does mouse-driven paper swordplay feel good?** Since the first build it can also be played person against person online (input delay; rollback comes in Milestone 2).
-- **In:** the 3D notebook with three round spreads and the back cover; Kami and Sumi built from code shapes with outlines, red insides and cut marks; mouse controls (cursor guard, clicks) with keyboard movement; Sumi as a practice dummy that switches guard, swings and feints; guard stance, light and heavy slashes, block, parry, riposte, feint, clash, counter cut, hit stun, jump, dash and backdash; paper health strips, 60-second timer, best of 3 rounds with page turns; K.O. split with Rapier halves; hitstop, shake, slash line, paper sounds, K.O. camera with slow motion; R to restart; an on-screen tuning panel for the feel numbers (frame timings, damage, parry window, counter window).
+- **In:** the 3D notebook with three round spreads and the back cover; Kami and Sumi built from code shapes with outlines, red insides and cut marks; mouse controls (cursor guard, clicks) with keyboard movement; Sumi as a practice dummy that switches guard, swings and feints; guard stance, light and heavy slashes, block, parry, riposte, feint, clash, counter cut, hit stun, jump, dash and backdash; paper health strips, 60-second timer, best of 5 rounds with page turns; K.O. split with Rapier halves; hitstop, shake, slash line, paper sounds, K.O. camera with slow motion; R to restart; an on-screen tuning panel for the feel numbers (frame timings, damage, parry window, counter window).
 - **Also in (first build):** online fights by invite link, room code or quick match; rematch.
 - **Out:** rollback, two players on one PC, gamepads, menus beyond the start screen, the computer fighter, specials, different move sets, Blender art, more fighters or blades.
 - **Done when:** Marz can play ten minutes against the dummy with the mouse and the guard, slashes, feints, parries and counter cuts all feel good, and the tuned numbers are saved as defaults.
@@ -167,3 +167,5 @@ The one question it answers: **does mouse-driven paper swordplay feel good?** Si
 | 2026-11-01 | Inputs go through the rooms server over a WebSocket for now, not browser-to-browser (WebRTC) | My call: works through every home router with no extra relay service; costs one server hop of latency. WebRTC comes with rollback. |
 | 2026-11-01 | Online seats: whoever creates the room (or waited first) is Kami on the left, the other is Sumi on the right; a rematch needs both players to say yes | My call: simple and fair; the camera is the same for both. |
 | 2026-11-01 | The K.O. halves keep the mock-up's scripted tumble in the first build; Rapier physics moves to the hit-feel work (#7) | My call: cosmetic only, and keeps the first online build small. |
+| 2026-11-01 | Matches are best of 5 (first to 3 rounds); the health strip drops from 100 to 80, so each cut takes a bigger slice (2 heavies and a light win a round) | Marz's picks after the first online playtest: cuts should feel more impactful, and a longer match makes up for the shorter rounds. |
+| 2026-11-01 | A "How to play" button on the title screen opens the controls card; the controls text no longer sits under every menu screen | Marz's request for new players. Keeps the title screen clean and gives the controls a page of their own. |

@@ -8,8 +8,8 @@ export interface Move {
   act: number; // active frames
   rec: number; // recovery frames
   reach: number; // metres from the attacker's centre
-  dmg: number; // % of the health strip on a clean hit
-  chip: number; // % taken through a block
+  dmg: number; // health taken on a clean hit (out of RULES.maxHp)
+  chip: number; // health taken through a block
   stun: number; // hit-stun frames
   push: number; // metres the defender slides on a hit
   hitstop: number; // frames the fight freezes on a clean hit
@@ -39,7 +39,8 @@ export const RULES = {
   edge: 7.7, // the page's edge
   startX: 1.8,
   roundFrames: 60 * FPS,
-  winsNeeded: 2,
+  maxHp: 80, // a full health strip; light cuts take 10, heavies 35
+  winsNeeded: 3, // best of 5
   // phase lengths
   introCut: 60, // "Round N" banner, then "Cut!"
   introFrames: 87,
@@ -56,4 +57,5 @@ export const PAGES = [
   { key: 'cover', name: 'The back cover', night: true },
 ] as const;
 export const FINAL_PAGE = 3;
+/** Round pages cycle graph, ruled, legal pad (rounds 4 and 5 reuse the first two). */
 export const pageForRound = (round: number) => (round - 1) % 3;

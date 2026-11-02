@@ -89,7 +89,7 @@ function newFighter(side: 0 | 1): Fighter {
     facing: side === 0 ? 1 : -1,
     stance: side === 0 ? 'high' : 'low', stanceAt: -999,
     state: 'guard', t: 0, atk: 'light', slash: 'high', whiffed: false,
-    hp: 100, wins: 0, alive: true, riposte: 0, buf: '', bufLeft: 0,
+    hp: RULES.maxHp, wins: 0, alive: true, riposte: 0, buf: '', bufLeft: 0,
     dashDir: 0, dashFrom: 0, dashLen: 0, stunT: 0, walk: 0,
   };
 }

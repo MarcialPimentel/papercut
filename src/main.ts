@@ -36,7 +36,7 @@ const stateOf = (m: Mode) => (m.kind === 'online' ? m.lock.state : m.s);
 const seatOf = (m: Mode) => (m.kind === 'online' ? m.lock.seat : 0);
 
 // ---------- menus ----------
-type Screen = 'main' | 'host' | 'search' | 'join' | 'error';
+type Screen = 'main' | 'howto' | 'host' | 'search' | 'join' | 'error';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   screen = to;
@@ -95,6 +95,8 @@ function ensureNet(then: () => void) {
 let pendingSend: (() => void) | null = null;
 
 $('#bPractice').addEventListener('click', startPractice);
+$('#bHowTo').addEventListener('click', () => showMenu('howto'));
+$('#bHowToBack').addEventListener('click', () => showMenu('main'));
 $('#bFriend').addEventListener('click', () => { showMenu('host'); ensureNet(() => net.send({ t: 'host' })); });
 $('#bQuick').addEventListener('click', () => { showMenu('search'); ensureNet(() => net.send({ t: 'quick' })); });
 $('#joinForm').addEventListener('submit', (e) => {
@@ -115,7 +117,7 @@ $('#bSound').addEventListener('click', () => { sound.on = !sound.on; $('#bSound 
 $('#rematch').addEventListener('click', () => command('rematch'));
 
 function command(c: 'restart' | 'menu' | 'rematch') {
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto') showMenu('main'); return; }
   if (mode.kind === 'practice') {
     if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(); mode.dummy.reset(); view.reset(mode.s); }
   } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
