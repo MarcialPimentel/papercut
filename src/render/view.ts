@@ -1,13 +1,16 @@
 // Draws the fight: listens to each fight frame and its events, and turns them into the 3D scene.
 
 import * as THREE from 'three';
-import { PAGES } from '../sim/rules';
+import { PAGES, RULES } from '../sim/rules';
 import type { FightEvent, State } from '../sim/sim';
 import { C, LOOKS, clamp, lerp, reduceMotion } from './common';
 import { FighterView } from './fighter';
 import { Fx } from './fx';
 import { Notebook } from './notebook';
-import { sfx } from './sfx';
+import { sfx } from '../audio/sounds';
+
+/** Stereo position of a spot on the lane: left of the page plays left. */
+const pan = (x: number) => clamp(x / RULES.edge, -1, 1) * 0.6;
 
 export class View {
   readonly renderer: THREE.WebGLRenderer;
@@ -25,6 +28,11 @@ export class View {
   private clock = 0;
   private cam = { x: 0, y: 1.1, dist: 11, yaw: 0.16, pitch: 0.2 };
   private _w = new THREE.Vector3();
+  /** Your seat (for win/lose sounds); seat 0 offline. */
+  you = 0;
+  // Last frame's fighter states, height and clock second, to hear slashes start, landings and the countdown.
+  private was = [{ state: '', y: 0 }, { state: '', y: 0 }];
+  private lastSec = 0;
 
   constructor(canvas: HTMLCanvasElement, private stage: HTMLElement, labels: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -54,6 +62,7 @@ export class View {
     this.book.endTurn(); this.book.setFold(1); this.book.setPage(s.page);
     this.fighters.forEach((v, i) => v.reset(s.f[i]));
     this.shake = this.slowmo = this.killCam = 0; this.koSeat = -1;
+    this.was = s.f.map((f) => ({ state: f.state, y: f.y })); this.lastSec = Math.ceil(s.clock / 60);
   }
 
   /** Screen y (pixels from the top of the canvas) of a fighter's waist: the cursor's guard line. */
@@ -67,38 +76,54 @@ export class View {
   onStep(s: State, events: FightEvent[]) {
     for (const e of events) this.event(s, e);
     s.f.forEach((f, i) => { if (f.alive) this.fighters[i].stepPose(f); });
+    this.listen(s);
+  }
+
+  /** Sounds that come from state changes rather than events. */
+  private listen(s: State) {
+    s.f.forEach((f, i) => {
+      const w = this.was[i];
+      if (f.alive && w.state === 'wind' && f.state === 'active') sfx.whoosh(f.atk !== 'light', pan(f.x));
+      if (f.alive && w.y > 0 && f.y <= 0) sfx.land(pan(f.x));
+      w.state = f.state; w.y = f.y;
+    });
+    const sec = Math.ceil(s.clock / 60);
+    if (s.phase === 'fight' && sec !== this.lastSec && sec <= 10 && sec > 0) sfx.tick(sec);
+    this.lastSec = sec;
+    // The round result sounds when its banner appears.
+    if (s.phase === 'ko' && s.phaseT === 54 && s.roundWinner >= 0 && !s.f.some((f) => f.wins >= RULES.winsNeeded)) sfx.roundEnd(s.roundWinner === this.you);
   }
 
   private event(s: State, e: FightEvent) {
     const fx = this.fx;
     switch (e.k) {
-      case 'swing': sfx.whoosh(); break;
-      case 'feint': fx.label('Feint', s.f[e.p].x, s.f[e.p].y + 2.3, 'gold'); sfx.fold(); break;
-      case 'jump': case 'dash': sfx.hop(); break;
+      case 'swing': if (e.atk === 'heavy') sfx.windup(pan(s.f[e.p].x)); break;
+      case 'feint': fx.label('Feint', s.f[e.p].x, s.f[e.p].y + 2.3, 'gold'); sfx.feint(pan(s.f[e.p].x)); break;
+      case 'jump': case 'dash': sfx.hop(pan(s.f[e.p].x)); break;
       case 'whiff':
         fx.razor(e.x, e.y, e.ang, C.ink, e.heavy ? 2.8 : 1.8);
         if (e.over) fx.label('Over', s.f[1 - e.p].x, s.f[1 - e.p].y + 2.2, 'gold');
         break;
       case 'clash':
-        fx.razor(e.x, e.y, e.ang, C.ink, 2.2); fx.burst(e.x, e.y, [C.paper, C.ink], 10, 1); fx.label('Clash', e.x, e.y + 0.6); sfx.block();
+        fx.razor(e.x, e.y, e.ang, C.ink, 2.2); fx.burst(e.x, e.y, [C.paper, C.ink], 10, 1); fx.label('Clash', e.x, e.y + 0.6); sfx.clash(pan(e.x));
         this.shake = 0.08;
         break;
       case 'block': {
         const dir = s.f[e.p].facing;
-        fx.razor(e.x, e.y, e.ang, C.ink, 2.2); fx.burst(e.x, e.y, [C.paper, C.paper, C.ink], 8, dir); fx.label('Block', e.x, e.y + 0.6); sfx.block();
+        fx.razor(e.x, e.y, e.ang, C.ink, 2.2); fx.burst(e.x, e.y, [C.paper, C.paper, C.ink], 8, dir); fx.label('Block', e.x, e.y + 0.6); sfx.block(e.heavy, pan(e.x));
         this.shake = e.heavy ? 0.08 : 0.04;
         if (e.chip) this.onStrip(1 - e.p, s.f[1 - e.p].hp, e.chip);
         break;
       }
       case 'parry':
-        fx.razor(e.x, e.y, e.ang, C.legal, 2.4); fx.burst(e.x, e.y, [C.legal, C.paper], 10, s.f[e.p].facing); fx.label('Parry', e.x, e.y + 0.6, 'gold'); sfx.parry();
+        fx.razor(e.x, e.y, e.ang, C.legal, 2.4); fx.burst(e.x, e.y, [C.legal, C.paper], 10, s.f[e.p].facing); fx.label('Parry', e.x, e.y + 0.6, 'gold'); sfx.parry(pan(e.x));
         this.shake = 0.06;
         break;
       case 'hit': {
         const def = 1 - e.p, dir = s.f[e.p].facing, y = e.y + (Math.random() - 0.5) * 0.06;
         this.fighters[def].addCut(s.f[def], [e.x, y], e.ang + (Math.random() - 0.5) * 0.17, e.heavy);
         fx.razor(e.x, y, e.ang, C.red, e.heavy ? 3.8 : 2.4); fx.burst(e.x, y, [C.red, C.paper, C.redDeep], e.heavy ? 18 : 8, dir);
-        if (e.heavy) { fx.label(e.atk === 'riposte' ? 'Riposte' : 'Cut', e.x, y + 0.6, 'cut'); sfx.cut(); } else sfx.hit();
+        if (e.heavy) { fx.label(e.atk === 'riposte' ? 'Riposte' : 'Cut', e.x, y + 0.6, 'cut'); sfx.cut(pan(e.x)); } else sfx.hit(pan(e.x));
         this.shake = e.heavy ? 0.14 : 0.05;
         this.onStrip(def, s.f[def].hp, e.dmg);
         break;
@@ -106,7 +131,7 @@ export class View {
       case 'ko': {
         const def = 1 - e.p, dir = s.f[e.p].facing;
         fx.label(e.counter ? 'Counter cut' : 'K.O.', e.x, e.y + 0.9, 'cut');
-        fx.razor(e.x, e.y, e.ang, C.red, 4.6); fx.burst(e.x, e.y, [C.red, C.redDeep, C.paper, C.red], 30, dir); sfx.cut();
+        fx.razor(e.x, e.y, e.ang, C.red, 4.6); fx.burst(e.x, e.y, [C.red, C.redDeep, C.paper, C.red], 30, dir); sfx.ko(e.counter, pan(e.x));
         this.shake = 0.2; this.slowmo = 1.0; this.killCam = 1.6; this.koSeat = def;
         this.fighters[def].split([e.x, e.y], e.ang, dir);
         this.onStrip(def, 0, e.dmg);
@@ -120,7 +145,10 @@ export class View {
         this.killCam = 0; this.koSeat = -1;
         break;
       case 'restart': this.reset(s); break;
-      case 'cut': sfx.whoosh(); break;
+      case 'cut': sfx.fight(); break;
+      case 'round': sfx.round(); break;
+      case 'roundEnd': if (e.how === 'Time') sfx.timeUp(); break;
+      case 'over': sfx.matchEnd(e.winner === this.you); break;
     }
   }
 
