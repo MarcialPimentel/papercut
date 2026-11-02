@@ -101,7 +101,21 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 .join label { font-weight: 700; flex-basis: 100%; }
 .join input { max-width: 110px; text-transform: uppercase; letter-spacing: .2em; text-align: center; }
 .help { font-size: 14px; color: var(--ink); border-top: 1.5px solid rgba(24,23,28,.18); padding-top: 12px; display: grid; gap: 6px; }
-.howto .mbtn, .setup .mbtn { text-align: center; }
+.howto .mbtn, .setup .mbtn, #tBegin { text-align: center; }
+.tname { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.tname input { flex: 1; min-width: 0; font: 700 15px var(--body); padding: 6px 8px; border: 2px solid var(--ink); background: #FFF; color: var(--ink); }
+.tplayers { margin: 0; padding-left: 22px; display: grid; gap: 4px; font-weight: 700; }
+.tplayers .me { color: var(--red-text); }
+.bracket { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; align-items: center; overflow-x: auto; }
+.bracket .col { display: grid; gap: 10px; }
+.bracket .col > b { font: 800 15px/1 var(--display); text-transform: uppercase; color: var(--muted); }
+.bracket .m { border: 2px solid var(--ink); background: #FFF; font-size: 13px; }
+.bracket .m.now { box-shadow: 3px 3px 0 var(--red); border-color: var(--red); }
+.bracket .m div { padding: 3px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bracket .m div + div { border-top: 1px solid rgba(24,23,28,.2); }
+.bracket .m .w { font-weight: 700; background: var(--legal); }
+.bracket .m .lost { color: var(--muted); text-decoration: line-through; }
+.bracket .m .me { color: var(--red-text); }
 .setup label { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 700; }
 .setup select { font: 700 15px var(--body); padding: 6px 8px; border: 2px solid var(--ink); background: #FFF; color: var(--ink); min-width: 170px; }
 .controls { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 14px; align-items: baseline; font-size: 15px; }

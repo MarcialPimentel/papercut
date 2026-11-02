@@ -29,6 +29,10 @@ export class Hud {
   /** Your seat online (shows "you" on your name), or null offline. */
   you: number | null = null;
   online = false;
+  /** A tournament fight: no rematch; the bracket comes next. */
+  tourney = false;
+  /** Player names for the two bars (tournaments); null = the fighters' own names. */
+  names: [string, string] | null = null;
   /** Endless: your best run before this one, for the end banner. */
   best = 0;
   private cfg: MatchCfg = DEFAULT_CFG;
@@ -46,7 +50,7 @@ export class Hud {
   setNames() {
     this.bars.forEach((bar, i) => {
       const nm = bar.querySelector('.nm')!;
-      nm.textContent = LOOKS[i].name;
+      nm.textContent = this.names?.[i] ?? LOOKS[i].name;
       bar.classList.toggle('you', this.you === i);
     });
   }
@@ -82,7 +86,7 @@ export class Hud {
     if (secs !== this.lastClock) { this.clock.textContent = secs === -2 ? '∞' : String(secs); this.lastClock = secs; }
 
     let html = '';
-    const name = (i: number) => LOOKS[i].name + (this.you === i ? ' (you)' : '');
+    const name = (i: number) => (this.names?.[i] ?? LOOKS[i].name) + (this.you === i ? ' (you)' : '');
     if (s.phase === 'intro') {
       html = s.phaseT >= RULES.introCut ? 'Cut!'
         : g ? `Bot ${cut + 1}<small>Level ${botLevel(cut)} · ${PAGES[s.page].name}</small>`
@@ -90,14 +94,14 @@ export class Hud {
     } else if (s.phase === 'ko' && s.phaseT > 54 && g && s.roundWinner >= 0) {
       html = s.roundWinner === 0 ? `Bot ${cut} cut<small>${howText(s, `Bot ${cut}`)}</small>` : `Cut down<small>${howText(s, 'You')}</small>`;
     } else if (s.phase === 'ko' && s.phaseT > 54) {
-      html = s.roundWinner >= 0 ? `${name(s.roundWinner)} takes round ${s.round}<small>${howText(s, LOOKS[1 - s.roundWinner].name)}</small>`
+      html = s.roundWinner >= 0 ? `${name(s.roundWinner)} takes round ${s.round}<small>${howText(s, this.names?.[1 - s.roundWinner] ?? LOOKS[1 - s.roundWinner].name)}</small>`
         : `Draw<small>${s.how === 'Time' ? 'Time ran out with the strips level.' : s.how} The round is replayed.</small>`;
     } else if (s.phase === 'over' && g) {
       html = `Run over<small>${cut} bot${cut === 1 ? '' : 's'} cut. ${cut > this.best ? 'A new best!' : `Best: ${this.best}.`} Press R or Rematch to run again.</small>`;
     } else if (s.phase === 'over') {
       const w = matchWinner(s);
       const waiting = mySeat !== null && s.rematch[mySeat];
-      const hint = !this.online ? 'Press R or Rematch for a new match.' : waiting ? 'Waiting for your rival to say yes…' : 'Press R or Rematch to fight again.';
+      const hint = this.tourney ? 'Back to the bracket in a moment…' : !this.online ? 'Press R or Rematch for a new match.' : waiting ? 'Waiting for your rival to say yes…' : 'Press R or Rematch to fight again.';
       html = `${name(w)} wins<small>${s.f[w].wins}-${s.f[1 - w].wins}. ${hint}</small>`;
     }
     if (html !== this.lastBanner) {
@@ -105,6 +109,6 @@ export class Hud {
       this.banner.hidden = !html;
       if (html) this.bannerText.innerHTML = html;
     }
-    this.rematchBtn.hidden = s.phase !== 'over' || (mySeat !== null && s.rematch[mySeat]);
+    this.rematchBtn.hidden = this.tourney || s.phase !== 'over' || (mySeat !== null && s.rematch[mySeat]);
   }
 }
