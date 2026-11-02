@@ -5,6 +5,7 @@ import { PAGES, RULES } from '../sim/rules';
 import type { FightEvent, State } from '../sim/sim';
 import { C, LOOKS, clamp, lerp, reduceMotion } from './common';
 import { FighterView } from './fighter';
+import { PaperPhysics } from './physics';
 import { Fx } from './fx';
 import { Notebook } from './notebook';
 import { sfx } from '../audio/sounds';
@@ -18,6 +19,8 @@ export class View {
   readonly book: Notebook;
   readonly fighters: FighterView[];
   readonly fx: Fx;
+  readonly physics = new PaperPhysics();
+  private sceneryPage = -1;
   /** Called when a fighter loses part of the strip (for the HUD's falling sliver). */
   onStrip: (seat: number, hp: number, lost: number) => void = () => {};
   private shake = 0;
@@ -41,12 +44,18 @@ export class View {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.localClippingEnabled = true;
     this.book = new Notebook(this.renderer);
-    this.fighters = LOOKS.map((look, i) => new FighterView(this.book.scene, look, i));
+    this.fighters = LOOKS.map((look, i) => new FighterView(this.book.scene, look, i, this.physics));
     this.fx = new Fx(this.book.scene, this.camera, labels, (p, m) => this.book.flatShape(p, m));
     for (const f of this.fighters) f.onLand = (x, dir) => { this.shake = Math.max(this.shake, 0.07); this.fx.burst(x, 0.1, [C.paper, C.red], 8, dir); };
-    this.book.setPage(0);
+    this.setPage(0);
     new ResizeObserver(() => this.resize()).observe(stage);
     this.resize();
+  }
+
+  /** Show a spread, and give its pop-ups to the paper physics. */
+  private setPage(p: number) {
+    this.book.setPage(p);
+    if (this.sceneryPage !== p) { this.sceneryPage = p; this.physics.setScenery(this.book.popupHulls()); }
   }
 
   resize() {
@@ -59,7 +68,7 @@ export class View {
   /** Start drawing a new match from this state. */
   reset(s: State) {
     this.fx.clearFlecks();
-    this.book.endTurn(); this.book.setFold(1); this.book.setPage(s.page);
+    this.book.endTurn(); this.book.setFold(1); this.setPage(s.page);
     this.fighters.forEach((v, i) => v.reset(s.f[i]));
     this.shake = this.slowmo = this.killCam = 0; this.koSeat = -1;
     this.was = s.f.map((f) => ({ state: f.state, y: f.y })); this.lastSec = Math.ceil(s.clock / 60);
@@ -141,14 +150,14 @@ export class View {
       case 'turn': sfx.page(); this.turnFrom = s.page; break;
       case 'swap':
         this.fx.clearFlecks();
-        this.book.setPage(e.page);
+        this.setPage(e.page);
         this.fighters.forEach((v, i) => v.reset(s.f[i]));
         this.killCam = 0; this.koSeat = -1;
         break;
       case 'spawn':
-        // Endless: the cut bot's pieces go, a fresh one stands in. Your own cuts stay: your strip carries over too.
+        // Endless: a fresh bot stands in; the cut bots' halves stay on the page (the last 5). Your own cuts stay too.
         this.fx.clearFlecks();
-        this.fighters[e.p].reset(s.f[e.p]);
+        this.fighters[e.p].reset(s.f[e.p], true);
         this.killCam = 0; this.koSeat = -1;
         break;
       case 'restart': this.reset(s); break;
@@ -169,6 +178,7 @@ export class View {
     if (s.phase === 'turn') this.book.turn(s.phaseT / 60, this.turnFrom, s.turnTo);
     else if (this.book.fold !== 1) { this.book.endTurn(); this.book.setFold(1); }
     const fold = this.book.fold;
+    this.physics.step(real * scale);
     s.f.forEach((f, i) => { this.fighters[i].draw(f, real, fold, this.clock); this.fighters[i].updateHalves(real * scale, fold); });
     this.fx.update(real, real * scale, fold);
     const g = this.fx.glint;
@@ -179,8 +189,6 @@ export class View {
       g.scale.setScalar(0.4 + Math.sin(k * Math.PI) * 1.1); g.quaternion.copy(this.camera.quaternion); g.rotateZ(k * 2);
     } else g.visible = false;
     this.updateCamera(s, real);
-    this.book.scene.updateMatrixWorld();
-    for (const f of this.fighters) f.afterMatrices();
     this.renderer.render(this.book.scene, this.camera);
   }
 

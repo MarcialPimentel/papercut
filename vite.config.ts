@@ -10,6 +10,7 @@ export default defineConfig({
     // In development the rooms server runs on 8790; the client talks to it through Vite.
     proxy: { '/ws': { target: 'ws://localhost:8790', ws: true }, '/api': 'http://localhost:8790' },
   },
-  build: { outDir: 'dist', chunkSizeWarningLimit: 900 },
+  // Rapier (paper physics, about 2 MB) is its own chunk, loaded in the background after the game starts.
+  build: { outDir: 'dist', chunkSizeWarningLimit: 2100 },
   test: { include: ['tests/**/*.test.ts'] },
 });

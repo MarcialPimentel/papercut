@@ -1,338 +1,350 @@
-// Folded-paper fighters: faceted shells, a white sticker outline with an ink edge, red cut marks
-// that wrap around the folds, and the K.O. split. Ported from the art-direction mock-up.
-// Poses are worked out here from the fight's state; nothing here changes the fight.
+// Papercraft fighters, built from the samurai in Blender (art/fighters/samurai.blend, after Marz's model guide):
+// flat paper pieces stacked in layers, each turning on one pivot, like a cardboard puppet. The game adds a thick
+// ink line round every paper piece, a thin cream rim round the whole figure, the sword's own outline, red slash
+// marks, the K.O. split and the falling halves. The body faces the camera with the head in profile toward the
+// rival; poses snap between held key poses, like stop-motion. Nothing here changes the fight.
 
 import * as THREE from 'three';
-import { MOVES, RULES } from '../sim/rules';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import type { RigidBody } from '@dimforge/rapier3d-compat';
+import { MOVES } from '../sim/rules';
 import type { Fighter } from '../sim/sim';
-import { C, D, clamp, easeIO, easeIn, easeOut, lerp, type Look } from './common';
+import { C, D, clamp, easeIn, lerp, type Look } from './common';
+import { ccw, clipConvex, clipHalf, offset, slashLens, type Line, type Pt } from './paper2d';
+import { PIECE_NAMES, SCALE, loadPuppet, type Piece, type PieceName, type Puppet } from './puppet';
+import type { PaperPhysics } from './physics';
 
-// ---------- shapes ----------
-function frustum(rt: number, rb: number, h: number, seg: number, pivot: 'top' | 'bottom', sz = 1) {
-  const g = new THREE.CylinderGeometry(rt, rb, h, seg, 1); g.translate(0, pivot === 'top' ? -h / 2 : h / 2, 0); g.scale(1, 1, sz); return g;
+const T = 0.005; // paper thickness
+const RIM = '#F4EAD2'; // the thin off-white rim round the whole figure
+// Round the whole figure, outermost first: [colour, width from the paper's edge, depth]. They sit behind every layer.
+const BODY_EDGE: [string, number, number][] = [[RIM, 0.04, -0.15], [C.ink, 0.025, -0.145]];
+// The sword's own outline, just behind the sword.
+const SWORD_EDGE: [string, number, number][] = [[RIM, 0.022, -0.004], [C.ink, 0.013, -0.003]];
+const SEAM = 0.016; // the ink line round every paper piece, seen wherever it overlaps paper behind it
+const GAP = 0.02; // the paper stops this short of a K.O. cut, so a thin red edge shows
+const MAX_PILES = 5; // Endless: halves of the last 5 cut bots stay on the page
+const SWORD: PieceName = 'sword';
+const L2 = 0.14 * SCALE; // hand pivot (at the sleeve opening) to the middle of the fist
+const HALF_Z = 0.25; // a falling half squashes its layers together, so it falls flat like paper
+// Where each hand holds the handle, back from the guard: the left hand by the guard, the right at the end.
+const GRIP_L = -0.15 * SCALE, GRIP_R = -0.45 * SCALE;
+
+// ---------- building flat pieces ----------
+const LIT = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+const FLAT = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+
+function slab(p: Pt[], depth: number, color: THREE.Color, z = 0): THREE.BufferGeometry {
+  const shape = new THREE.Shape(ccw(p).map((q) => new THREE.Vector2(q[0], q[1])));
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 1 });
+  g.translate(0, 0, z - depth / 2);
+  g.deleteAttribute('uv');
+  const n = g.attributes.position.count, col = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) col.set([color.r, color.g, color.b], i * 3);
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return g;
 }
-function limb(r0: number, r1: number, len: number) { const g = new THREE.CylinderGeometry(r1, r0, len, 4, 1); g.rotateZ(-Math.PI / 2); g.translate(len / 2, 0, 0); return g; }
-function box(w: number, h: number, d: number, x = 0, y = 0, z = 0) { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z); return g; }
-function merge(...gs: THREE.BufferGeometry[]) {
-  const pos: number[] = [], nor: number[] = [];
-  for (const g0 of gs) {
-    const g = g0.index ? g0.toNonIndexed() : g0; g.computeVertexNormals();
-    pos.push(...(g.attributes.position.array as Float32Array)); nor.push(...(g.attributes.normal.array as Float32Array));
+
+interface PieceGeo { lit: THREE.BufferGeometry[]; flat: THREE.BufferGeometry[]; outline: { pts: Pt[]; z: number }[] }
+/** One piece as geometry: its share of the figure's rim and ink line (behind everything), an ink line and the
+ *  paper for every paper shape, the prints, red slash marks. With `cut`, only the kept side of the line: the
+ *  paper stops GAP short, so a thin red edge shows. */
+function pieceGeo(piece: Piece, look: Look, marks: Pt[][], cut: Line | null): PieceGeo {
+  const out: PieceGeo = { lit: [], flat: [], outline: [] };
+  const sword = piece.name === SWORD;
+  const keep = (p: Pt[], gap: number) => (cut ? clipHalf(p, cut, gap) : p);
+  const add = (list: THREE.BufferGeometry[], p: Pt[], depth: number, col: THREE.Color, z: number) => { if (p.length >= 3) list.push(slab(p, depth, col, z)); };
+  const ink = new THREE.Color(C.ink), red = new THREE.Color(C.red);
+  const papers = piece.shapes.filter((s) => s.paper), back = Math.min(...papers.map((s) => s.z));
+  for (const s of piece.shapes) {
+    const col = new THREE.Color(look.colors[s.role] ?? s.color);
+    if (!s.paper) { add(out.lit, keep(s.pts, GAP), T, col, s.z); continue; }
+    for (const [c, w, z] of sword ? SWORD_EDGE : BODY_EDGE) add(out.flat, keep(offset(s.pts, w), GAP), 0.003, new THREE.Color(c), sword ? back + z : z);
+    add(out.flat, keep(offset(s.pts, SEAM), GAP), T * 0.6, ink, s.z);
+    if (cut) add(out.flat, clipHalf(s.pts, cut), T * 0.8, red, s.z);
+    const card = keep(s.pts, GAP);
+    add(out.lit, card, T, col, s.z);
+    if (card.length >= 3) out.outline.push({ pts: card, z: s.z });
+    if (!sword) for (const lens of marks) add(out.flat, keep(clipConvex(s.pts, lens), GAP), T * 1.3, red, s.z);
   }
-  const m = new THREE.BufferGeometry();
-  m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); return m;
+  return out;
 }
-// Inverted hull: push every vertex out along the average normal of all faces that share its position.
-const hullCache = new Map<string, THREE.BufferGeometry>();
-function hullOf(geo: THREE.BufferGeometry, d: number) {
-  const key = geo.uuid + d; if (hullCache.has(key)) return hullCache.get(key)!;
-  const g = geo.clone(); g.computeVertexNormals();
-  const pos = g.attributes.position, nor = g.attributes.normal, acc = new Map<string, number[]>();
-  const k = (i: number) => pos.getX(i).toFixed(4) + ',' + pos.getY(i).toFixed(4) + ',' + pos.getZ(i).toFixed(4);
-  for (let i = 0; i < pos.count; i++) { const a = acc.get(k(i)) || [0, 0, 0]; a[0] += nor.getX(i); a[1] += nor.getY(i); a[2] += nor.getZ(i); acc.set(k(i), a); }
-  const out: number[][] = [];
-  for (let i = 0; i < pos.count; i++) { const a = acc.get(k(i))!, l = Math.hypot(a[0], a[1], a[2]) || 1; out.push([pos.getX(i) + (a[0] / l) * d, pos.getY(i) + (a[1] / l) * d, pos.getZ(i) + (a[2] / l) * d]); }
-  out.forEach((p, i) => pos.setXYZ(i, p[0], p[1], p[2])); pos.needsUpdate = true; hullCache.set(key, g); return g;
-}
-const bladeShape = new THREE.Shape([[0.04, -0.026], [1.1, -0.026], [1.22, 0.024], [0.04, 0.026]].map((p) => new THREE.Vector2(p[0], p[1])));
-const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, { depth: 0.018, bevelEnabled: false }); bladeGeo.translate(0, 0, -0.009);
-const LEG = frustum(0.1, 0.23, 0.9, 4, 'top', 0.72);
-const UP = limb(0.07, 0.056, 0.32), LOW = merge(limb(0.056, 0.046, 0.3), box(0.085, 0.085, 0.08, 0.32, 0, 0));
-const FOOT = box(0.26, 0.075, 0.13, 0.06, 0.0375, 0);
-const HEAD = frustum(0.155, 0.13, 0.36, 6, 'bottom', 0.9);
-type PartDef = [name: string, z: number, meshes: [THREE.BufferGeometry, string, number?][], details?: [THREE.BufferGeometry, string][]];
-const PARTS: PartDef[] = [
-  ['legB', -0.11, [[LEG, 'hakamaFold']]],
-  ['footB', -0.11, [[FOOT, 'ink']]],
-  ['armBU', -0.15, [[UP, 'giFold']]],
-  ['armBL', -0.15, [[LOW, 'giFold']]],
-  ['legF', 0.11, [[LEG, 'hakama']]],
-  ['footF', 0.11, [[FOOT, 'ink']]],
-  ['torso', 0, [[frustum(0.28, 0.2, 0.78, 4, 'bottom', 0.66), 'gi']], [[frustum(0.218, 0.207, 0.13, 4, 'bottom', 0.7).translate(0, 0.03, 0), 'sash']]],
-  ['head', 0, [[HEAD, 'gi']], [
-    [box(0.06, 0.026, 0.012, 0.05, 0.21, 0.122).rotateZ(-0.12), 'ink'], [box(0.06, 0.026, 0.012, 0.05, 0.21, -0.122).rotateZ(-0.12), 'ink'],
-    [box(0.085, 0.022, 0.012, 0.045, 0.258, 0.124).rotateZ(-0.2), 'ink'], [box(0.085, 0.022, 0.012, 0.045, 0.258, -0.124).rotateZ(-0.2), 'ink'],
-  ]],
-  ['hair', 0, [[frustum(0.168, 0.16, 0.15, 6, 'bottom', 0.92).translate(-0.025, 0.285, 0), 'hair']]],
-  ['knot', 0, [[new THREE.ConeGeometry(0.045, 0.22, 4).translate(-0.05, 0.53, 0), 'hair']]],
-  ['handle', 0.02, [[box(0.3, 0.052, 0.046, -0.15, 0, 0), 'ink', 0.7]], [0, 1, 2, 3].map((k) => [box(0.026, 0.058, 0.052, -0.26 + k * 0.07, 0, 0), 'grip'] as [THREE.BufferGeometry, string])],
-  ['tsuba', 0.02, [[box(0.036, 0.14, 0.11, 0.018, 0, 0), 'ink', 0.7]]],
-  ['blade', 0.02, [[bladeGeo, 'steel', 0.45]]],
-  ['armFU', 0.17, [[UP, 'gi']]],
-  ['armFL', 0.17, [[LOW, 'gi']]],
-];
-const PART_GEO = Object.fromEntries(PARTS.map(([n, , meshes]) => [n, meshes[0][0]]));
-const HULL_W = 0.026, HULL_I = 0.04, GAP = 0.02;
-
-type Kind = 'shell' | 'back' | 'core' | 'hullW' | 'hullI';
-type MatFn = (color: string, kind: Kind) => THREE.Material;
-interface Rig { root: THREE.Group; parts: Record<string, THREE.Group> }
-
-const colorOf = (look: Look, key: string) => (look as unknown as Record<string, string>)[key] ?? (C as Record<string, string>)[key] ?? key;
-function buildRig(look: Look, mf: MatFn, cut = false): Rig {
-  const root = new THREE.Group(), body = new THREE.Group(); root.add(body); const parts: Record<string, THREE.Group> = {};
-  for (const [n, z, meshes, det = []] of PARTS) {
-    const g = new THREE.Group(); g.position.z = z; body.add(g); parts[n] = g;
-    for (const [geo, key, os = 1] of meshes) {
-      const shell = new THREE.Mesh(geo, mf(colorOf(look, key), 'shell')); shell.castShadow = true; g.add(shell);
-      if (cut) { g.add(new THREE.Mesh(geo, mf(C.red, 'back'))); const core = new THREE.Mesh(geo, mf(C.red, 'core')); core.scale.setScalar(0.9); g.add(core); }
-      g.add(new THREE.Mesh(hullOf(geo, HULL_W * os), mf(C.white, 'hullW')));
-      g.add(new THREE.Mesh(hullOf(geo, HULL_I * os), mf(C.ink, 'hullI')));
-    }
-    for (const [geo, key] of det) g.add(new THREE.Mesh(geo, mf(colorOf(look, key), 'shell')));
+/** Merge a piece (or a whole half) into two meshes: lit paper and unlit edges, so draw calls stay low. */
+function meshes(lit: THREE.BufferGeometry[], flat: THREE.BufferGeometry[]) {
+  const out: THREE.Mesh[] = [];
+  for (const [list, mat] of [[lit, LIT], [flat, FLAT]] as const) {
+    if (!list.length) continue;
+    const g = mergeGeometries(list); list.forEach((x) => x.dispose());
+    if (!g) continue;
+    const m = new THREE.Mesh(g, mat); m.castShadow = true; out.push(m);
   }
-  return { root, parts };
+  return out;
 }
-function matFor(color: string, kind: Kind, planes?: THREE.Plane[]) {
-  const o = planes ? { clippingPlanes: planes, clipShadows: true } : {};
-  if (kind === 'shell') return new THREE.MeshLambertMaterial({ color, flatShading: true, ...o });
-  if (kind === 'back') return new THREE.MeshBasicMaterial({ color, side: THREE.BackSide, ...o });
-  if (kind === 'core') return new THREE.MeshBasicMaterial({ color: C.redDeep, ...o });
-  return new THREE.MeshBasicMaterial({ color, side: THREE.BackSide, ...o });
-}
-const sharedMats = new Map<string, THREE.Material>();
-const sharedMF: MatFn = (color, kind) => { const k = color + kind; if (!sharedMats.has(k)) sharedMats.set(k, matFor(color, kind)); return sharedMats.get(k)!; };
+const disposeTree = (o: THREE.Object3D) => o.traverse((c) => { const m = c as THREE.Mesh; if (m.isMesh) m.geometry.dispose(); });
 
-// ---------- poses: 2D forward kinematics in the fighter's side plane ----------
-export interface Pose { hipY: number; lean: number; legB: number; legF: number; hilt: [number, number]; sword: number; head: number }
-const rot = (a: number, v: number[]): [number, number] => { const c = Math.cos(a), s = Math.sin(a); return [c * v[0] - s * v[1], s * v[0] + c * v[1]]; };
-const vadd = (a: number[], b: number[]): [number, number] => [a[0] + b[0], a[1] + b[1]];
-function setPart(p: THREE.Object3D, pos: number[], r: number) { p.position.x = pos[0]; p.position.y = pos[1]; p.rotation.z = r; }
-function ik(S: number[], G: number[], L1: number, L2: number) {
-  const dx = G[0] - S[0], dy = G[1] - S[1], d = clamp(Math.hypot(dx, dy), 0.05, L1 + L2 - 1e-3), base = Math.atan2(dy, dx);
+// ---------- the rig, read from the Blender rest pose ----------
+const v2 = (p: THREE.Vector2): Pt => [p.x, p.y];
+const sub = (a: Pt, b: Pt): Pt => [a[0] - b[0], a[1] - b[1]];
+const vadd = (a: Pt, b: Pt): Pt => [a[0] + b[0], a[1] + b[1]];
+const rot = (a: number, v: Pt): Pt => { const c = Math.cos(a), s = Math.sin(a); return [c * v[0] - s * v[1], s * v[0] + c * v[1]]; };
+interface Arm { shoulder: Pt; l1: number; rest: number }
+interface Dims { torso: Pt; head: Pt; skirtL: Pt; skirtR: Pt; armL: Arm; armR: Arm }
+function dimsOf(p: Puppet): Dims {
+  const arm = (a: PieceName, h: PieceName): Arm => {
+    const d = sub(v2(p[h].rest), v2(p[a].rest));
+    return { shoulder: v2(p[a].rest), l1: Math.hypot(d[0], d[1]), rest: Math.atan2(d[1], d[0]) };
+  };
+  return { torso: v2(p.torso.rest), head: v2(p.head.rest), skirtL: v2(p.skirt_L.rest), skirtR: v2(p.skirt_R.rest), armL: arm('arm_L', 'hand_L'), armR: arm('arm_R', 'hand_R') };
+}
+interface Rig { root: THREE.Group; parts: Record<PieceName, THREE.Group> }
+
+// ---------- poses ----------
+/** spreadF / spreadB: how far the front (rival-side) and back hakama halves swing out; the body drops to keep the
+ *  feet on the page. lean: the torso's tilt (negative leans toward the rival). hilt / sword: where the sword's
+ *  guard is (from the feet) and its angle. head: extra head tilt. */
+export interface Pose { spreadF: number; spreadB: number; lean: number; head: number; hilt: [number, number]; sword: number }
+function ik(S: Pt, G: Pt, L1: number, L2: number) {
+  const dx = G[0] - S[0], dy = G[1] - S[1], d = clamp(Math.hypot(dx, dy), 0.02, L1 + L2 - 1e-3), base = Math.atan2(dy, dx);
   const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1)), up = base - A, E = vadd(S, [L1 * Math.cos(up), L1 * Math.sin(up)]);
   return { up, E, lo: Math.atan2(G[1] - E[1], G[0] - E[0]) };
 }
-function applyPose(rig: Rig, P: Pose) {
-  const pr = rig.parts, hip = [0, P.hipY], hb = vadd(hip, [-0.05, 0]), hf = vadd(hip, [0.05, 0]);
-  setPart(pr.legB, hb, P.legB); setPart(pr.legF, hf, P.legF);
-  const fb = vadd(hb, rot(P.legB, [0, -0.88])), ff = vadd(hf, rot(P.legF, [0, -0.88]));
-  setPart(pr.footB, [fb[0] - 0.04, Math.max(0, fb[1] - 0.04)], 0); setPart(pr.footF, [ff[0] - 0.04, Math.max(0, ff[1] - 0.04)], 0);
+function setPart(p: THREE.Object3D, pos: Pt, r: number) { p.position.x = pos[0]; p.position.y = pos[1]; p.rotation.z = r; }
+function applyPose(pr: Record<PieceName, THREE.Group>, P: Pose, d: Dims) {
+  const drop = d.torso[1] * (1 - Math.cos(Math.max(P.spreadF, P.spreadB)));
+  setPart(pr.skirt_L, [d.skirtL[0], d.skirtL[1] - drop], P.spreadF);
+  setPart(pr.skirt_R, [d.skirtR[0], d.skirtR[1] - drop], -P.spreadB);
+  const hip: Pt = [d.torso[0], d.torso[1] - drop], onTorso = (p: Pt) => vadd(hip, rot(P.lean, sub(p, d.torso)));
   setPart(pr.torso, hip, P.lean);
-  const neck = vadd(hip, rot(P.lean, [0.02, 0.76])), hr = P.lean * 0.6 + P.head;
-  for (const k of ['head', 'hair', 'knot']) setPart(pr[k], neck, hr);
-  const H = vadd(hip, rot(P.lean, P.hilt)), a = P.sword + P.lean;
-  for (const k of ['handle', 'tsuba', 'blade']) setPart(pr[k], H, a);
-  const SF = vadd(hip, rot(P.lean, [0.07, 0.68])), SB = vadd(hip, rot(P.lean, [-0.07, 0.68]));
-  let k = ik(SF, vadd(H, rot(a, [-0.07, 0])), 0.32, 0.31); setPart(pr.armFU, SF, k.up); setPart(pr.armFL, k.E, k.lo);
-  k = ik(SB, vadd(H, rot(a, [-0.22, 0])), 0.32, 0.31); setPart(pr.armBU, SB, k.up); setPart(pr.armBL, k.E, k.lo);
+  setPart(pr.head, onTorso(d.head), P.lean + P.head);
+  const H = P.hilt, a = P.sword;
+  setPart(pr.sword, H, a);
+  for (const [arm, hand, A, grip] of [['arm_L', 'hand_L', d.armL, GRIP_L], ['arm_R', 'hand_R', d.armR, GRIP_R]] as const) {
+    const S = onTorso(A.shoulder), k = ik(S, vadd(H, rot(a, [grip, 0])), A.l1, L2);
+    setPart(pr[arm], S, k.up - A.rest);
+    setPart(pr[hand], k.E, k.lo + Math.PI / 2); // the hand hangs straight down in the rest pose
+  }
 }
 const POSE = {
   guard: {
-    high: { hipY: 0.95, lean: -0.05, legB: 0.24, legF: -0.26, hilt: [0.3, 0.62], sword: 68 * D, head: 0.02 },
-    low: { hipY: 0.9, lean: -0.13, legB: 0.3, legF: -0.32, hilt: [0.3, 0.3], sword: -12 * D, head: 0.08 },
+    high: { spreadF: 0.14, spreadB: 0.1, lean: -0.05, head: -0.04, hilt: [0.42, 1.25], sword: 42 * D },
+    low: { spreadF: 0.16, spreadB: 0.12, lean: -0.08, head: -0.02, hilt: [0.44, 0.98], sword: -25 * D },
   },
   wind: {
-    high: { hipY: 0.96, lean: 0.08, legB: 0.22, legF: -0.24, hilt: [0.0, 0.98], sword: 140 * D, head: -0.04 },
-    low: { hipY: 0.87, lean: 0.02, legB: 0.3, legF: -0.3, hilt: [-0.12, 0.22], sword: -160 * D, head: 0.04 },
+    high: { spreadF: 0.12, spreadB: 0.1, lean: 0.04, head: -0.06, hilt: [0.25, 1.95], sword: 62 * D },
+    low: { spreadF: 0.16, spreadB: 0.14, lean: 0.06, head: 0.0, hilt: [-0.1, 0.95], sword: -150 * D },
   },
   strike: {
-    high: { hipY: 0.9, lean: -0.24, legB: 0.38, legF: -0.4, hilt: [0.42, 0.3], sword: -40 * D, head: 0.12 },
-    low: { hipY: 0.88, lean: -0.18, legB: 0.36, legF: -0.38, hilt: [0.42, 0.52], sword: 40 * D, head: 0.06 },
+    high: { spreadF: 0.28, spreadB: 0.2, lean: -0.16, head: -0.06, hilt: [0.55, 1.1], sword: -15 * D },
+    low: { spreadF: 0.28, spreadB: 0.2, lean: -0.14, head: -0.04, hilt: [0.42, 1.05], sword: 12 * D },
   },
 } as Record<'guard' | 'wind' | 'strike', Record<'high' | 'low', Pose>>;
-// How far toward the full wind-up / strike each move goes (lights are smaller motions).
+// How far toward the full wind-up / strike each move's key pose goes (lights are smaller motions).
 const MOTION = { light: { windK: 0.45, strikeK: 0.8 }, heavy: { windK: 1, strikeK: 1 }, riposte: { windK: 0.6, strikeK: 1 } };
-const POSE_KEYS = ['hipY', 'lean', 'legB', 'legF', 'sword', 'head'] as const;
+const POSE_KEYS = ['spreadF', 'spreadB', 'lean', 'head', 'sword'] as const;
 function lerpPose(a: Pose, b: Pose, k: number, out = {} as Pose): Pose {
   for (const key of POSE_KEYS) out[key] = lerp(a[key], b[key], k);
   out.hilt = [lerp(a.hilt[0], b.hilt[0], k), lerp(a.hilt[1], b.hilt[1], k)]; return out;
 }
 const copyPose = (p: Pose) => lerpPose(p, p, 0);
+// Turning around: the cut-out flips through edge-on in two held steps.
+const FLIP = [0.3, 0.3, 0.7, 0.7, 1];
 
-// ---------- cut marks ----------
-interface Mark { part: string; plane: THREE.Plane; w: number }
-interface MarkInst { part: THREE.Group; A: THREE.Plane; B: THREE.Plane; la: THREE.Plane; lb: THREE.Plane; mesh: THREE.Mesh; mat: THREE.Material }
-function attachMark(rig: Rig, m: Mark, extra: THREE.Plane[] = []): MarkInst {
-  const part = rig.parts[m.part], A = new THREE.Plane(), B = new THREE.Plane();
-  const mat = new THREE.MeshBasicMaterial({ color: C.red, clippingPlanes: [A, B, ...extra], polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-  const mesh = new THREE.Mesh(PART_GEO[m.part], mat); mesh.scale.setScalar(1.012); part.add(mesh);
-  const la = m.plane.clone(); la.constant += m.w;
-  const lb = m.plane.clone().negate(); lb.constant += m.w;
-  return { part, A, B, la, lb, mesh, mat };
+/** The key pose a puppeteer would set for this moment, and a name for it. */
+function keyPose(f: Fighter, walkT: number): [Pose, string] {
+  const g = POSE.guard[f.stance], mo = MOTION[f.atk], mv = MOVES[f.atk];
+  const wind = () => lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK), strike = (k = 1) => lerpPose(POSE.guard[f.slash], POSE.strike[f.slash], mo.strikeK * k);
+  switch (f.state) {
+    case 'wind': return [wind(), 'w' + f.slash + f.atk];
+    case 'active': return [strike(), 'a' + f.slash];
+    case 'recover': return f.t < mv.rec * 0.45 ? [strike(0.85), 'r' + f.slash] : [g, 'g' + f.stance];
+    case 'feint': return [lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK * 0.4), 'f' + f.slash];
+    case 'stun': return [{ ...g, lean: 0.14, head: 0.16, hilt: [0.3, 0.95], sword: -35 * D }, 'st'];
+    case 'land': return [{ ...g, spreadF: 0.3, spreadB: 0.26, lean: -0.1 }, 'ld'];
+    case 'dash': { const back = f.dashDir !== f.facing; return [{ ...g, lean: back ? 0.12 : -0.12, spreadF: 0.24, spreadB: 0.2 }, back ? 'db' : 'df']; }
+    default:
+      if (f.y > 0) return f.vy > 0 ? [{ ...g, spreadF: 0.05, spreadB: 0.3, lean: -0.06 }, 'j1' + f.stance] : [{ ...g, spreadF: 0.2, spreadB: 0.2 }, 'j2' + f.stance];
+      if (f.walk) { const s = Math.floor(walkT / 8) % 2; return [{ ...g, spreadF: s ? 0.24 : 0.06, spreadB: s ? 0.06 : 0.2 }, 'k' + s + f.stance]; }
+      return [g, 'g' + f.stance];
+  }
 }
-function updateMark(i: MarkInst) { i.A.copy(i.la).applyMatrix4(i.part.matrixWorld); i.B.copy(i.lb).applyMatrix4(i.part.matrixWorld); }
 
 // ---------- halves after a K.O. ----------
 interface Half {
-  holder: THREE.Group; rig: Rig; local: THREE.Plane; core: THREE.Plane; skin: THREE.Plane; mats: THREE.Material[]; marks: MarkInst[];
-  side: number; t: number; base: THREE.Vector3; dir: number; v: THREE.Vector3; w: THREE.Vector3; landed: boolean;
+  holder: THREE.Group; body: RigidBody | null; side: number; t: number; base: THREE.Vector3; dir: number;
+  landed: boolean; vy: number; folding: number;
+  v: THREE.Vector3; w: THREE.Vector3; // for the scripted fall when physics isn't loaded
 }
+
+const PUPPET = loadPuppet();
 
 /** One fighter on screen: follows its fighter in the fight and adds the paper effects. */
 export class FighterView {
-  readonly rig: Rig;
+  rig: Rig | null = null;
+  private puppet: Puppet | null = null;
+  private dims: Dims | null = null;
   pose: Pose;
-  private yaw: number;
-  private prev: { state: string; atk: string } = { state: 'guard', atk: 'light' };
-  private from: Pose; private recFrom: Pose; private feintFrom: Pose;
-  private walkPhase = 0;
-  private marks: Mark[] = [];
-  private markInst: MarkInst[] = [];
+  private ibFrom: Pose; private ib = 0; private sig = '';
+  private yaw: number; private yawFrom: number; private yawTo: number; private flipT = 99;
+  private walkT = 0;
+  /** Slash marks per piece, as polygons in the piece's own plane. */
+  private marks: Partial<Record<PieceName, Pt[][]>> = {};
   halves: Half[] = [];
+  /** Earlier bots' halves (Endless), oldest first. */
+  private piles: Half[][] = [];
+  private folding: Half[] = [];
   /** Called when a half lands: shake the camera, throw paper. */
   onLand: (x: number, dir: number) => void = () => {};
 
-  constructor(private scene: THREE.Scene, readonly look: Look, readonly seat: number) {
-    this.rig = buildRig(look, sharedMF);
-    scene.add(this.rig.root);
+  constructor(private scene: THREE.Scene, readonly look: Look, readonly seat: number, private physics: PaperPhysics) {
     this.pose = copyPose(POSE.guard[seat === 0 ? 'high' : 'low']);
-    this.from = this.recFrom = this.feintFrom = copyPose(this.pose);
-    this.yaw = seat === 0 ? 0 : Math.PI;
+    this.ibFrom = copyPose(this.pose);
+    this.yaw = this.yawFrom = this.yawTo = seat === 0 ? 0 : Math.PI;
+    PUPPET.then((p) => this.build(p)).catch((e) => console.error('Could not load the fighters:', e));
   }
 
-  /** Back to a fresh round: whole again, no cuts. */
-  reset(f: Fighter) {
+  private build(p: Puppet) {
+    this.puppet = p; this.dims = dimsOf(p);
+    const root = new THREE.Group(), parts = {} as Record<PieceName, THREE.Group>;
+    for (const name of PIECE_NAMES) { const g = new THREE.Group(); root.add(g); parts[name] = g; }
+    this.rig = { root, parts };
+    for (const name of PIECE_NAMES) this.rebuild(name);
+    this.scene.add(root);
+  }
+
+  private rebuild(name: PieceName) {
+    if (!this.rig || !this.puppet) return;
+    const g = this.rig.parts[name];
+    for (const c of [...g.children]) { g.remove(c); disposeTree(c); }
+    const pg = pieceGeo(this.puppet[name], this.look, this.marks[name] ?? [], null);
+    g.add(...meshes(pg.lit, pg.flat));
+  }
+
+  /** Back to a fresh round: whole again, no cuts. With `keep` (Endless), the halves stay on the page. */
+  reset(f: Fighter, keep = false) {
     this.clearMarks();
-    this.dropHalves();
-    if (!this.rig.root.parent) this.scene.add(this.rig.root);
-    this.pose = copyPose(POSE.guard[f.stance]);
-    this.prev = { state: f.state, atk: f.atk };
-    this.yaw = f.facing > 0 ? 0 : Math.PI;
+    if (keep) this.pileUp(); else this.dropHalves();
+    if (this.rig && !this.rig.root.parent) this.scene.add(this.rig.root);
+    this.pose = copyPose(POSE.guard[f.stance]); this.ib = 0; this.sig = '';
+    this.yaw = this.yawFrom = this.yawTo = f.facing > 0 ? 0 : Math.PI; this.flipT = 99;
   }
 
-  /** Update the pose for one fight frame. */
+  /** Update the pose for one fight frame: snap to the key pose, with one in-between when it changes. */
   stepPose(f: Fighter) {
-    const dt = 1 / 60;
-    if (f.state !== this.prev.state) {
-      if (f.state === 'wind') this.from = copyPose(this.pose);
-      if (f.state === 'recover') this.recFrom = copyPose(this.pose);
-      if (f.state === 'feint') this.feintFrom = copyPose(this.pose);
-      this.prev = { state: f.state, atk: f.atk };
-    }
-    const P = this.pose, M = MOVES[f.atk], mo = MOTION[f.atk];
-    switch (f.state) {
-      case 'guard': {
-        const tgt = POSE.guard[f.stance];
-        lerpPose(P, tgt, 1 - Math.exp(-dt * 22), P);
-        if (f.walk && f.y <= 0) this.walkPhase += dt * 10;
-        const sw = f.walk && f.y <= 0 ? Math.sin(this.walkPhase) * 0.22 : 0;
-        if (f.y > 0) { P.legB = lerp(P.legB, 0.7, 0.3); P.legF = lerp(P.legF, -0.2, 0.3); }
-        else { P.legB = lerp(P.legB, tgt.legB + sw, 0.5); P.legF = lerp(P.legF, tgt.legF - sw, 0.5); }
-        break;
-      }
-      case 'wind': {
-        const w = lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK);
-        lerpPose(this.from, w, easeIO(Math.min(1, f.t / M.wind)), P);
-        break;
-      }
-      case 'active': {
-        const w = lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK), s = lerpPose(POSE.guard[f.slash], POSE.strike[f.slash], mo.strikeK);
-        lerpPose(w, s, easeOut(Math.min(1, f.t / M.act)), P);
-        break;
-      }
-      case 'recover':
-        lerpPose(this.recFrom, POSE.guard[f.stance], easeIO(Math.min(1, f.t / M.rec)), P);
-        break;
-      case 'feint':
-        lerpPose(this.feintFrom, POSE.guard[f.stance], easeOut(Math.min(1, f.t / RULES.feintFrames)), P);
-        break;
-      case 'stun':
-        lerpPose(P, { ...POSE.guard[f.stance], lean: 0.32, head: -0.15 }, 1 - Math.exp(-dt * 18), P);
-        break;
-      case 'land':
-        lerpPose(P, { ...POSE.guard[f.stance], lean: -0.18, legB: 0.55, legF: -0.55 }, 1 - Math.exp(-dt * 30), P);
-        break;
-      case 'dash': {
-        const back = f.dashDir !== f.facing;
-        lerpPose(P, { ...POSE.guard[f.stance], lean: back ? 0.2 : -0.2, legB: 0.45, legF: -0.45 }, 1 - Math.exp(-dt * 25), P);
-        break;
-      }
-    }
+    if (f.walk && f.y <= 0) this.walkT++;
+    const [key, sig] = keyPose(f, this.walkT);
+    if (sig !== this.sig) { this.ibFrom = copyPose(this.pose); this.ib = f.state === 'active' ? 0 : 1; this.sig = sig; }
+    if (this.ib > 0) { lerpPose(this.ibFrom, key, 0.5, this.pose); this.ib--; } else lerpPose(key, key, 0, this.pose);
+    const want = f.facing > 0 ? 0 : Math.PI;
+    if (want !== this.yawTo) { this.yawFrom = this.yaw; this.yawTo = want; this.flipT = 0; }
+    this.yaw = lerp(this.yawFrom, this.yawTo, FLIP[Math.min(FLIP.length - 1, this.flipT >> 1)]);
+    this.flipT++;
   }
 
   /** Place the model for this screen frame. */
-  draw(f: Fighter, real: number, fold: number, clock: number) {
+  draw(f: Fighter, _real: number, fold: number, _clock: number) {
+    if (!this.rig || !this.dims) return;
     const r = this.rig.root;
     r.visible = f.alive;
     if (!f.alive) return;
-    const ty = f.facing > 0 ? 0 : Math.PI;
-    this.yaw = lerp(this.yaw, ty, 1 - Math.exp(-real * 14));
-    const bob = f.walk && f.y <= 0 ? Math.abs(Math.sin(this.walkPhase)) * 0.03 : Math.sin(clock * 2.2 + this.seat) * 0.006;
-    r.position.set(f.x, f.y + bob, 0); r.rotation.y = this.yaw;
-    r.scale.set(1, Math.max(0.001, fold), 1);
-    applyPose(this.rig, this.pose);
+    // Facing left is drawn mirrored rather than turned around, so the layers keep their order.
+    // The turn still passes through edge-on: past 90 degrees the cut-out shows mirrored.
+    const mirror = this.yaw > Math.PI / 2;
+    r.position.set(f.x, f.y, 0); r.rotation.y = mirror ? this.yaw - Math.PI : this.yaw;
+    r.scale.set(mirror ? -1 : 1, Math.max(0.001, fold), 1);
+    applyPose(this.rig.parts, this.pose, this.dims);
   }
 
-  /** After the scene's matrices are up to date: move cut marks and half clipping planes. */
-  afterMatrices() {
-    if (this.rig.root.visible) this.markInst.forEach(updateMark);
-    for (const h of this.halves) {
-      const M = h.rig.root.matrixWorld;
-      h.core.copy(h.local).applyMatrix4(M); h.skin.copy(h.local); h.skin.constant -= GAP; h.skin.applyMatrix4(M);
-      h.marks.forEach(updateMark);
-    }
-  }
-
-  /** A clean hit: a red band where the blade crossed (torso for high, legs for low; heavies cut two parts). */
-  addCut(f: Fighter, P: [number, number], ang: number, heavy: boolean) {
-    const high = P[1] - f.y > 1.1;
-    const parts = high ? (heavy ? ['torso', 'armFU'] : ['torso']) : heavy ? ['legF', 'legB'] : ['legF'];
+  /** A clean hit: a red slash where the blade crossed, cut through every piece of paper it passes. */
+  addCut(_f: Fighter, P: [number, number], ang: number, heavy: boolean) {
+    if (!this.rig || !this.puppet) return;
     this.rig.root.updateMatrixWorld(true);
-    const n = new THREE.Vector3(-Math.sin(ang), Math.cos(ang), 0);
-    const wp = new THREE.Plane().setFromNormalAndCoplanarPoint(n, new THREE.Vector3(P[0], P[1], 0));
-    for (const name of parts) {
+    const lens = slashLens(P, ang, heavy ? 0.5 : 0.32, heavy ? 0.03 : 0.016), v = new THREE.Vector3();
+    for (const name of PIECE_NAMES) {
+      if (name === SWORD) continue;
       const inv = this.rig.parts[name].matrixWorld.clone().invert();
-      const m = { part: name, plane: wp.clone().applyMatrix4(inv), w: heavy ? 0.026 : 0.012 };
-      this.marks.push(m); this.markInst.push(attachMark(this.rig, m));
+      const local = lens.map((q): Pt => { v.set(q[0], q[1], 0).applyMatrix4(inv); return [v.x, v.y]; });
+      if (!this.puppet[name].shapes.some((s) => s.paper && clipConvex(s.pts, local).length)) continue;
+      (this.marks[name] ??= []).push(local);
+      this.rebuild(name);
     }
   }
 
-  private clearMarks() { for (const i of this.markInst) { i.part.remove(i.mesh); i.mat.dispose(); } this.markInst = []; this.marks = []; }
+  private clearMarks() {
+    const had = Object.keys(this.marks) as PieceName[];
+    this.marks = {};
+    for (const name of had) this.rebuild(name);
+  }
 
-  /** The K.O. split: the fighter is redrawn twice, each copy clipped to one side of the blade's path. */
+  /** The K.O. split: every piece is cut along the blade's path; each side becomes one paper half. */
   split(P: [number, number], ang: number, dirAway: number) {
-    const f = this.rig.root;
-    f.updateMatrixWorld(true);
-    const inv = f.matrixWorld.clone().invert();
+    if (!this.rig || !this.puppet) return;
+    const root = this.rig.root;
+    root.updateMatrixWorld(true);
+    if (this.piles.length >= MAX_PILES) this.foldAway(this.piles.shift()!);
     const n = new THREE.Vector3(-Math.sin(ang), Math.cos(ang), 0);
     const wp = new THREE.Plane().setFromNormalAndCoplanarPoint(n, new THREE.Vector3(P[0], P[1], 0));
-    const lp = wp.clone().applyMatrix4(inv);
+    const v = new THREE.Vector3();
     for (const side of [1, -1]) {
-      const core = new THREE.Plane(), skin = new THREE.Plane(), mats: THREE.Material[] = [];
-      const mf: MatFn = (color, kind) => { const m = matFor(color, kind, kind === 'back' || kind === 'core' ? [core] : [skin]); mats.push(m); return m; };
-      const rig = buildRig(this.look, mf, true);
-      const holder = new THREE.Group(); holder.position.set(P[0], P[1], 0); this.scene.add(holder); holder.add(rig.root);
-      rig.root.position.copy(f.position).sub(holder.position); rig.root.rotation.copy(f.rotation); rig.root.scale.copy(f.scale);
-      applyPose(rig, this.pose); rig.root.updateMatrixWorld(true);
-      const h: Half = {
-        holder, rig, local: side > 0 ? lp : lp.clone().negate(), core, skin, mats, marks: [], side, t: 0,
-        base: holder.position.clone(), dir: dirAway, landed: false,
-        v: new THREE.Vector3(dirAway * 1.4, 1.3, (Math.random() - 0.5) * 1.6),
-        w: new THREE.Vector3((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 4, -dirAway * 3.2),
-      };
-      h.marks = this.marks.map((m) => attachMark(rig, m, [skin]));
-      this.halves.push(h);
+      const holder = new THREE.Group(); holder.position.set(P[0], P[1], 0);
+      this.scene.add(holder); holder.updateMatrixWorld(true);
+      const hinv = holder.matrixWorld.clone().invert(), lit: THREE.BufferGeometry[] = [], flat: THREE.BufferGeometry[] = [], hull: number[] = [];
+      for (const name of PIECE_NAMES) {
+        const M = this.rig.parts[name].matrixWorld;
+        const lp = wp.clone().applyMatrix4(M.clone().invert()), l = Math.hypot(lp.normal.x, lp.normal.y) || 1;
+        const L: Line = { nx: (side * lp.normal.x) / l, ny: (side * lp.normal.y) / l, c: (-side * lp.constant) / l };
+        const pg = pieceGeo(this.puppet[name], this.look, this.marks[name] ?? [], L);
+        const m = new THREE.Matrix4().makeScale(1, 1, HALF_Z).multiply(hinv).multiply(M);
+        for (const g of [...pg.lit, ...pg.flat]) g.applyMatrix4(m);
+        lit.push(...pg.lit); flat.push(...pg.flat);
+        for (const o of pg.outline) for (const q of o.pts) for (const z of [o.z - T, o.z + T]) { v.set(q[0], q[1], z).applyMatrix4(m); hull.push(v.x, v.y, v.z); }
+      }
+      holder.add(...meshes(lit, flat));
+      // The top flies off along the blade; the legs keel over (a card can't stand on its own).
+      const up = side > 0;
+      const vel = new THREE.Vector3(dirAway * (up ? 1.8 : 0.8), up ? 1.6 : 0.4, (Math.random() - 0.5) * 0.5);
+      const spin = up ? new THREE.Vector3((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 3, -dirAway * 5)
+        : new THREE.Vector3(-(3.2 + Math.random() * 1.2), (Math.random() - 0.5) * 2, -dirAway * 2.5);
+      const body = hull.length >= 12 ? this.physics.addHalf(new Float32Array(hull), holder.position, holder.quaternion, vel, spin) : null;
+      this.halves.push({ holder, body, side, t: 0, base: holder.position.clone(), dir: dirAway, landed: false, vy: 0, folding: -1, v: vel.clone().multiplyScalar(0.6), w: spin.clone() });
     }
-    this.rig.root.visible = false;
-    this.scene.remove(this.rig.root);
+    root.visible = false;
+    this.scene.remove(root);
   }
 
-  /** Tumble the halves (scripted for now; Rapier physics comes with the hit-feel work). */
+  /** Move the halves: physics when it's loaded, otherwise a scripted fall onto the page. */
   updateHalves(dt: number, fold: number) {
-    for (const h of this.halves) {
+    for (const h of [...this.halves, ...this.piles.flat(), ...this.folding]) {
       h.t += dt;
-      if (h.side > 0) {
-        if (h.t >= 0.12) {
-          h.v.y -= 15 * 0.55 * dt; h.holder.position.addScaledVector(h.v, dt);
-          h.holder.rotation.x += h.w.x * dt; h.holder.rotation.y += h.w.y * dt; h.holder.rotation.z += h.w.z * dt;
-          if (h.holder.position.y < 0.32) { h.holder.position.y = 0.32; h.v.multiplyScalar(0.35); h.v.y = Math.abs(h.v.y) * 0.3; h.w.multiplyScalar(0.45); }
-        }
-      } else {
-        const k = clamp((h.t - 0.3) / 0.8, 0, 1);
-        h.holder.rotation.z = -h.dir * (Math.PI / 2) * 0.94 * easeIn(k);
-        h.holder.position.y = lerp(h.base.y, 0.3, easeIn(k)); h.holder.position.x = h.base.x + h.dir * 0.35 * easeIn(k);
-        if (k >= 1 && !h.landed) { h.landed = true; this.onLand(h.holder.position.x + h.dir * 0.6, h.dir); }
+      const o = h.holder;
+      if (h.body) {
+        const p = h.body.translation(), q = h.body.rotation(), vy = h.body.linvel().y;
+        o.position.set(p.x, p.y, p.z); o.quaternion.set(q.x, q.y, q.z, q.w);
+        if (!h.landed && h.t > 0.15 && h.vy < -1.2 && vy > -0.3) { h.landed = true; this.onLand(p.x, h.dir); }
+        h.vy = vy;
+      } else if (!h.landed && h.t > 0.1) {
+        h.v.y -= 9 * dt; o.position.addScaledVector(h.v, dt);
+        o.rotation.z += h.w.z * dt * 0.5;
+        const k = clamp((h.t - 0.1) / 0.8, 0, 1);
+        o.rotation.x = (-Math.PI / 2) * easeIn(k);
+        if (o.position.y <= 0.05) { o.position.y = 0.05; h.v.set(0, 0, 0); }
+        if (k >= 1) { h.landed = true; this.onLand(o.position.x, h.dir); }
       }
-      h.holder.scale.y = Math.max(0.001, fold);
+      const shrink = h.folding >= 0 ? Math.max(0, 1 - (h.folding += dt) / 0.35) : 1;
+      o.scale.y = Math.max(0.001, fold * shrink);
     }
+    this.folding = this.folding.filter((h) => { if (h.folding < 0.35) return true; this.removeHalf(h); return false; });
   }
+
+  /** Endless: the cut bot's halves join the pile on the page. */
+  private pileUp() { if (this.halves.length) this.piles.push(this.halves); this.halves = []; }
+  /** Fold a pile flat into the page, then remove it. */
+  private foldAway(pile: Half[]) { for (const h of pile) h.folding = 0; this.folding.push(...pile); }
+  private removeHalf(h: Half) { this.scene.remove(h.holder); disposeTree(h.holder); if (h.body) this.physics.remove(h.body); }
 
   dropHalves() {
-    for (const h of this.halves) { this.scene.remove(h.holder); h.mats.forEach((m) => m.dispose()); h.marks.forEach((i) => i.mat.dispose()); }
-    this.halves = [];
+    for (const h of [...this.halves, ...this.piles.flat(), ...this.folding]) this.removeHalf(h);
+    this.halves = []; this.piles = []; this.folding = [];
   }
 
   /** Where the blade's tip is in the world (for the dummy's glint). */
-  tip(out: THREE.Vector3) { return out.set(1.15, 0, 0).applyMatrix4(this.rig.parts.blade.matrixWorld); }
+  tip(out: THREE.Vector3) { return this.rig ? out.set(2.3 * SCALE, 0, 0).applyMatrix4(this.rig.parts.sword.matrixWorld) : out.set(0, 0, 0); }
 }
