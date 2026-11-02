@@ -22,22 +22,22 @@ function run(s: State, frames: number, inp: (n: number) => [number, number] = ()
 const kinds = (ev: FightEvent[]) => ev.map((e) => e.k);
 
 describe('slashes', () => {
-  it('a light slash at the wrong guard height cuts 10%', () => {
+  it('a light slash at the wrong guard height cuts 10 of 80 health', () => {
     const s = fightAt();
     const ev = run(s, MOVES.light.wind + 1, (n) => [low | (n === 0 ? light : 0), 0]);
     expect(kinds(ev)).toContain('hit');
-    expect(s.f[1].hp).toBe(90);
+    expect(s.f[1].hp).toBe(RULES.maxHp - MOVES.light.dmg);
     expect(s.f[1].state).toBe('stun');
   });
 
-  it('a guard at the right height blocks; a heavy chips 3%', () => {
+  it('a guard at the right height blocks; a heavy chips 3', () => {
     const s = fightAt();
     run(s, MOVES.light.wind + 1, (n) => [n === 0 ? light : 0, 0]);
-    expect(s.f[1].hp).toBe(100);
+    expect(s.f[1].hp).toBe(RULES.maxHp);
     run(s, 40);
     const ev = run(s, MOVES.heavy.wind + 1, (n) => [n === 0 ? heavy : 0, 0]);
     expect(kinds(ev)).toContain('block');
-    expect(s.f[1].hp).toBe(97);
+    expect(s.f[1].hp).toBe(RULES.maxHp - MOVES.heavy.chip);
   });
 
   it('a slash out of reach whiffs', () => {
@@ -53,7 +53,7 @@ describe('slashes', () => {
     const ev = run(s, 12 + MOVES.light.wind, (n) => [low | (n === 12 ? light : 0), n === 0 ? jump : 0]);
     const w = ev.find((e) => e.k === 'whiff');
     expect(w && w.k === 'whiff' && w.over).toBe(true);
-    expect(s.f[1].hp).toBe(100);
+    expect(s.f[1].hp).toBe(RULES.maxHp);
   });
 });
 
@@ -70,7 +70,7 @@ describe('parry and riposte', () => {
     const ev2 = run(s, 12, (n) => [0, low | (n === 0 ? light : 0)]);
     const hit = ev2.find((e) => e.k === 'hit');
     expect(hit && hit.k === 'hit' && hit.atk).toBe('riposte');
-    expect(s.f[0].hp).toBe(100 - MOVES.riposte.dmg);
+    expect(s.f[0].hp).toBe(RULES.maxHp - MOVES.riposte.dmg);
   });
 
   it('a guard held early is a block, not a parry', () => {
@@ -117,16 +117,16 @@ describe('counter cut', () => {
     const s = fightAt();
     const ev = run(s, MOVES.light.wind + 1, (n) => [low | (n === 0 ? light : 0), n === 0 ? light : 0]);
     expect(kinds(ev).filter((k) => k === 'hit')).toHaveLength(2);
-    expect(s.f[0].hp).toBe(90);
-    expect(s.f[1].hp).toBe(90);
+    expect(s.f[0].hp).toBe(RULES.maxHp - MOVES.light.dmg);
+    expect(s.f[1].hp).toBe(RULES.maxHp - MOVES.light.dmg);
   });
 
   it('two identical slashes on the same frame clash', () => {
     const s = fightAt();
     const ev = run(s, MOVES.light.wind + 1, (n) => [n === 0 ? light : 0, n === 0 ? light : 0]);
     expect(kinds(ev)).toContain('clash');
-    expect(s.f[0].hp).toBe(100);
-    expect(s.f[1].hp).toBe(100);
+    expect(s.f[0].hp).toBe(RULES.maxHp);
+    expect(s.f[1].hp).toBe(RULES.maxHp);
   });
 });
 
@@ -172,11 +172,11 @@ describe('rounds', () => {
     expect(s.f[0].wins).toBe(1);
   });
 
-  it('plays a best-of-3 to the back cover, then both players can ask for a rematch', () => {
+  it('plays a best-of-5 to the back cover, then both players can ask for a rematch', () => {
     const s = newMatch();
     const pages: number[] = [];
     let over: FightEvent | undefined;
-    for (let r = 0; r < 2; r++) {
+    for (let r = 0; r < RULES.winsNeeded; r++) {
       while (s.phase !== 'fight') { for (const e of step(s, [0, 0])) if (e.k === 'swap') pages.push(e.page); }
       s.f[0].x = -0.6; s.f[1].x = 0.6;
       run(s, 10, (n) => [low | (n === 2 ? light : 0), n === 0 ? heavy : 0]);
@@ -186,7 +186,7 @@ describe('rounds', () => {
       for (const e of step(s, [0, 0])) { if (e.k === 'over') over = e; if (e.k === 'swap') pages.push(e.page); }
     }
     expect(over).toMatchObject({ winner: 0 });
-    expect(pages).toEqual([1, 3]);
+    expect(pages).toEqual([1, 2, 3]);
     expect(s.phase).toBe('over');
     step(s, [BTN.rematch, 0]);
     expect(s.phase).toBe('over');
@@ -194,6 +194,7 @@ describe('rounds', () => {
     expect(kinds(ev)).toContain('restart');
     expect(s.round).toBe(1);
     expect(s.f[0].wins).toBe(0);
+    expect(s.f[0].hp).toBe(RULES.maxHp);
   });
 });
 

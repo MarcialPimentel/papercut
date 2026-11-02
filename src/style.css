@@ -95,6 +95,11 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 .join label { font-weight: 700; flex-basis: 100%; }
 .join input { max-width: 110px; text-transform: uppercase; letter-spacing: .2em; text-align: center; }
 .help { font-size: 14px; color: var(--ink); border-top: 1.5px solid rgba(24,23,28,.18); padding-top: 12px; display: grid; gap: 6px; }
+.howto .mbtn { text-align: center; }
+.controls { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 14px; align-items: baseline; font-size: 15px; }
+.controls dt { font-weight: 700; white-space: nowrap; }
+.controls dd { margin: 0; }
+.controls dd b { color: var(--red-text); }
 .help p { margin: 0; }
 .help em { font-style: normal; color: var(--red-text); font-weight: 700; }
 kbd { font: 700 12px var(--body); border: 1.5px solid rgba(24,23,28,.3); border-bottom-width: 3px; padding: 0 5px; border-radius: 3px; background: #FFF; }

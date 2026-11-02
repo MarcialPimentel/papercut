@@ -17,9 +17,9 @@
     <div class="hud labels" id="labels"></div>
 
     <div class="hud bars fight-only">
-      <div class="bar" id="bar0"><div class="row"><span class="nm">Kami</span><div class="strip"><i></i></div></div><div class="pips" aria-label="Rounds won"><b></b><b></b></div></div>
+      <div class="bar" id="bar0"><div class="row"><span class="nm">Kami</span><div class="strip"><i></i></div></div><div class="pips" aria-label="Rounds won"></div></div>
       <div class="clock" id="clock" aria-label="Round timer">60</div>
-      <div class="bar r" id="bar1"><div class="row"><span class="nm">Sumi</span><div class="strip"><i></i></div></div><div class="pips" aria-label="Rounds won"><b></b><b></b></div></div>
+      <div class="bar r" id="bar1"><div class="row"><span class="nm">Sumi</span><div class="strip"><i></i></div></div><div class="pips" aria-label="Rounds won"></div></div>
     </div>
     <div class="hud opts fight-only">
       <button class="hbtn" id="bSound" type="button">Sound: <b>On</b></button>
@@ -51,6 +51,7 @@
           <button class="mbtn red" id="bFriend" type="button">Fight a friend<small>Get an invite link to send</small></button>
           <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting</small></button>
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
+          <button class="hbtn" id="bHowTo" type="button">How to play</button>
           <form id="joinForm" class="join">
             <label for="joinCode">Have a room code?</label>
             <input id="joinCode" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD">
@@ -81,10 +82,23 @@
           <button class="mbtn" data-cancel type="button">Back</button>
         </div>
 
-        <div class="help">
-          <p><b>Mouse fights:</b> cursor above your fighter's waist guards high, below guards low. <kbd>Left click</kbd> light slash, <kbd>Right click</kbd> heavy slash. Left click or <kbd>Q</kbd> during a heavy's wind-up feints.</p>
-          <p><b>Keyboard moves:</b> <kbd>A</kbd> <kbd>D</kbd> walk (double-tap to dash), <kbd>Space</kbd> or <kbd>W</kbd> jump, <kbd>Esc</kbd> back to this menu.</p>
-          <p><b>The rule:</b> hit someone while their heavy winds up, or right after they miss, and it's a <em>counter cut</em>: instant K.O. Flick your guard to the right height just before a hit lands to parry, then answer with a riposte.</p>
+        <div data-screen="howto" class="stack howto" hidden>
+          <p class="big">How to play</p>
+          <dl class="controls">
+            <dt>Guard</dt><dd>Move the mouse <b>above</b> your fighter's waist to guard high, <b>below</b> to guard low.</dd>
+            <dt><kbd>Left click</kbd></dt><dd>Light slash: quick, small cut.</dd>
+            <dt><kbd>Right click</kbd></dt><dd>Heavy slash: slow, big cut. Click again (or <kbd>Q</kbd>) while it winds up to feint.</dd>
+            <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Walk. Double-tap to dash.</dd>
+            <dt><kbd>Space</kbd></dt><dd>Jump (low slashes pass under you).</dd>
+            <dt><kbd>Esc</kbd></dt><dd>Back to the menu.</dd>
+          </dl>
+          <div class="help">
+            <p><b>Hit where they aren't guarding.</b> A slash at the height they guard is blocked.</p>
+            <p><b>Counter cut:</b> hit someone while their heavy winds up, or right after they miss: instant K.O.</p>
+            <p><b>Parry:</b> switch your guard to the right height just before a hit lands, then slash back for a big riposte.</p>
+            <p><b>Win 3 rounds</b> to take the match.</p>
+          </div>
+          <button class="mbtn" id="bHowToBack" type="button">Got it</button>
         </div>
       </div>
     </div>
