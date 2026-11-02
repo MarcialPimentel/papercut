@@ -145,6 +145,12 @@ export class View {
         this.fighters.forEach((v, i) => v.reset(s.f[i]));
         this.killCam = 0; this.koSeat = -1;
         break;
+      case 'spawn':
+        // Endless: the cut bot's pieces go, a fresh one stands in. Your own cuts stay: your strip carries over too.
+        this.fx.clearFlecks();
+        this.fighters[e.p].reset(s.f[e.p]);
+        this.killCam = 0; this.koSeat = -1;
+        break;
       case 'restart': this.reset(s); break;
       case 'cut': sfx.fight(); break;
       case 'round': sfx.round(); break;
