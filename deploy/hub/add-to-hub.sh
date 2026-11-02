@@ -7,7 +7,7 @@
 # It adds the papercut service to /opt/hub/docker-compose.yml and a papercut.marz.gg block to
 # /opt/hub/Caddyfile, checks both, and reloads Caddy. Safe to run twice. If a check fails, both
 # files are put back exactly as they were, so the other games are never left with a broken setup.
-# Afterwards, copy the same two changes into the hormigas repo's deploy/hub/ (the hub's master copy).
+# Afterwards, copy the same two changes into the hub repo (MarcialPimentel/hub), the master copy of the server's files.
 set -euo pipefail
 cd "${HUB_DIR:-/opt/hub}"   # HUB_DIR is only for rehearsing on a copy
 

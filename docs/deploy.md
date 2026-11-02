@@ -2,7 +2,7 @@
 
 _Current as of the first online build (2026-11-01)._
 
-Papercut is live at **https://papercut.marz.gg**. It runs on the same small cloud server as Hormigas (the "hub"), as **one Docker container** with no database: it serves the game and runs the rooms that pair players online. The hub itself (Caddy for HTTPS, the other projects) is described in the Hormigas repo's `docs/DEPLOY.md`.
+Papercut is live at **https://papercut.marz.gg**. It runs on the same small cloud server as Hormigas (the "hub"), as **one Docker container** with no database: it serves the game and runs the rooms that pair players online. The hub itself (Caddy for HTTPS, the other projects) is described in the hub repo (MarcialPimentel/hub).
 
 > **Private details are not in this repo.** The server's address, SSH keys and passwords live in Marz's private hosting notes, GitHub secrets and the server itself. Never commit them here.
 
@@ -42,7 +42,7 @@ Papercut was added to the hub on 2026-11-01. This is what was done, in case the 
 3. **GitHub secrets:** `DROPLET_HOST` (the hub's IP) and `DROPLET_SSH_KEY` (the private half of the deploy key, the same one Hormigas uses) are set in the repo's Settings → Secrets and variables → Actions.
 4. **First deploy:** Actions → Deploy → Run workflow. Build 2b5269e went live.
 
-Still to do: copy the Papercut service and Caddy blocks into the Hormigas repo's `deploy/hub/`, which is the hub's master copy.
+The Papercut service and Caddy block are recorded in the hub repo (MarcialPimentel/hub), the master copy of the server's files.
 
 ## Everyday commands (on the server, in /opt/hub)
 
