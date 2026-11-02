@@ -8,8 +8,7 @@ const f = (...names: string[]) => names.map((n) => `/sfx/${n}.ogg`);
 const RECORDINGS: Record<string, string[]> = {
   clash: f('impactMetal_light_000', 'impactMetal_light_001', 'impactMetal_light_003'),
   block: f('impactPlate_light_000', 'impactPlate_light_002', 'impactPlate_light_003'),
-  slice: f('scratch_001', 'scratch_002'),
-  tear: f('knifeSlice2', 'scratch_005'),
+  slice: f('knifeSlice2'), // light hits play it faster and quieter, heavies slower
   shing: f('drawKnife3'),
   page: f('bookFlip2', 'bookFlip3'),
   fold: f('cloth4'),
@@ -89,16 +88,15 @@ export const sfx = {
   },
   /** A light hit: a quick paper slice. */
   hit(pan: number) {
-    if (E.sample('slice', { gain: 0.6, pan })) return;
-    E.hiss({ dur: 0.09, type: 'highpass', freq: 3000, sweep: 5200, gain: 0.45, pan });
-    E.tone({ f0: 2200, f1: 1400, dur: 0.06, type: 'triangle', gain: 0.05, pan });
+    // A quick blade pass with a soft paper snip; no high pitched tones (they squeak).
+    if (!E.sample('slice', { gain: 0.45, rate: 1.3, pan })) E.hiss({ dur: 0.1, type: 'bandpass', freq: 2600, sweep: 1600, q: 0.9, gain: 0.35, pan });
+    E.hiss({ dur: 0.06, type: 'bandpass', freq: 1800, q: 0.8, gain: 0.25, pan });
   },
   /** A heavy hit or riposte: a long paper tear with a body thump. */
   cut(pan: number) {
-    if (!E.sample('tear', { gain: 0.9, pan })) {
-      E.hiss({ dur: 0.38, type: 'bandpass', freq: 3200, sweep: 1100, q: 0.8, gain: 0.6, pan });
-      E.hiss({ dur: 0.2, type: 'highpass', freq: 4500, gain: 0.25, pan });
-    }
+    // The blade (recording) plus a lower, softer paper tear in code: weight without squeak.
+    const rec = E.sample('slice', { gain: 0.8, rate: 0.85, pan });
+    E.hiss({ dur: 0.34, type: 'bandpass', freq: 1900, sweep: 700, q: 0.6, gain: rec ? 0.3 : 0.5, attack: 0.01, pan });
     E.tone({ f0: 150, f1: 60, dur: 0.22, gain: 0.45, pan });
     E.duck(0.4, 0.1);
   },
@@ -106,7 +104,7 @@ export const sfx = {
   ko(counter: boolean, pan: number) {
     const t = later(0);
     taiko(t, 1.1);
-    if (!E.sample('tear', { gain: 1, rate: 0.85, pan })) E.hiss({ dur: 0.6, type: 'bandpass', freq: 2800, sweep: 700, q: 0.7, gain: 0.7, pan });
+    if (!E.sample('slice', { gain: 0.9, rate: 0.8, pan })) E.hiss({ dur: 0.6, type: 'bandpass', freq: 2800, sweep: 700, q: 0.7, gain: 0.7, pan });
     if (counter) {
       if (!E.sample('shing', { gain: 2.5, pan })) E.ring({ base: 1980, dur: 1.8, gain: 0.12, at: t + 0.02, pan });
       E.hiss({ dur: 0.5, type: 'highpass', freq: 6000, gain: 0.2, attack: 0.01, at: t, pan });
