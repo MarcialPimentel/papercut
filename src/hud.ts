@@ -15,7 +15,7 @@ function howText(s: State, loser: string) {
   if (s.how !== 'Counter cut') return s.how;
   return s.why === 'wind'
     ? `Counter cut! ${loser} ${loser === 'You' ? 'were' : 'was'} hit while winding up a heavy: instant K.O.`
-    : `Counter cut! ${loser} ${loser === 'You' ? 'were' : 'was'} hit right after missing a slash: instant K.O.`;
+    : `Counter cut! ${loser} ${loser === 'You' ? 'were' : 'was'} hit just after missing a slash: instant K.O.`;
 }
 
 export class Hud {

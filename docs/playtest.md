@@ -21,6 +21,7 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 | Dash / backdash | Double-tap D / A |
 | Jump | Space or W |
 | Rematch (when the match ends) | R or the Rematch button |
+| Hitbox view on / off | H |
 | Free the mouse / back to the menu | Esc frees the mouse (held during a fight), Esc again or Leave for the menu |
 
 ## Ways to play
@@ -42,6 +43,12 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 - **Custom room:** try best of 1 with 50 health (deadly), or endless rounds with no timer. The status line in the corner shows the room's rules.
 - **Tournament:** with 3+ people (or several browser windows), run a bracket to the end. Does watching feel smooth? Does everyone land back on the bracket after each fight, and does everyone see the same champion?
 - **The cut-out fighters (2026-11-02):** watch a heavy's wind-up: can you read high from low as quickly as before? Turn around (jump over the dummy): the cards flip. Land a few hits: red slashes cut through the paper. K.O. the dummy: the halves should fly, bounce off the pop-ups and lie flat on the page.
+- **Heavy rework (2026-11-02):**
+  - Throw a heavy at a guarding Sumi: it should step in, say "Stagger", and knock Sumi's blade up. Click a light right after at the other height: it should land before Sumi can do anything. Does a heavy now feel worth throwing?
+  - Have a friend (or Endless bots) try to counter-cut your heavy: it should take a read, not just fast fingers. Too safe now, or still too risky?
+  - Miss a heavy on purpose: the rival can still punish it, but only a quick punish is an instant K.O.; a late one is a normal cut.
+- **Hitboxes (2026-11-02):** press **H** in a fight to show them. Green boxes are bodies (red while open to a counter cut, gold while stunned or staggered); the blue line is a slash's reach, faint while it winds up. Does every hit you see land, and every miss look like a miss? Note anything that looks off (which move, high or low, how far apart). Air slashes now sail over a standing head at the top of a jump: swing on the way down.
+- **Spacing:** fighters start further apart and walk and dash further, so the spacing should feel as before with honest swords. Too roomy or too cramped?
 - **Endless:** how far do you get? The cut bots' halves pile up on the page (the last 5 stay). From level 2 (bot 6) the bots block heavies they see coming, punish your misses and swat jumpers.
 
 ## What to report

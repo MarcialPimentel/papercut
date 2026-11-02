@@ -132,13 +132,23 @@ const POSE = {
     high: { spreadF: 0.12, spreadB: 0.1, lean: 0.04, head: -0.06, hilt: [0.25, 1.95], sword: 62 * D },
     low: { spreadF: 0.16, spreadB: 0.14, lean: 0.06, head: 0.0, hilt: [-0.1, 0.95], sword: -150 * D },
   },
+  // The cut itself (the active frames): the blade lies across the height it cuts (chest high or knee low), and its
+  // tip is where the fight's reach ends (MOVES.reach, 1.8 m ahead of the centre). Check with the hitbox view (H).
   strike: {
+    high: { spreadF: 0.28, spreadB: 0.2, lean: -0.16, head: -0.06, hilt: [0.6, 1.47], sword: -1 * D },
+    low: { spreadF: 0.3, spreadB: 0.22, lean: -0.2, head: -0.04, hilt: [0.62, 0.86], sword: -12 * D },
+  },
+  // The follow-through (early recovery): the blade carries on past the cut.
+  follow: {
     high: { spreadF: 0.28, spreadB: 0.2, lean: -0.16, head: -0.06, hilt: [0.55, 1.1], sword: -15 * D },
     low: { spreadF: 0.28, spreadB: 0.2, lean: -0.14, head: -0.04, hilt: [0.42, 1.05], sword: 12 * D },
   },
-} as Record<'guard' | 'wind' | 'strike', Record<'high' | 'low', Pose>>;
-// How far toward the full wind-up / strike each move's key pose goes (lights are smaller motions).
-const MOTION = { light: { windK: 0.45, strikeK: 0.8 }, heavy: { windK: 1, strikeK: 1 }, riposte: { windK: 0.6, strikeK: 1 } };
+} as Record<'guard' | 'wind' | 'strike' | 'follow', Record<'high' | 'low', Pose>>;
+// How far toward the full wind-up each move's key pose goes (lights are smaller motions). Every move cuts with
+// the same strike pose, so its reach matches what's drawn.
+const MOTION = { light: { windK: 0.45 }, heavy: { windK: 1 }, riposte: { windK: 0.6 } };
+// A blocked heavy knocks the guard aside: blade thrown up and back, body rocked away.
+const STAGGER: Pose = { spreadF: 0.1, spreadB: 0.24, lean: 0.2, head: 0.12, hilt: [0.15, 1.6], sword: 80 * D };
 const POSE_KEYS = ['spreadF', 'spreadB', 'lean', 'head', 'sword'] as const;
 function lerpPose(a: Pose, b: Pose, k: number, out = {} as Pose): Pose {
   for (const key of POSE_KEYS) out[key] = lerp(a[key], b[key], k);
@@ -151,11 +161,12 @@ const FLIP = [0.3, 0.3, 0.7, 0.7, 1];
 /** The key pose a puppeteer would set for this moment, and a name for it. */
 function keyPose(f: Fighter, walkT: number): [Pose, string] {
   const g = POSE.guard[f.stance], mo = MOTION[f.atk], mv = MOVES[f.atk];
-  const wind = () => lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK), strike = (k = 1) => lerpPose(POSE.guard[f.slash], POSE.strike[f.slash], mo.strikeK * k);
+  const wind = () => lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK);
   switch (f.state) {
     case 'wind': return [wind(), 'w' + f.slash + f.atk];
-    case 'active': return [strike(), 'a' + f.slash];
-    case 'recover': return f.t < mv.rec * 0.45 ? [strike(0.85), 'r' + f.slash] : [g, 'g' + f.stance];
+    case 'active': return [POSE.strike[f.slash], 'a' + f.slash];
+    case 'recover': return f.t < mv.rec * 0.45 ? [POSE.follow[f.slash], 'r' + f.slash] : [g, 'g' + f.stance];
+    case 'stagger': return [STAGGER, 'sg'];
     case 'feint': return [lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK * 0.4), 'f' + f.slash];
     case 'stun': return [{ ...g, lean: 0.14, head: 0.16, hilt: [0.3, 0.95], sword: -35 * D }, 'st'];
     case 'land': return [{ ...g, spreadF: 0.3, spreadB: 0.26, lean: -0.1 }, 'ld'];
