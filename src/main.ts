@@ -23,7 +23,7 @@ try {
   throw e;
 }
 const hud = new Hud();
-const controls = new Controls(canvas, $('#chips'));
+const controls = new Controls(canvas, $('#chips'), $('#aim'));
 const net = new Net();
 $('#build').textContent = `build ${__BUILD__}`;
 
@@ -58,6 +58,7 @@ function hideMenu() { screen = null; stage.classList.remove('in-menu'); $('#menu
 function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
   if (mode.kind === 'online') net.send({ t: 'cancel' });
   controls.active = false; controls.clear();
+  controls.lockWanted = false; controls.unlock();
   mode = { kind: 'menu', s: newMatch() };
   view.reset(mode.s);
   hud.you = null; hud.online = false; hud.setNames();
@@ -83,6 +84,7 @@ function startOnline(seat: 0 | 1, delay: number, code: string) {
 function begin() {
   view.reset(stateOf(mode));
   controls.clear(); controls.active = true;
+  controls.lockWanted = true; controls.lock(); // works when a click started the fight; otherwise the first click locks
   acc = 0;
   hideMenu();
 }
@@ -119,7 +121,7 @@ $('#rematch').addEventListener('click', () => command('rematch'));
 function command(c: 'restart' | 'menu' | 'rematch') {
   if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto') showMenu('main'); return; }
   if (mode.kind === 'practice') {
-    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(); mode.dummy.reset(); view.reset(mode.s); }
+    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(); mode.dummy.reset(); view.reset(mode.s); controls.lockWanted = true; controls.lock(); }
   } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
 }
 controls.onCommand = command;
@@ -173,7 +175,12 @@ function frame(now: number) {
     }
   }
   const s = stateOf(m);
-  if (m.kind !== 'menu') hud.update(s, m.kind === 'online' ? seat : 0);
+  if (m.kind !== 'menu') {
+    hud.update(s, m.kind === 'online' ? seat : 0);
+    // Hold the mouse while fighting; let it go when the match is over so Rematch and Leave can be clicked.
+    controls.lockWanted = s.phase !== 'over';
+    if (!controls.lockWanted) controls.unlock();
+  }
   view.draw(s, real, m.kind === 'practice' ? { seat: 1, k: m.dummy.tell / m.dummy.tellFrames } : undefined);
   stage.style.background = view.sky;
 
@@ -184,6 +191,9 @@ function frame(now: number) {
     status = l.desynced ? `Out of sync at frame ${l.frame}. Please tell Marz.`
       : l.waiting > 20 ? "Waiting for your rival's connection…"
       : `Online · room ${m.code} · ${l.delay}-frame delay`;
+  }
+  if (m.kind !== 'menu' && controls.lockWanted && !controls.locked && matchMedia('(hover: hover) and (pointer: fine)').matches && !status.startsWith('Out')) {
+    status = 'Click the fight to hold the mouse · ' + status;
   }
   if (status !== lastStatus) { statusEl.textContent = status; lastStatus = status; statusEl.classList.toggle('warn', status.startsWith('Out') || status.startsWith('Wait')); }
 }

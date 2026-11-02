@@ -230,6 +230,9 @@ export class FighterView {
       case 'stun':
         lerpPose(P, { ...POSE.guard[f.stance], lean: 0.32, head: -0.15 }, 1 - Math.exp(-dt * 18), P);
         break;
+      case 'land':
+        lerpPose(P, { ...POSE.guard[f.stance], lean: -0.18, legB: 0.55, legF: -0.55 }, 1 - Math.exp(-dt * 30), P);
+        break;
       case 'dash': {
         const back = f.dashDir !== f.facing;
         lerpPose(P, { ...POSE.guard[f.stance], lean: back ? 0.2 : -0.2, legB: 0.45, legF: -0.45 }, 1 - Math.exp(-dt * 25), P);

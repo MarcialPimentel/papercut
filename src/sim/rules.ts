@@ -32,6 +32,7 @@ export const RULES = {
   walk: 2.6 / FPS, // metres per frame
   jumpV: 5.6 / FPS,
   gravity: 15 / (FPS * FPS),
+  landLag: 10, // stuck this long on landing after a slash in the air
   dashFrames: 12,
   dashForward: 1.4,
   dashBack: 1.15,

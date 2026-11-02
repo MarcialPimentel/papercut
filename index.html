@@ -28,6 +28,7 @@
     <div class="hud banner fight-only" id="banner" hidden><div id="bannerText"></div></div>
     <div class="hud rematch fight-only"><button class="mbtn red" id="rematch" type="button" hidden>Rematch</button></div>
     <div class="hud status fight-only" id="status" role="status"></div>
+    <div class="aim" id="aim" hidden><i></i></div>
 
     <div class="hud hud-chips fight-only" id="chips">
       <button class="chip" data-hold="left" type="button">◀</button>
@@ -89,12 +90,13 @@
             <dt><kbd>Left click</kbd></dt><dd>Light slash: quick, small cut.</dd>
             <dt><kbd>Right click</kbd></dt><dd>Heavy slash: slow, big cut. Click again (or <kbd>Q</kbd>) while it winds up to feint.</dd>
             <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Walk. Double-tap to dash.</dd>
-            <dt><kbd>Space</kbd></dt><dd>Jump (low slashes pass under you).</dd>
-            <dt><kbd>Esc</kbd></dt><dd>Back to the menu.</dd>
+            <dt><kbd>Space</kbd></dt><dd>Jump over low slashes. A slash in the air always comes in <b>high</b>.</dd>
+            <dt><kbd>Esc</kbd></dt><dd>Free the mouse (the game holds it during a fight). Press again for the menu.</dd>
           </dl>
           <div class="help">
             <p><b>Hit where they aren't guarding.</b> A slash at the height they guard is blocked.</p>
-            <p><b>Counter cut:</b> hit someone while their heavy winds up, or right after they miss: instant K.O.</p>
+            <p><b>Counter cut = instant K.O.</b> A heavy slash is slow to wind up, and a missed slash leaves you open while you recover. Land any hit in either moment and the round is over, however much strip is left. So don't throw heavies up close, and don't swing at air.</p>
+            <p><b>Jumpers:</b> guard high to block a jump-in, or slash high to cut them out of the air (no one can block mid-air). Landing after an air slash leaves you stuck for a moment.</p>
             <p><b>Parry:</b> switch your guard to the right height just before a hit lands, then slash back for a big riposte.</p>
             <p><b>Win 3 rounds</b> to take the match.</p>
           </div>
