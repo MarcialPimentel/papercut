@@ -86,6 +86,7 @@ export type FightEvent =
   | { k: 'swap'; page: number }
   | { k: 'over'; winner: number }
   | { k: 'heal'; p: number; amt: number }
+  | { k: 'spawn'; p: number } // Endless: a fresh bot appears beside you
   | { k: 'restart' };
 
 const DEG = Math.PI / 180;
@@ -130,6 +131,22 @@ function resetForRound(s: State, ev: FightEvent[]) {
   s.roundWinner = -1; s.how = ''; s.why = '';
 }
 
+/** Endless: a fresh bot appears a few steps away, on the left or right; you stay where you are. */
+function nextBot(s: State, ev: FightEvent[]) {
+  const x = s.f[0].x;
+  resetForRound(s, ev); // fresh fighters (you keep your strip), heal every few bots, back to the intro
+  s.round++;
+  const me = s.f[0], bot = s.f[1], gap = RULES.startX * 2;
+  me.x = x;
+  // Left or right from a shuffle of the frame count: unpredictable for the player, but still plain
+  // integer maths, so the fight stays repeatable from its inputs.
+  let dir = (Math.imul(s.frame ^ (s.round * 7919), 2654435761) >>> 16) & 1 ? 1 : -1;
+  if (Math.abs(x + dir * gap) > RULES.edge - 0.3) dir = -dir;
+  bot.x = Math.max(-RULES.edge, Math.min(RULES.edge, x + dir * gap));
+  me.facing = dir > 0 ? 1 : -1; bot.facing = me.facing === 1 ? -1 : 1;
+  ev.push({ k: 'spawn', p: 1 }, { k: 'round', round: s.round, page: s.page });
+}
+
 export const cloneState = (s: State): State => structuredClone(s);
 
 /** Where and at what angle a slash cuts, in the fight's side-on plane. */
@@ -160,6 +177,13 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
         s.final = s.cfg.gauntlet
           ? s.roundWinner === 1 || !s.f[0].alive // Endless: one lost round ends the run
           : s.cfg.wins > 0 && s.f.some((f) => f.wins >= s.cfg.wins);
+        if (s.cfg.gauntlet) {
+          // Endless never turns the page: the next bot steps in, or the run ends where it stands.
+          if (!s.final) { nextBot(s, ev); break; }
+          s.phase = 'over'; s.phaseT = 0; s.rematch = [false, false];
+          ev.push({ k: 'over', winner: 1 });
+          break;
+        }
         s.turnTo = s.final ? FINAL_PAGE : pageForRound(s.round + 1);
         s.phase = 'turn'; s.phaseT = 0;
         ev.push({ k: 'turn', to: s.turnTo, final: s.final });

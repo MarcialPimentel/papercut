@@ -331,7 +331,7 @@ describe('custom rules', () => {
       expect(s.f[0].hp).toBe(20 + ENDLESS_CFG.maxHp * ENDLESS.healShare);
     });
 
-    it('one lost round ends the run, and the bot stands on the back cover', () => {
+    it('one lost round ends the run, right there on the page', () => {
       const s = newMatch(ENDLESS_CFG);
       kamiWinsRound(s); untilNext(s);
       while (s.phase !== 'fight') step(s, [0, 0]);
@@ -341,6 +341,26 @@ describe('custom rules', () => {
       for (const e of untilNext(s)) if (e.k === 'over') over = e;
       expect(over).toMatchObject({ winner: 1 });
       expect(s.f[0].wins).toBe(1);
+      expect(s.page).toBe(0);
+    });
+
+    it('never turns the page: each new bot appears beside you, sometimes left, sometimes right', () => {
+      const s = newMatch(ENDLESS_CFG);
+      const sides = new Set<number>(), kinds = new Set<string>();
+      for (let r = 0; r < 12; r++) {
+        while (s.phase !== 'fight') for (const e of step(s, [0, 0])) kinds.add(e.k);
+        kamiWinsRound(s);
+        const x = s.f[0].x;
+        for (const e of untilNext(s)) kinds.add(e.k);
+        expect(s.f[0].x).toBe(x); // you stay where you were
+        expect(Math.abs(s.f[1].x - x)).toBeGreaterThan(2);
+        expect(s.f[1].facing).toBe(-s.f[0].facing);
+        sides.add(Math.sign(s.f[1].x - x));
+      }
+      expect(kinds.has('turn')).toBe(false);
+      expect(kinds.has('spawn')).toBe(true);
+      expect(s.page).toBe(0);
+      expect([...sides].sort()).toEqual([-1, 1]);
     });
 
     it('bots at every level keep playing whole runs without getting stuck', () => {
