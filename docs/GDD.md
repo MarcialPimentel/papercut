@@ -27,6 +27,12 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 - **World:** an open notebook on a desk. Round 1 is fought on the Graph Paper Dojo spread, round 2 on the Ruled Courtyard, round 3 on the Legal Pad Grove; the match winner stands on the marble back cover.
 - **HUD:** paper health strips that get sliced shorter, a paper countdown tag, round markers. Straight lines and flat facets only. Red is paper, not blood. One non-red accent per fighter.
 
+## Sound (summary; full detail in [sound.md](sound.md))
+- **Mix:** free CC0 recordings for the big moments (blade clash, cuts, K.O., page turn), code-made sounds for the rest. Every sound has a code-made fallback.
+- **Sword and paper at once:** a clash rings like steel with a paper snap on top; hits are paper slices and tears, not blood or flesh. A clash, a block and a parry each sound different, so the ear reads the exchange too (pillar 3).
+- **Round flow:** kabuki clappers for "Round N", a taiko hit for "Cut!", ticks in the last 10 seconds, stings for round and match results.
+- **Music:** made in code (taiko, high drum, koto-like plucks on a Japanese scale), calm on menus, busier when a round is close to deciding, silent from a K.O. to the next round.
+
 ## The fight (rules)
 - **The lane:** both fighters move along one path across the spread and always face each other. The world, fighters and camera are fully 3D; the fight is on a line.
 - **Guard stance:** the cursor sets it. Above your fighter's waist on screen you guard **high**, below it **low**; the blade follows. When not attacking, you guard at that height, even while walking.
@@ -113,7 +119,6 @@ The one question it answers: **does mouse-driven paper swordplay feel good?** Si
 - Exact frame timings, damage, chip, parry window and counter window. (Tuned in Milestone 1; record the final numbers here.)
 - Does a backdash have invincible frames?
 - Each fighter's specials and differences (Milestone 4).
-- Sound style: real paper sounds, stylised, or both?
 
 ## Decision Log
 | Date | Decision | Why |
@@ -178,4 +183,11 @@ The one question it answers: **does mouse-driven paper swordplay feel good?** Si
 | 2026-11-01 | The mouse is locked to the game during a fight, with a drawn crosshair; Esc frees it, the match end releases it | Marz's request: the cursor slipping out of the window mid-fight drops guards and clicks. |
 | 2026-11-01 | Custom rooms: the room creator picks rounds (best of 1/3/5/7 or endless), health (50/80/100/150) and the timer (30/60/90 s or none); the server checks the choice and sends it to both players. Quick match keeps the defaults | Marz's request and picks. The rules live in each match's data, so both browsers still compute the same fight. Quick match stays standard so strangers always know what they're getting. |
 | 2026-11-01 | Endless mode: one round per bot, strip carries over, half a strip back every 5 bots, bots level up every 5, one loss ends the run, best run kept in the browser. Pulls part of "the computer fighter" forward from Milestone 4 | Marz's request and picks (partial heal over full heal; local best over an online leaderboard). Gives solo players a goal. Note: this is new content ahead of the hit-feel work (#7–#9), which pillar 2 ("feel first") would put first; Marz chose to add it now. |
+| 2026-11-01 | Sound pass: a mix of free CC0 recordings (Kenney) for the big moments and code-made sounds for the rest, every sound with a code-made fallback. Answers the open "sound style" question | Marz's pick (my recommendation). Recorded clashes and tears feel best (pillar 2); code keeps the download small and the game never silent. |
+| 2026-11-01 | Clash gets its own sound (a bright double blade ring with a paper snap), separate from block and parry | Marz's request: blades meeting should sound like it. Different sounds for clash, block and parry help read the exchange (pillar 3). |
+| 2026-11-01 | Music: a reactive drum loop made in code (taiko, koto-like plucks); busier in tense moments, silent after a K.O. | Marz's pick. Reacts to the fight, no music files, fresh melodies so it doesn't loop stale. |
+| 2026-11-01 | Round start: kabuki wooden clappers for "Round N", a taiko hit for "Cut!"; no announcer voice | Marz's pick. Fits the stage feel; a voice needs recordings and computer voices sound bad. |
+| 2026-11-01 | A heavy's wind-up makes a quiet rising creak | My addition: the counter-cut opening can be heard as well as seen (pillar 3). Kept quiet so it informs without making heavies trivial to react to; easy to turn down if it does. |
+| 2026-11-01 | Separate Music and Effects volume sliders replace the Sound on/off button | Standard for any game with music. |
+| 2026-11-01 | Cut sounds: the knife-slice recording plus a soft code-made paper tear; the squeaky interface "scratch" recordings are dropped. The counter cut's sword-draw shing stays | Marz's playtest of #19: cuts squeaked, the counter cut sounded great (pillar 2). |
 | 2026-11-01 | Tournaments: 3 to 8 players, single-elimination bracket with byes, one fight at a time with everyone else watching live, the creator's rules for every fight (no endless rounds), names typed in the lobby. The two fighters report the winner and the server only accepts it when both agree (otherwise the fight is replayed); a player who leaves forfeits | Marz's request and picks. Watching costs almost nothing because only inputs travel: watchers run the same fight from both players' inputs. Knockout keeps an 8-player evening to 7 fights. |
