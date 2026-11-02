@@ -92,6 +92,10 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 .menu .tag { margin: -6px 0 0; font-weight: 700; color: var(--muted); }
 .stack { display: grid; gap: 12px; }
 .stack > .hbtn { justify-self: start; }
+.row2 { display: flex; gap: 8px; flex-wrap: wrap; }
+.soundbox { pointer-events: auto; display: grid; gap: 8px; background: var(--paper); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 10px 12px; z-index: 5; }
+.soundbox label { display: grid; grid-template-columns: 62px min(150px, 50vw); align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+.soundbox input { accent-color: var(--red); width: 100%; }
 .big { font: 800 30px/1.05 var(--display); text-transform: uppercase; margin: 0; }
 .big b { color: var(--red-text); letter-spacing: .08em; }
 .muted { color: var(--muted); margin: 0; }
