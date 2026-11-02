@@ -16,26 +16,26 @@ References Marz shared (inspiration only, nothing copied): Samurai Shodown (heav
 ## How a fight works
 | Move | Speed | Effect | Risk |
 |---|---|---|---|
-| Light slash (left click) | Fast wind-up, short recovery | 10% of the strip, a thin red cut | Safe if blocked; a miss leaves a short opening |
-| Heavy slash (right click) | Slow wind-up, long recovery | 35% of the strip, a wide cut across two parts; chips 3% through a block | While it winds up, any hit is a counter cut |
+| Light slash (left click) | Fast wind-up, short recovery | 10 of 80 health (an eighth of the strip), a thin red cut | Safe if blocked; a miss leaves a short opening |
+| Heavy slash (right click) | Slow wind-up, long recovery | 35 of 80 health (almost half the strip), a wide cut across two parts; chips 3 through a block | While it winds up, any hit is a counter cut |
 | Feint (left click or Q mid wind-up) | Cancels a heavy, back to guard fast | Baits a counter-cut attempt | Only before the swing is nearly out |
 | Guard (cursor height) | Instant, works while walking | Blocks slashes at that height | Wrong height: you're cut |
 | Parry, then riposte | Flick the cursor to the right height at the last moment | Attacker staggers; your next slash is a riposte (light speed, heavy damage, a lunge, can't be parried) | Too early is a block, too late is a hit |
-| Jump (Space or W) | A paper hop | Low slashes pass under; air slashes cut high | High slashes still hit |
+| Jump (Space or W) | A paper hop | Low slashes pass under; air slashes cut high | High slashes still hit (nobody can block mid-air); landing after an air slash leaves you stuck for a moment |
 | Dash / backdash (double-tap) | Quick | Get in, get out | Committed for a moment |
 | Counter cut | Any hit at the right moment | Instant K.O. and split | Only on a heavy's wind-up or after a miss; two lights trading just do normal damage |
 
-**Rounds:** 60 seconds; a K.O. or the most strip left at time wins; a tie replays. Best of 3. Between rounds everything folds flat and the page turns: round 1 Graph Paper Dojo, round 2 Ruled Courtyard, round 3 Legal Pad Grove. The match winner stands alone on the marble back cover.
+**Rounds:** 60 seconds; a K.O. or the most strip left at time wins; a tie replays. Best of 5 by default (a custom room or tournament can pick best of 1, 3, 5 or 7, endless rounds, other health and timers; the GDD has the details). Between rounds everything folds flat and the page turns: Graph Paper Dojo, Ruled Courtyard, Legal Pad Grove, then round again. The match winner stands alone on the marble back cover. Endless mode stays on one page: each new bot steps in beside you.
 
 **Depth:** spacing at the tip of your light slash, reading the guard, feinting a heavy to bait their counter cut, parrying a predictable swing into a riposte, jumping a low, and the clock pressing on whoever is behind. Every round can turn on one greedy swing.
 
 ## HUD
 - **Health strip:** a strip of graph paper per fighter; each hit slices a piece off its inner end, which falls away. The cut end is a red edge. No numbers.
-- **Clock:** a paper tag counting down from 60.
-- **Round markers:** two paper diamonds per fighter, filled red for each round won.
+- **Clock:** a paper tag counting down the round (60 seconds by default; ∞ when a room has no timer).
+- **Round markers:** one paper diamond per round needed to win (three by default), filled red for each round won. With endless rounds, and in Endless mode, a small paper counter replaces them ("Bots cut", the bot's level).
 - **Banners:** red paper banners for "Round 1", "Cut!", round winner and match winner.
 - **Stickers:** "Block", "Clash", "Parry", "Feint", "Riposte", "Cut", "Counter cut".
-- **Touch buttons** appear only on screens without a mouse. The cursor is a crosshair over the stage.
+- **Touch buttons** appear only on screens without a mouse. The cursor is a crosshair over the stage; during a fight the mouse is locked to the game and the game draws its own ink-and-red crosshair.
 - Menus and HUD stay flat paper; only the world is 3D.
 
 ## Fighters in 3D
@@ -128,8 +128,9 @@ Concept prompt:
 
 Check the commercial-use terms of any image tool, and don't name other franchises' characters in prompts.
 
-## Decided 2026-11-01
-- A 3D weapon fighting game: paper health strip plus red body cuts, best of 3 rounds of 60 seconds with page turns between, the W/S guard stance, light and heavy slashes, fast feet and deadly commits, the counter cut as the touch of death.
+## Decided 2026-11-01 (updated 2026-11-02)
+- A 3D weapon fighting game: paper health strip plus red body cuts, best of 5 rounds of 60 seconds with page turns between, the cursor guard stance (above or below the waist), light and heavy slashes, fast feet and deadly commits, the counter cut as the touch of death.
 - Kami (player 1) and Sumi (player 2 / dummy); smooth motion; Rapier physics for the cut halves (cosmetic).
 - Mouse controls: cursor guard, left click light, right click heavy, keyboard movement; feint and riposte; no two players on one PC, no gamepads for now.
 - A practice dummy in Milestone 1 and a computer fighter later; one shared move set in Milestone 1; simple specials later.
+- Since the first build (2026-11-02): Endless mode, custom room rules and tournaments use the same two looks (Kami and Sumi) with player names on the HUD; their rules are in the GDD. Whether bots and tournament players get looks of their own is an open art question.
