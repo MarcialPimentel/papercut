@@ -86,7 +86,9 @@ export function loopsFromTriangles(pos: ArrayLike<number>, index: ArrayLike<numb
       const loop: Pt[] = [];
       for (let v = start, guard = 0; guard < 10000; guard++) {
         used.add(v); loop.push([vx[v][0], vx[v][1]]);
-        const w = next.get(v); if (w === undefined || w === start) break; v = w;
+        const w = next.get(v); if (w === undefined || w === start) break;
+        if (used.has(w)) break; // two shapes touching at one corner (a pinch): stop instead of walking in circles
+        v = w;
       }
       if (Math.abs(area(loop)) > Math.abs(area(best))) best = loop;
     }

@@ -6,11 +6,12 @@ export const C = {
   marble: '#141316', white: '#FFFFFF',
 } as const;
 
-/** A fighter's look: colours by Blender material role (gi, hakama, pleat, sash, grip...).
- *  The puppet is painted as Kami in Blender; a look only lists what it changes. */
+/** A fighter's look: colours by Blender material role (robe, kimono, hakama, accent...).
+ *  The samurai is painted as Kami in Blender; a look only lists what it changes. */
 export interface Look { name: string; colors: Record<string, string> }
 export const KAMI: Look = { name: 'Kami', colors: {} };
-export const SUMI: Look = { name: 'Sumi', colors: { hakama: '#2A292F', pleat: '#45434C', sash: C.gold, grip: C.gold } };
+// Sumi wears Kami's robes inverted: a cream robe over an indigo kimono, indigo prints (Marz's pick).
+export const SUMI: Look = { name: 'Sumi', colors: { robe: '#F2E3C0', kimono: '#3C3A7E' } };
 export const LOOKS = [KAMI, SUMI] as const;
 
 export function mulberry32(a: number) {

@@ -7,6 +7,8 @@ import type { Collider, RigidBody, World } from '@dimforge/rapier3d-compat';
 import { PD, PW, PZ } from './notebook';
 
 type Rapier = typeof import('@dimforge/rapier3d-compat').default;
+/** Collision groups (membership << 16 | filter): halves are group 2 and only collide with group 1 (scenery). */
+const HALVES = (0x0002 << 16) | 0x0001;
 let R: Rapier | null = null;
 let loading: Promise<Rapier | null> | null = null;
 
@@ -60,8 +62,9 @@ export class PaperPhysics {
     const body = w.createRigidBody(R.RigidBodyDesc.dynamic()
       .setTranslation(pos.x, pos.y, pos.z).setRotation({ x: rot.x, y: rot.y, z: rot.z, w: rot.w })
       .setLinvel(vel.x, vel.y, vel.z).setAngvel({ x: spin.x, y: spin.y, z: spin.z })
-      .setLinearDamping(0.35).setAngularDamping(0.9).setCcdEnabled(true));
-    w.createCollider(shape.setDensity(0.5).setFriction(0.85).setRestitution(0.25), body);
+      .setLinearDamping(0.35).setAngularDamping(0.6).setCcdEnabled(true));
+    // Halves only touch the page and the pop-ups, never each other: two halves of one cut would jam together.
+    w.createCollider(shape.setDensity(0.5).setFriction(0.85).setRestitution(0.25).setCollisionGroups(HALVES), body);
     return body;
   }
 

@@ -36,4 +36,11 @@ describe('flat paper maths', () => {
     expect(area(loops[0].pts)).toBeCloseTo(1, 5);
     expect(loops[1].z).toBeCloseTo(0.002, 5);
   });
+
+  it('stays sane when two shapes touch at one corner', () => {
+    // Two triangles sharing only the point (1,1).
+    const pos = [0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 2, 1, 0, 2, 2, 0];
+    const loops = loopsFromTriangles(pos, null);
+    for (const l of loops) expect(l.pts.length).toBeLessThanOrEqual(6);
+  });
 });
