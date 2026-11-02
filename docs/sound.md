@@ -2,7 +2,7 @@
 
 _Added in the sound pass (2026-11-01). Code: `src/audio/`._
 
-Papercut's sound is a mix: **free recordings** (CC0, from Kenney) for the big moments where real sound sells the hit, and **sounds made in code** for everything else, including all the music. Every sound has a code-made version, so the game always has sound even before (or without) any recordings.
+Papercut's sound is a mix: **free recordings** (CC0, from Kenney) for hits, clashes, paper and clicks, and **sounds made in code** for everything else, including all the music. Every sound has a code-made version, so the game always has sound even before (or without) any recordings.
 
 Sound never touches the fight rules (`src/sim/`), so it can't affect online sync.
 
@@ -48,17 +48,30 @@ Made in code: taiko drums, a small high drum, a plucked bass and a koto-like mel
 
 The **Sound** button (on the title screen next to "How to play", and top-right during a fight) opens **Music** and **Effects** sliders. The browser remembers them.
 
-## Adding the Kenney recordings (one-time, for Marz)
-
-Kenney's site only lets a normal browser download, so this step is manual.
-
-1. Open https://kenney.nl/assets/impact-sounds in your browser.
-2. Click **Download**, then **Continue without donating...** (or donate if you like). A zip downloads.
-3. Do the same for https://kenney.nl/assets/rpg-audio and https://kenney.nl/assets/interface-sounds.
-4. Tell Claude where the three zips are (usually your **Downloads** folder). Claude picks the sounds, copies only those into `public/sfx/`, and lists them below.
-
 ## Recordings in the game
 
-_None yet. Each entry: file in `public/sfx/`, what it's used for, source pack, licence._
+22 files in `public/sfx/` (240 KB in all), from three free Kenney packs, downloaded 2026-11-01. All Kenney packs are CC0 (public domain): no credit is required, but we credit Kenney (www.kenney.nl) anyway. Several files for one sound = one is picked at random each time.
 
-All Kenney packs are CC0 (public domain): no credit is required, but we credit Kenney here anyway.
+| Sound | Files | Pack | How it's used |
+|---|---|---|---|
+| Clash | impactMetal_light_000, _001, _003 | Impact Sounds | The hit; a quieter code-made ring adds the sword tail |
+| Block | impactPlate_light_000, _002, _003 | Impact Sounds | Slowed a little for heavies |
+| Light hit | scratch_001, scratch_002 | Interface Sounds | |
+| Heavy hit, K.O. | knifeSlice2, scratch_005 | RPG Audio, Interface Sounds | Plus a code-made thump |
+| Counter cut | drawKnife3 | RPG Audio | A sword-draw "shing" on top of the K.O. |
+| Page turn | bookFlip2, bookFlip3 | RPG Audio | |
+| Feint | cloth4 | RPG Audio | |
+| Landing | impactSoft_medium_000, _001, _002 | Impact Sounds | |
+| Menu buttons | select_002 | Interface Sounds | |
+| Last-10-seconds tick | tick_001, tick_002 | Interface Sounds | Higher for the last 3 seconds |
+| Round clappers | impactWood_light_000, _002 | Impact Sounds | Sped up, with a code-made crack on top |
+
+Still code-made: whooshes, the heavy wind-up creak, parry, jump/dash hop, taiko drums, the gong, all stings and all music.
+
+## Swapping a recording
+
+1. Put the new `.ogg` (or `.mp3`) file in `public/sfx/`.
+2. In `src/audio/sounds.ts`, change the file names for that sound in `RECORDINGS`.
+3. Add it to the table above with its pack and licence. Only use CC0 or clearly free-to-use sounds.
+
+If a file is missing or won't load, the code-made version plays instead, so a bad file never makes the game silent.

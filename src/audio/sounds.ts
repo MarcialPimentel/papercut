@@ -4,7 +4,20 @@
 import { engine as E } from './engine';
 
 /** Recordings to load: name -> files (a random one plays each time). Sources and licences: docs/sound.md. */
-const RECORDINGS: Record<string, string[]> = {};
+const f = (...names: string[]) => names.map((n) => `/sfx/${n}.ogg`);
+const RECORDINGS: Record<string, string[]> = {
+  clash: f('impactMetal_light_000', 'impactMetal_light_001', 'impactMetal_light_003'),
+  block: f('impactPlate_light_000', 'impactPlate_light_002', 'impactPlate_light_003'),
+  slice: f('scratch_001', 'scratch_002'),
+  tear: f('knifeSlice2', 'scratch_005'),
+  shing: f('drawKnife3'),
+  page: f('bookFlip2', 'bookFlip3'),
+  fold: f('cloth4'),
+  land: f('impactSoft_medium_000', 'impactSoft_medium_001', 'impactSoft_medium_002'),
+  ui: f('select_002'),
+  tick: f('tick_001', 'tick_002'),
+  clack: f('impactWood_light_000', 'impactWood_light_002'),
+};
 E.want(RECORDINGS);
 
 // The music's scale (miyako-bushi on D) as semitones, shared with the stingers.
@@ -18,6 +31,8 @@ const later = (s: number) => (E.live ? E.live.currentTime + s : 0);
 
 /** One wooden clapper strike (hyoshigi, the kabuki stage clappers). */
 function clack(at: number, gain = 1, pan = 0) {
+  const rec = E.sample('clack', { gain: 0.8 * gain, rate: 1.3, pan, at });
+  if (rec) gain *= 0.5; // the recording carries the wood; the code version adds the bright crack
   E.tone({ f0: 2350, f1: 2200, dur: 0.07, gain: 0.28 * gain, at, pan });
   E.tone({ f0: 1180, f1: 1100, dur: 0.05, gain: 0.18 * gain, at, pan });
   E.hiss({ dur: 0.045, type: 'bandpass', freq: 2600, q: 3, gain: 0.7 * gain, at, pan });
@@ -50,10 +65,10 @@ export const sfx = {
   /** Two attacks meeting: a bright double blade ring and a paper snap. The loudest "sword" sound. */
   clash(pan: number) {
     const t = later(0);
-    if (!E.sample('clash', { gain: 0.9, pan })) {
-      E.ring({ base: 1240, dur: 0.9, gain: 0.16, at: t, pan: pan - 0.15 });
-      E.ring({ base: 1395, dur: 0.75, gain: 0.12, at: t + 0.012, pan: pan + 0.15 });
-    }
+    // The recording is the hit; the code-made ring adds the long sword tail (quieter when the recording plays).
+    const k = E.sample('clash', { gain: 0.9, pan }) ? 0.45 : 1;
+    E.ring({ base: 1240, dur: 0.9, gain: 0.16 * k, at: t, pan: pan - 0.15 });
+    E.ring({ base: 1395, dur: 0.75, gain: 0.12 * k, at: t + 0.012, pan: pan + 0.15 });
     E.hiss({ dur: 0.07, type: 'highpass', freq: 3500, gain: 0.55, at: t, pan });
     E.tone({ f0: 300, f1: 140, dur: 0.1, gain: 0.25, at: t, pan });
     E.duck(0.35, 0.05);
@@ -74,7 +89,7 @@ export const sfx = {
   },
   /** A light hit: a quick paper slice. */
   hit(pan: number) {
-    if (E.sample('slice', { gain: 0.7, pan })) return;
+    if (E.sample('slice', { gain: 0.6, pan })) return;
     E.hiss({ dur: 0.09, type: 'highpass', freq: 3000, sweep: 5200, gain: 0.45, pan });
     E.tone({ f0: 2200, f1: 1400, dur: 0.06, type: 'triangle', gain: 0.05, pan });
   },
@@ -93,12 +108,12 @@ export const sfx = {
     taiko(t, 1.1);
     if (!E.sample('tear', { gain: 1, rate: 0.85, pan })) E.hiss({ dur: 0.6, type: 'bandpass', freq: 2800, sweep: 700, q: 0.7, gain: 0.7, pan });
     if (counter) {
-      if (!E.sample('shing', { gain: 0.9, pan })) E.ring({ base: 1980, dur: 1.8, gain: 0.12, at: t + 0.02, pan });
+      if (!E.sample('shing', { gain: 2.5, pan })) E.ring({ base: 1980, dur: 1.8, gain: 0.12, at: t + 0.02, pan });
       E.hiss({ dur: 0.5, type: 'highpass', freq: 6000, gain: 0.2, attack: 0.01, at: t, pan });
     }
     E.duck(0.85, 1.4, 1.0);
   },
-  feint(pan: number) { if (!E.sample('fold', { gain: 0.6, pan })) E.hiss({ dur: 0.22, type: 'bandpass', freq: 1600, sweep: 900, gain: 0.25, pan }); },
+  feint(pan: number) { if (!E.sample('fold', { gain: 1.5, pan })) E.hiss({ dur: 0.22, type: 'bandpass', freq: 1600, sweep: 900, gain: 0.25, pan }); },
   hop(pan: number) { if (!E.sample('hop', { gain: 0.5, pan })) E.hiss({ dur: 0.1, type: 'lowpass', freq: 700, gain: 0.25, pan }); },
   land(pan: number) {
     if (E.sample('land', { gain: 0.5, pan })) return;
@@ -106,7 +121,7 @@ export const sfx = {
     E.hiss({ dur: 0.07, type: 'lowpass', freq: 500, gain: 0.3, pan });
   },
   /** The notebook page turning between rounds. */
-  page() { if (!E.sample('page', { gain: 0.8 })) E.hiss({ dur: 0.6, type: 'bandpass', freq: 700, sweep: 1400, q: 0.4, gain: 0.4, attack: 0.08 }); },
+  page() { if (!E.sample('page', { gain: 1.6 })) E.hiss({ dur: 0.6, type: 'bandpass', freq: 700, sweep: 1400, q: 0.4, gain: 0.4, attack: 0.08 }); },
 
   /** "Round N": the clappers, speeding up, like a kabuki curtain call. */
   round() {
@@ -122,6 +137,7 @@ export const sfx = {
   /** The last ten seconds: a wood tick each second, sharper for the last three. */
   tick(secs: number) {
     const urgent = secs <= 3;
+    if (E.sample('tick', { gain: urgent ? 0.6 : 0.4, rate: urgent ? 1.25 : 1 })) return;
     E.tone({ f0: urgent ? 1900 : 1450, dur: 0.05, gain: urgent ? 0.2 : 0.12 });
     E.hiss({ dur: 0.03, type: 'bandpass', freq: urgent ? 2400 : 1800, q: 3, gain: urgent ? 0.35 : 0.2 });
   },
@@ -150,6 +166,7 @@ export const sfx = {
   },
   /** A menu button: a soft paper tap. */
   ui() {
+    if (E.sample('ui', { gain: 0.4 })) return;
     E.hiss({ dur: 0.04, type: 'bandpass', freq: 2200, q: 1.5, gain: 0.25 });
     E.tone({ f0: 880, f1: 700, dur: 0.04, type: 'triangle', gain: 0.06 });
   },
