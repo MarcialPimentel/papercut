@@ -21,7 +21,7 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 | Dash / backdash | Double-tap D / A |
 | Jump | Space or W |
 | Rematch (when the match ends) | R or the Rematch button |
-| Back to the menu | Esc or Leave |
+| Free the mouse / back to the menu | Esc frees the mouse (held during a fight), Esc again or Leave for the menu |
 
 ## Three ways to play
 
@@ -34,8 +34,8 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 - **Guard:** block a light, then a heavy (a heavy chips a sliver of strip through a block).
 - **Parry into riposte:** keep the wrong guard, flick the cursor to the right height just before their slash lands ("Parry"), then click at once: your slash is a riposte (fast, heavy damage, can't be parried).
 - **Feint bait:** start a heavy (right click) and cancel it with a left click. Does your rival swing into it?
-- **Counter cut:** hit someone while their heavy winds up, or right after they miss: instant K.O.
-- **Jump a low slash.**
+- **Counter cut:** hit someone while their heavy winds up, or right after they miss: instant K.O. The round banner says which it was.
+- **Jump a low slash.** Then try a jump-in slash against someone guarding high: after it's blocked you're stuck for a moment on landing, and they can cut you.
 - **A full match:** best of 5 (first to 3), the page turns between rounds, the winner stands on the back cover.
 
 ## What to report

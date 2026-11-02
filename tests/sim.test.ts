@@ -57,6 +57,39 @@ describe('slashes', () => {
   });
 });
 
+describe('jump', () => {
+  /** Jump, slash in the air after `at` frames, then run until landing. */
+  function jumpIn(s: State, at = 6) {
+    let n = 0;
+    run(s, at + 1, (k) => [(k === 0 ? jump : 0) | (k === at ? light : 0), 0]);
+    expect(s.f[0].slash).toBe('high'); // a slash in the air always comes in high
+    while (s.f[0].y > 0 && n++ < 200) step(s, [0, 0]);
+  }
+
+  it('landing after an air slash leaves you stuck for a moment', () => {
+    const s = fightAt(3);
+    jumpIn(s);
+    expect(s.f[0].state).toBe('land');
+    run(s, RULES.landLag);
+    expect(s.f[0].state).toBe('guard');
+  });
+
+  it('a jump without a slash lands clean', () => {
+    const s = fightAt(3);
+    run(s, 1, () => [jump, 0]);
+    while (s.f[0].y > 0) step(s, [0, 0]);
+    expect(s.f[0].state).toBe('guard');
+  });
+
+  it('a fighter stuck on landing can be hit', () => {
+    const s = fightAt(3);
+    jumpIn(s);
+    s.f[1].x = s.f[0].x + 1.2;
+    const ev = run(s, MOVES.light.wind + 1, (n) => [0, low | (n === 0 ? light : 0)]);
+    expect(kinds(ev)).toContain('hit');
+  });
+});
+
 describe('parry and riposte', () => {
   it('switching guard to the right height at the last moment parries, and the next slash is a riposte', () => {
     const s = fightAt();
@@ -101,6 +134,7 @@ describe('counter cut', () => {
     expect(s.f[0].wins).toBe(1);
     expect(s.phase).toBe('ko');
     expect(s.how).toBe('Counter cut');
+    expect(s.why).toBe('wind');
   });
 
   it("hitting a missed slash's recovery is an instant K.O.", () => {
@@ -111,6 +145,7 @@ describe('counter cut', () => {
     s.f[0].x = s.f[1].x - 1.2;
     const ev = run(s, MOVES.light.wind + 1, (n) => [n === 0 ? light : 0, 0]);
     expect(ev.some((e) => e.k === 'ko' && e.counter)).toBe(true);
+    expect(s.why).toBe('miss');
   });
 
   it('two light slashes on the same frame at different heights trade normal damage', () => {

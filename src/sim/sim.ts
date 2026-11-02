@@ -22,7 +22,8 @@ const PRESSES = ['light', 'heavy', 'feint', 'jump', 'dashL', 'dashR'] as const;
 type Press = (typeof PRESSES)[number];
 
 export type Stance = 'high' | 'low';
-export type FState = 'guard' | 'wind' | 'active' | 'recover' | 'feint' | 'stun' | 'dash';
+export type FState = 'guard' | 'wind' | 'active' | 'recover' | 'feint' | 'stun' | 'dash' | 'land';
+const FSTATES: FState[] = ['guard', 'wind', 'active', 'recover', 'feint', 'stun', 'dash', 'land'];
 export type Atk = keyof typeof MOVES;
 export type Phase = 'intro' | 'fight' | 'ko' | 'turn' | 'over';
 
@@ -36,6 +37,7 @@ export interface Fighter {
   atk: Atk;
   slash: Stance;
   whiffed: boolean;
+  airSlash: boolean; // slashed in the air: stuck for a moment on landing
   hp: number;
   wins: number;
   alive: boolean;
@@ -57,6 +59,8 @@ export interface State {
   hitstop: number;
   roundWinner: number; // -1 = nobody (draw)
   how: string;
+  /** Why the last counter cut landed: caught winding up a heavy, or after a missed slash. */
+  why: '' | 'wind' | 'miss';
   final: boolean; // the match is decided; the page turns to the back cover
   turnTo: number;
   rematch: [boolean, boolean];
@@ -74,7 +78,7 @@ export type FightEvent =
   | { k: 'block'; p: number; x: number; y: number; ang: number; heavy: boolean; chip: number }
   | { k: 'parry'; p: number; x: number; y: number; ang: number }
   | { k: 'hit'; p: number; x: number; y: number; ang: number; heavy: boolean; atk: Atk; dmg: number }
-  | { k: 'ko'; p: number; x: number; y: number; ang: number; counter: boolean; dmg: number }
+  | { k: 'ko'; p: number; x: number; y: number; ang: number; counter: boolean; dmg: number; why?: 'wind' | 'miss' }
   | { k: 'roundEnd'; winner: number; how: string }
   | { k: 'turn'; to: number; final: boolean }
   | { k: 'swap'; page: number }
@@ -88,7 +92,7 @@ function newFighter(side: 0 | 1): Fighter {
     x: side === 0 ? -RULES.startX : RULES.startX, y: 0, vx: 0, vy: 0,
     facing: side === 0 ? 1 : -1,
     stance: side === 0 ? 'high' : 'low', stanceAt: -999,
-    state: 'guard', t: 0, atk: 'light', slash: 'high', whiffed: false,
+    state: 'guard', t: 0, atk: 'light', slash: 'high', whiffed: false, airSlash: false,
     hp: RULES.maxHp, wins: 0, alive: true, riposte: 0, buf: '', bufLeft: 0,
     dashDir: 0, dashFrom: 0, dashLen: 0, stunT: 0, walk: 0,
   };
@@ -97,7 +101,7 @@ function newFighter(side: 0 | 1): Fighter {
 export function newMatch(): State {
   const s: State = {
     frame: 0, round: 1, page: 0, phase: 'intro', phaseT: 0, clock: RULES.roundFrames, hitstop: 0,
-    roundWinner: -1, how: '', final: false, turnTo: 0, rematch: [false, false],
+    roundWinner: -1, how: '', why: '', final: false, turnTo: 0, rematch: [false, false],
     f: [newFighter(0), newFighter(1)],
   };
   return s;
@@ -110,7 +114,7 @@ function resetForRound(s: State) {
     s.f[i].wins = wins;
   }
   s.phase = 'intro'; s.phaseT = 0; s.clock = RULES.roundFrames; s.hitstop = 0;
-  s.roundWinner = -1; s.how = '';
+  s.roundWinner = -1; s.how = ''; s.why = '';
 }
 
 export const cloneState = (s: State): State => structuredClone(s);
@@ -228,13 +232,19 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
         if (f.t >= MOVES[f.atk].act) { f.state = 'recover'; f.t = 0; }
         break;
       case 'recover':
-        if (f.t >= MOVES[f.atk].rec) { f.state = 'guard'; f.whiffed = false; }
+        if (f.t >= MOVES[f.atk].rec) {
+          f.whiffed = false;
+          if (f.airSlash && f.y <= 0) { f.state = 'land'; f.t = 0; f.airSlash = false; } else f.state = 'guard';
+        }
         break;
       case 'feint':
         if (f.t >= RULES.feintFrames) f.state = 'guard';
         break;
       case 'stun':
         if (f.t >= f.stunT) f.state = 'guard';
+        break;
+      case 'land':
+        if (f.t >= RULES.landLag) f.state = 'guard';
         break;
       case 'dash': {
         const k = Math.min(1, f.t / RULES.dashFrames);
@@ -245,7 +255,11 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
     }
     if (f.state !== 'dash' && (f.y > 0 || f.vy > 0)) {
       f.vy -= RULES.gravity; f.y += f.vy;
-      if (f.y <= 0) { f.y = 0; f.vy = 0; f.vx = 0; }
+      if (f.y <= 0) {
+        f.y = 0; f.vy = 0; f.vx = 0;
+        // Landing after an air slash: a short stuck moment, so a blocked jump-in can be punished.
+        if (f.airSlash && (f.state === 'guard' || f.state === 'recover')) { f.state = 'land'; f.t = 0; f.airSlash = false; }
+      }
     }
   }
   // Slashes land after both fighters have moved, judged against where both stood at that moment,
@@ -285,7 +299,7 @@ function act(s: State, i: number, p: Press, b: number, ev: FightEvent[]) {
   if (p === 'light' || p === 'heavy') {
     f.state = 'wind'; f.t = 0;
     f.atk = f.riposte > 0 ? 'riposte' : p; f.riposte = 0;
-    f.slash = f.y > 0.2 ? 'high' : f.stance; f.whiffed = false;
+    f.slash = f.y > 0.2 ? 'high' : f.stance; f.whiffed = false; f.airSlash = f.y > 0;
     ev.push({ k: 'swing', p: i, atk: f.atk, slash: f.slash });
   } else if (p === 'jump') {
     if (f.y > 0) return;
@@ -329,12 +343,12 @@ function apply(s: State, o: Outcome, ev: FightEvent[]) {
       ev.push({ k: 'whiff', p: o.att, x: a.x + a.facing * (M.reach - 0.3), y: L.y, ang: L.ang, heavy, over: o.over });
       return;
     case 'counter':
-      ev.push({ k: 'ko', p: o.att, ...P, ang: L.ang, counter: true, dmg: d.hp });
+      ev.push({ k: 'ko', p: o.att, ...P, ang: L.ang, counter: true, dmg: d.hp, why: d.state === 'wind' ? 'wind' : 'miss' });
       d.hp = 0;
       return;
     case 'parry':
       d.riposte = RULES.riposteWindow;
-      a.state = 'stun'; a.t = 0; a.stunT = RULES.parryStun; a.x -= a.facing * 0.3;
+      a.state = 'stun'; a.t = 0; a.stunT = RULES.parryStun; a.airSlash = false; a.x -= a.facing * 0.3;
       s.hitstop = Math.max(s.hitstop, RULES.hitstop.parry);
       ev.push({ k: 'parry', p: o.att, ...P, ang: L.ang });
       return;
@@ -350,7 +364,7 @@ function apply(s: State, o: Outcome, ev: FightEvent[]) {
       const before = d.hp;
       d.hp = Math.max(0, d.hp - M.dmg);
       if (d.hp <= 0) { ev.push({ k: 'ko', p: o.att, ...P, ang: L.ang, counter: false, dmg: before }); return; }
-      d.state = 'stun'; d.t = 0; d.stunT = M.stun; d.x += a.facing * M.push;
+      d.state = 'stun'; d.t = 0; d.stunT = M.stun; d.airSlash = false; d.x += a.facing * M.push;
       s.hitstop = Math.max(s.hitstop, M.hitstop);
       ev.push({ k: 'hit', p: o.att, ...P, ang: L.ang, heavy, atk: a.atk, dmg: before - d.hp });
       return;
@@ -373,7 +387,8 @@ function finishKOs(s: State, ev: FightEvent[]) {
   if (down.length === 2) return endRound(s, -1, 'Double K.O.', ev);
   const w = 1 - down[0];
   s.f[w].wins++;
-  const counter = ev.some((e) => e.k === 'ko' && e.p === w && e.counter);
+  const counter = ev.find((e) => e.k === 'ko' && e.p === w && e.counter);
+  s.why = counter && counter.k === 'ko' ? counter.why ?? '' : '';
   endRound(s, w, counter ? 'Counter cut' : 'K.O.', ev);
 }
 
@@ -401,7 +416,7 @@ export function hashState(s: State): number {
   mix(s.frame); mix(s.round); mix(s.page); mix(s.phaseT); mix(s.clock); mix(s.hitstop);
   for (const f of s.f) {
     mix(f.x); mix(f.y); mix(f.vy); mix(f.hp); mix(f.wins); mix(f.t); mix(f.riposte); mix(f.stanceAt);
-    mix(['guard', 'wind', 'active', 'recover', 'feint', 'stun', 'dash'].indexOf(f.state));
+    mix(FSTATES.indexOf(f.state)); mix(f.airSlash ? 1 : 0);
     mix(f.stance === 'high' ? 1 : 2); mix(f.alive ? 1 : 0);
   }
   return h;

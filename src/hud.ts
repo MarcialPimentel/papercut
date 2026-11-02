@@ -8,6 +8,14 @@ const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
 /** Health as a share of the full strip, in %. */
 const pct = (hp: number) => (hp / RULES.maxHp) * 100;
 
+/** The round-end line. A counter cut says why it was an instant K.O., so players learn the rule. */
+function howText(s: State, loser: string) {
+  if (s.how !== 'Counter cut') return s.how;
+  return s.why === 'wind'
+    ? `Counter cut! ${loser} was hit while winding up a heavy: instant K.O.`
+    : `Counter cut! ${loser} was hit right after missing a slash: instant K.O.`;
+}
+
 export class Hud {
   private bars = [$('#bar0'), $('#bar1')];
   private clock = $('#clock');
@@ -57,7 +65,7 @@ export class Hud {
     const name = (i: number) => LOOKS[i].name + (this.you === i ? ' (you)' : '');
     if (s.phase === 'intro') html = s.phaseT < RULES.introCut ? `Round ${s.round}<small>${PAGES[s.page].name}</small>` : 'Cut!';
     else if (s.phase === 'ko' && s.phaseT > 54) {
-      html = s.roundWinner >= 0 ? `${name(s.roundWinner)} takes round ${s.round}<small>${s.how}</small>`
+      html = s.roundWinner >= 0 ? `${name(s.roundWinner)} takes round ${s.round}<small>${howText(s, LOOKS[1 - s.roundWinner].name)}</small>`
         : `Draw<small>${s.how === 'Time' ? 'Time ran out with the strips level.' : s.how} The round is replayed.</small>`;
     } else if (s.phase === 'over') {
       const w = s.f[0].wins > s.f[1].wins ? 0 : 1;

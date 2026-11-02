@@ -65,6 +65,11 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 .wlabel.gold { background: var(--legal); }
 .pop { animation: pop 1s ease-out forwards; }
 @keyframes pop { 0% { opacity: 0; margin-top: 8px; } 12% { opacity: 1; margin-top: 0; } 70% { opacity: 1; } 100% { opacity: 0; margin-top: -30px; } }
+.aim { position: absolute; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; pointer-events: none; }
+.aim::before, .aim::after { content: ""; position: absolute; background: var(--ink); box-shadow: 0 0 0 1px #FFF; }
+.aim::before { left: 10px; top: 0; width: 2px; height: 22px; }
+.aim::after { top: 10px; left: 0; width: 22px; height: 2px; }
+.aim i { position: absolute; left: 8px; top: 8px; width: 6px; height: 6px; background: var(--red); border: 1px solid #FFF; z-index: 1; }
 .status { left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); font: 700 13px var(--body); background: #FFF; border: 2px solid var(--ink); padding: 4px 8px; }
 .status:empty { display: none; }
 .status.warn { background: var(--legal); }

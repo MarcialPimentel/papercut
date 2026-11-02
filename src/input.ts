@@ -1,5 +1,7 @@
 // The mouse fights, the keyboard moves. Turns raw input into one frame of buttons for the fight.
 // Presses are kept until the fight reads them, so a click is never lost between frames.
+// During a fight the mouse is locked to the game (Pointer Lock), so it can't wander out of the window;
+// the game then draws its own cursor and moves it by the mouse's movement.
 
 import { BTN } from './sim/sim';
 
@@ -8,12 +10,19 @@ const KEYS: Record<string, 'left' | 'right' | 'jump' | 'feint'> = {
   KeyA: 'left', KeyD: 'right', ArrowLeft: 'left', ArrowRight: 'right', Space: 'jump', KeyW: 'jump', ArrowUp: 'jump', KeyQ: 'feint',
 };
 
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
 export class Controls {
   private held = { left: 0, right: 0 }; // bit 1 keyboard, bit 2 touch
   private presses = 0;
   private lastTap = { left: 0, right: 0 };
   private low = false;
   mouseY: number | null = null;
+  private mouseX = 0;
+  /** Hold the mouse while fighting. Main turns it off when the match is over, so the buttons can be clicked. */
+  lockWanted = false;
+  private aim: HTMLElement;
+  private canvas: HTMLCanvasElement;
   /** Set by the on-screen High / Low buttons on touch screens. */
   touchLow: boolean | null = null;
   /** True while a fight is on screen: Space and arrows don't scroll the page. */
@@ -21,7 +30,8 @@ export class Controls {
   onCommand: (c: 'restart' | 'menu' | 'rematch') => void = () => {};
   onAnyInput: () => void = () => {};
 
-  constructor(canvas: HTMLCanvasElement, chips: HTMLElement) {
+  constructor(canvas: HTMLCanvasElement, chips: HTMLElement, aim: HTMLElement) {
+    this.canvas = canvas; this.aim = aim;
     const typing = (e: Event) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
     addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || typing(e)) return;
@@ -43,12 +53,21 @@ export class Controls {
     addEventListener('keyup', (e) => { const k = KEYS[e.code]; if (k === 'left' || k === 'right') this.held[k] &= ~1; });
     addEventListener('blur', () => { this.held.left = this.held.right = 0; });
 
-    canvas.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') this.mouseY = e.clientY - canvas.getBoundingClientRect().top; });
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      if (this.locked) {
+        // Locked: the real cursor is hidden and doesn't move, so steer our own one, kept inside the window.
+        this.mouseX = clamp(this.mouseX + e.movementX, 0, canvas.clientWidth);
+        this.mouseY = clamp((this.mouseY ?? canvas.clientHeight / 2) + e.movementY, 0, canvas.clientHeight);
+        this.drawAim();
+      } else this.track(e);
+    });
+    document.addEventListener('pointerlockchange', () => { this.aim.hidden = !this.locked; this.drawAim(); });
     canvas.addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'mouse' || !this.active) return;
       e.preventDefault();
       this.onAnyInput();
-      this.mouseY = e.clientY - canvas.getBoundingClientRect().top;
+      if (!this.locked) { this.track(e); if (this.lockWanted) this.lock(); }
       this.touchLow = null;
       this.press(e.button === 2 ? 'heavy' : e.button === 0 ? 'light' : 'feint');
     });
@@ -72,6 +91,23 @@ export class Controls {
   }
 
   press(p: PressName) { this.presses |= BTN[p]; }
+
+  get locked() { return document.pointerLockElement === this.canvas; }
+
+  /** Capture the mouse. Browsers only allow this right after a click or key press. */
+  lock() {
+    if (this.locked || !this.lockWanted || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    try { const p = this.canvas.requestPointerLock() as unknown as Promise<void> | undefined; p?.catch?.(() => {}); } catch { /* not allowed now: the next click tries again */ }
+  }
+
+  unlock() { if (this.locked) document.exitPointerLock(); }
+
+  private track(e: PointerEvent) {
+    const r = this.canvas.getBoundingClientRect();
+    this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top;
+  }
+
+  private drawAim() { this.aim.style.transform = `translate(${this.mouseX}px, ${this.mouseY ?? 0}px)`; }
 
   /** Guard low? From the touch buttons, else the cursor against the fighter's waist line (with a small dead zone). */
   guardLow(waistY: number | null) {
