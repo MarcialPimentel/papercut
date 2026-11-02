@@ -4,7 +4,7 @@ A 3D sword-fighting game in folded paper. Two papercraft samurai duel on a pop-u
 
 **Play:** https://papercut.marz.gg · **Status:** first online build: practice against a dummy, or fight a friend online by invite link or quick match.
 
-- Design: [docs/GDD.md](docs/GDD.md) · Art: [docs/art-direction.md](docs/art-direction.md) · Plan: [docs/roadmap.md](docs/roadmap.md)
+- Design: [docs/GDD.md](docs/GDD.md) · Art: [docs/art-direction.md](docs/art-direction.md) · Blender: [docs/blender-pipeline.md](docs/blender-pipeline.md) · Plan: [docs/roadmap.md](docs/roadmap.md)
 - Playtest: [docs/playtest.md](docs/playtest.md) · Hosting: [docs/deploy.md](docs/deploy.md)
 
 ## Develop

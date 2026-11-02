@@ -41,7 +41,8 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 - **A full match:** best of 5 (first to 3), the page turns between rounds, the winner stands on the back cover.
 - **Custom room:** try best of 1 with 50 health (deadly), or endless rounds with no timer. The status line in the corner shows the room's rules.
 - **Tournament:** with 3+ people (or several browser windows), run a bracket to the end. Does watching feel smooth? Does everyone land back on the bracket after each fight, and does everyone see the same champion?
-- **Endless:** how far do you get? From level 2 (bot 6) the bots block heavies they see coming, punish your misses and swat jumpers.
+- **The cut-out fighters (2026-11-02):** watch a heavy's wind-up: can you read high from low as quickly as before? Turn around (jump over the dummy): the cards flip. Land a few hits: red slashes cut through the paper. K.O. the dummy: the halves should fly, bounce off the pop-ups and lie flat on the page.
+- **Endless:** how far do you get? The cut bots' halves pile up on the page (the last 5 stay). From level 2 (bot 6) the bots block heavies they see coming, punish your misses and swat jumpers.
 
 ## What to report
 
@@ -54,4 +55,4 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 
 - Online fights wait for the slower player: if either player's tab is hidden or their connection hiccups, the fight pauses for both.
 - The fight numbers are the mock-up's placeholders; the tuning panel comes next.
-- The K.O. halves tumble on a script; real physics comes with the hit-feel work.
+- The K.O. halves use paper physics once it has loaded (a couple of seconds after the page opens); a K.O. before that uses a simpler scripted fall.

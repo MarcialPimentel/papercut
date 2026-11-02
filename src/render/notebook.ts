@@ -239,6 +239,26 @@ export class Notebook {
     this.scene.background = new THREE.Color(this.sky); (this.scene.fog as THREE.Fog).color.set(this.sky);
   }
 
+  /** The pop-ups as solid shapes for the paper physics: each one's corners in world space, standing up. */
+  popupHulls(): Float32Array[] {
+    const g = this.popups;
+    if (!g) return [];
+    const was = g.scale.y; g.scale.y = 1; g.updateMatrixWorld(true);
+    const out: Float32Array[] = [], v = new THREE.Vector3(), box = new THREE.Box3();
+    g.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      box.setFromObject(m);
+      const size = box.getSize(v);
+      if (Math.max(size.x, size.y, size.z) < 0.25 || Math.min(size.x, size.y, size.z) < 0.02) return; // tiny bits and flat cut-outs
+      const p = m.geometry.attributes.position, pts = new Float32Array(p.count * 3);
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); pts.set([v.x, v.y, v.z], i * 3); }
+      out.push(pts);
+    });
+    g.scale.y = was; g.updateMatrixWorld(true);
+    return out;
+  }
+
   setFold(v: number) { this.fold = v; if (this.popups) this.popups.scale.y = Math.max(0.001, v); }
 
   /**
