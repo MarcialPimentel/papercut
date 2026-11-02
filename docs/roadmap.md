@@ -32,7 +32,7 @@ Online play already works with input delay (first build). This milestone makes i
 Kami remade in Blender (low-poly parts, flat shading, one bone per part) and the click-by-click pipeline guide.
 
 ## Milestone 4: Solo and character
-A computer fighter, Kami and Sumi made different (speed, reach), one or two specials each (direction + button).
+A computer fighter (Endless mode already has levelled bots, 2026-11-01), Kami and Sumi made different (speed, reach), one or two specials each (direction + button).
 
 ## Milestone 5: The full notebook
 Menus, more spreads and blades.
