@@ -1,5 +1,5 @@
 # Papercut — Blender → game guide (cut-out fighters)
-_2026-11-02. For Blender 5.2. The fighters are flat paper puppets: you draw flat pieces in Blender, and the game adds the card's thickness, the white sticker border, the ink edge, red slashes and the K.O. cut. Design rules: [art-direction.md](art-direction.md) ("Fighters: cut-out puppets")._
+_2026-11-02. For Blender 5.2. The fighters are flat paper puppets: you draw flat pieces in Blender, and the game adds the bold ink outline round the whole body, red slashes and the K.O. cut. Design rules: [art-direction.md](art-direction.md) ("Fighters: cut-out puppets")._
 
 **Files**
 - `art/fighters/puppet.blend`: the puppet you edit (Kami's colours).
@@ -43,10 +43,12 @@ Sumi uses the same puppet and swaps four roles in code (`hakama`, `pleat`, `sash
 Details are flat shapes laid just in front of the paper.
 1. Click the piece, **Tab** into Edit Mode, press **3** (pick faces), and click an existing detail on that piece (for example the sleeve hem).
 2. **Shift+D** to copy it, move the mouse, click to drop it. Reshape it as in step 2.
-3. Keep it just in front of the paper: press **N**, and in the **Item** tab check its **Y** is between −0.001 and −0.02 (more negative = further in front, drawn over other details).
+3. Keep it just in front of the paper: press **N**, and in the **Item** tab check its **Y** is between −0.0005 and −0.005 (more negative = further in front, drawn over other details).
 4. With the new shape still picked, in the Material tab pick the material for it and click **Assign**.
 
-The paper itself must sit exactly at Y = 0; anything at Y = 0 gets the white border.
+The paper itself must sit exactly at Y = 0; anything at Y = 0 is part of the body's outline.
+
+**Drawing order of pieces:** the whole fighter is one thin sheet. Each piece's **Y** location (Object Mode, **N** panel) only says which piece is drawn on top: more negative is in front. Today, back to front: back arm, back leg, front leg, torso, head, sword, front arm (from +0.016 down to −0.014).
 
 ## 5. Move a pin or change proportions
 The game reads where each pin is from the layout in this file: neck height, shoulders, elbows, hips, and leg length (from each leg's pin down to its foot's pin, minus 6 cm).
@@ -69,6 +71,6 @@ The game reads where each pin is from the layout in this file: neck height, shou
 
 ## What the game does with it
 - Reads each piece's outline and printed details, its pin and its colours.
-- Gives every piece 2.2 cm of thickness, a 3 cm white sticker border and a thin ink edge.
+- Draws the fighter as one thin sheet with one bold outline round the whole body (a heavy ink line and a thin white rim), ink lines where a limb crosses the body, and the sword outlined on its own.
 - Poses the puppet from the fight (key poses are in code for now; making them in Blender is the next step).
 - Cuts red slashes into the paper on hits, and on a K.O. cuts every piece in two for the paper-physics halves.

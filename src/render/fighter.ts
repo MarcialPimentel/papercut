@@ -1,7 +1,8 @@
-// Cut-out paper fighters: flat card pieces pinned at the joints, made in Blender (art/fighters/puppet.blend).
-// The game adds the card's thickness, a white sticker border with an ink edge, red slash marks, the K.O.
-// split and the falling halves. Poses snap between held key poses, like cut-out animation, while the body
-// glides. Poses are worked out here from the fight's state; nothing here changes the fight.
+// Cut-out paper fighters: one flat cut-out per fighter, posed by turning its pieces on their pins (made in
+// Blender, art/fighters/puppet.blend). Bold ink style: one heavy ink outline and thin white rim around the
+// whole body, ink lines where a limb crosses the body, and the sword outlined on its own. Plus red slash
+// marks, the K.O. split and the falling halves. Poses snap between held key poses (a kendo stance), like
+// cut-out animation, while the body glides. Nothing here changes the fight.
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -13,10 +14,13 @@ import { ccw, clipConvex, clipHalf, offset, slashLens, type Line, type Pt } from
 import { PIECE_NAMES, loadPuppet, type Piece, type PieceName, type Puppet } from './puppet';
 import type { PaperPhysics } from './physics';
 
-const T = 0.022; // card thickness
-const SW = 0.03, IW = 0.047; // white sticker border and ink edge, measured from the card's edge
-const GAP = 0.03; // the white stops this short of a K.O. cut, so a thin red edge shows
-const HALF_Z = 0.15; // a falling half squashes its layers together, like paper
+const T = 0.005; // paper thickness: the whole fighter is one thin sheet
+// The outline round the whole body, outermost first: [colour, width from the paper's edge, depth behind the sheet].
+const BODY_EDGE: [string, number, number][] = [[C.white, 0.068, -0.034], [C.ink, 0.042, -0.028]];
+// The sword has its own outline, at its own layer.
+const SWORD_EDGE: [string, number, number][] = [[C.white, 0.035, -0.0035], [C.ink, 0.02, -0.0025]];
+const SEAM = 0.022; // ink line round each piece, seen where a limb crosses the body
+const GAP = 0.03; // the paper stops this short of a K.O. cut, so a thin red edge shows
 const MAX_PILES = 5; // Endless: halves of the last 5 cut bots stay on the page
 const BACK = new Set<PieceName>(['legB', 'footB', 'armBU', 'armBL']);
 const THIN = new Set<PieceName>(['sword']);
@@ -29,10 +33,10 @@ const LIT = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.Doub
 const FLAT = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
 const _c = new THREE.Color();
 
-function slab(p: Pt[], depth: number, color: THREE.Color): THREE.BufferGeometry {
+function slab(p: Pt[], depth: number, color: THREE.Color, z = 0): THREE.BufferGeometry {
   const shape = new THREE.Shape(ccw(p).map((q) => new THREE.Vector2(q[0], q[1])));
   const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 1 });
-  g.translate(0, 0, -depth / 2);
+  g.translate(0, 0, z - depth / 2);
   g.deleteAttribute('uv');
   const n = g.attributes.position.count, col = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) col.set([color.r, color.g, color.b], i * 3);
@@ -41,28 +45,30 @@ function slab(p: Pt[], depth: number, color: THREE.Color): THREE.BufferGeometry 
 }
 
 interface PieceGeo { lit: THREE.BufferGeometry[]; flat: THREE.BufferGeometry[]; outline: Pt[][] }
-/** One piece as geometry: ink edge, sticker border, the card, printed details and red slash marks.
- *  With `cut`, only the kept side of the line: the white stops GAP short, so a red edge shows. */
+/** One piece as geometry: its share of the body outline, its ink seam, the paper, printed details and red
+ *  slash marks. The body outline sits behind every piece, so together the pieces show one outline round the
+ *  whole cut-out. With `cut`, only the kept side of the line: the paper stops GAP short, so a red edge shows. */
 function pieceGeo(piece: Piece, look: Look, marks: Pt[][], cut: Line | null): PieceGeo {
   const out: PieceGeo = { lit: [], flat: [], outline: [] };
-  const name = piece.name as PieceName, sc = THIN.has(name) ? 0.5 : 1;
+  const name = piece.name as PieceName, sword = THIN.has(name);
   const keep = (p: Pt[], gap: number) => (cut ? clipHalf(p, cut, gap) : p);
   const color = (role: string, own: string) => {
     _c.set(look.colors[role] ?? own);
     return BACK.has(name) ? _c.clone().multiplyScalar(0.88) : _c.clone();
   };
-  const add = (list: THREE.BufferGeometry[], p: Pt[], depth: number, col: THREE.Color) => { if (p.length >= 3) list.push(slab(p, depth, col)); };
-  const ink = new THREE.Color(C.ink), white = new THREE.Color(C.white), red = new THREE.Color(C.red);
+  const add = (list: THREE.BufferGeometry[], p: Pt[], depth: number, col: THREE.Color, z = 0) => { if (p.length >= 3) list.push(slab(p, depth, col, z)); };
+  const ink = new THREE.Color(C.ink), red = new THREE.Color(C.red);
   piece.shells.forEach((s, i) => {
-    add(out.flat, keep(offset(s.pts, IW * sc), GAP), T * 0.5, ink);
-    add(out.flat, keep(offset(s.pts, SW * sc), GAP), T * 0.75, white);
-    if (cut) add(out.flat, clipHalf(s.pts, cut), T * 0.88, red);
+    // Body outline layers sit at a fixed depth behind the whole sheet; the sword's sit just behind the sword.
+    for (const [col, w, z] of sword ? SWORD_EDGE : BODY_EDGE) add(out.flat, keep(offset(s.pts, w), GAP), 0.003, new THREE.Color(col), sword ? z : z - piece.rest.z);
+    if (!sword) add(out.flat, keep(offset(s.pts, SEAM), GAP), T * 0.6, ink);
+    if (cut) add(out.flat, clipHalf(s.pts, cut), T * 0.8, red);
     const card = keep(s.pts, GAP);
-    add(out.lit, card, T + i * 0.002, color(s.role, s.color));
+    add(out.lit, card, T + i * 0.0006, color(s.role, s.color));
     if (card.length >= 3) out.outline.push(card);
   });
-  piece.details.forEach((d, i) => add(out.lit, keep(d.pts, GAP), T + 0.006 + i * 0.0004, color(d.role, d.color)));
-  for (const lens of marks) for (const s of piece.shells) add(out.flat, keep(clipConvex(s.pts, lens), GAP), T + 0.014, red);
+  piece.details.forEach((d, i) => add(out.lit, keep(d.pts, GAP), T + 0.0016 + i * 0.0002, color(d.role, d.color)));
+  for (const lens of marks) for (const s of piece.shells) add(out.flat, keep(clipConvex(s.pts, lens), GAP), T + 0.003, red);
   return out;
 }
 /** Merge a piece (or a whole half) into two meshes: lit paper and unlit edges, so draw calls stay low. */
@@ -115,18 +121,20 @@ function applyPose(pr: Record<PieceName, THREE.Group>, P: Pose, d: Dims) {
   let k = ik(SF, vadd(H, rot(a, [GRIP_F, 0])), d.l1F, L2); setPart(pr.armFU, SF, k.up); setPart(pr.armFL, k.E, k.lo);
   k = ik(SB, vadd(H, rot(a, [GRIP_B, 0])), d.l1B, L2); setPart(pr.armBU, SB, k.up); setPart(pr.armBL, k.E, k.lo);
 }
+// A kendo stance: arms held out, both hands on the grip. High guard points the sword up at the rival's head,
+// low guard down at the knees. The high wind-up is overhead (jodan), the low one held back and low (waki).
 const POSE = {
   guard: {
-    high: { hipY: 0.95, lean: -0.05, legB: 0.24, legF: -0.26, hilt: [0.3, 0.62], sword: 68 * D, head: 0.02 },
-    low: { hipY: 0.9, lean: -0.13, legB: 0.3, legF: -0.32, hilt: [0.3, 0.3], sword: -12 * D, head: 0.08 },
+    high: { hipY: 0.95, lean: -0.02, legB: 0.2, legF: -0.16, hilt: [0.58, 0.5], sword: 35 * D, head: 0 },
+    low: { hipY: 0.92, lean: -0.06, legB: 0.24, legF: -0.2, hilt: [0.5, 0.22], sword: -26 * D, head: 0.06 },
   },
   wind: {
-    high: { hipY: 0.96, lean: 0.08, legB: 0.22, legF: -0.24, hilt: [0.0, 0.98], sword: 140 * D, head: -0.04 },
-    low: { hipY: 0.87, lean: 0.02, legB: 0.3, legF: -0.3, hilt: [-0.12, 0.22], sword: -160 * D, head: 0.04 },
+    high: { hipY: 0.97, lean: 0.04, legB: 0.2, legF: -0.18, hilt: [0.14, 1.22], sword: 128 * D, head: -0.02 },
+    low: { hipY: 0.9, lean: 0.06, legB: 0.26, legF: -0.26, hilt: [0.0, 0.26], sword: -168 * D, head: 0.03 },
   },
   strike: {
-    high: { hipY: 0.9, lean: -0.24, legB: 0.38, legF: -0.4, hilt: [0.42, 0.3], sword: -40 * D, head: 0.12 },
-    low: { hipY: 0.88, lean: -0.18, legB: 0.36, legF: -0.38, hilt: [0.42, 0.52], sword: 40 * D, head: 0.06 },
+    high: { hipY: 0.88, lean: -0.2, legB: 0.42, legF: -0.4, hilt: [0.62, 0.42], sword: -18 * D, head: 0.08 },
+    low: { hipY: 0.86, lean: -0.16, legB: 0.4, legF: -0.38, hilt: [0.6, 0.34], sword: 14 * D, head: 0.05 },
   },
 } as Record<'guard' | 'wind' | 'strike', Record<'high' | 'low', Pose>>;
 // How far toward the full wind-up / strike each move's key pose goes (lights are smaller motions).
@@ -284,7 +292,7 @@ export class FighterView {
         const lp = wp.clone().applyMatrix4(M.clone().invert()), l = Math.hypot(lp.normal.x, lp.normal.y) || 1;
         const L: Line = { nx: (side * lp.normal.x) / l, ny: (side * lp.normal.y) / l, c: (-side * lp.constant) / l };
         const pg = pieceGeo(this.puppet[name], this.look, this.marks[name] ?? [], L);
-        const m = hinv.clone().multiply(M); m.elements[14] *= HALF_Z;
+        const m = hinv.clone().multiply(M);
         for (const g of [...pg.lit, ...pg.flat]) g.applyMatrix4(m);
         lit.push(...pg.lit); flat.push(...pg.flat);
         for (const loop of pg.outline) for (const q of loop) for (const z of [-T, T]) { v.set(q[0], q[1], z).applyMatrix4(m); hull.push(v.x, v.y, v.z); }

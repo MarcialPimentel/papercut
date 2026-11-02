@@ -5,7 +5,7 @@ Playable mock-up: [art/papercut-mockup.html](art/papercut-mockup.html) (open it 
 
 ## The short version
 - **World:** the Notebook Dojo. A pop-up feudal Japan made of stationery, as a real 3D book open on a desk. Each round is fought on a different spread.
-- **Fighters:** flat cut-out paper puppets pinned at the joints, standing in the 3D book (since 2026-11-02). Every piece has a white sticker border and an ink edge. They move like cut-out animation: held key poses that snap from one to the next, while the body glides.
+- **Fighters:** one flat paper cut-out per fighter, standing in the 3D book (since 2026-11-02), in a bold ink style: a heavy ink outline with a thin white rim around the whole body, and the sword outlined on its own. Only the pose changes, like cut-out animation: held key poses in a kendo stance that snap from one to the next, while the body glides.
 - **The red rule:** paper is red inside. Red only appears where paper is cut: slash marks, the K.O. split's cut edge, the health strip's cut edge.
 - **The fight:** the cursor sets your guard (above the waist high, below low), left click light, right click heavy, feint, parry into riposte, jump, dash. Catch the rival mid-heavy or after a miss and it's a counter cut: instant K.O.
 - **Technology:** Three.js, no new stack. Moves as data on a fixed 60-frame clock, ready for rollback online. Rapier for the falling halves.
@@ -39,27 +39,31 @@ References Marz shared (inspiration only, nothing copied): Samurai Shodown (heav
 - Menus and HUD stay flat paper; only the world is 3D.
 
 ## Fighters: cut-out puppets
-_Since 2026-11-02. Marz asked for "2D-esque" fighters that move like Paper Mario or Inferno Cop's cut-outs; this replaces the folded low-poly shells. Preview of the three animation styles he chose from: https://claude.ai/artifact/XhTD4K59tCYokVW3139tst_
+_Since 2026-11-02. Marz asked for "2D-esque" fighters that move like Paper Mario or Inferno Cop's cut-outs; this replaces the folded low-poly shells. Previews he chose from: animation styles https://claude.ai/artifact/XhTD4K59tCYokVW3139tst, outline styles https://claude.ai/artifact/JPJvyT9A9TX2djjnJQJoHc (he picked "Bold ink")._
 
-Each fighter is a puppet of 11 flat card pieces, each turning on one pin: torso, head (with hair and topknot), front and back hakama legs, two feet, upper arms with wide kimono sleeves, forearms with fists, and the katana. They stand in the lane facing each other, drawn in profile; a fighter facing left is drawn mirrored, so every fighter shows the same side. Back limbs are the same pieces, shaded a little darker.
+Each fighter reads as **one flat cut-out**, like a Paper Mario sticker or a Game & Watch figure: everything lies on one thin sheet, and only the pose changes. Under the hood it's 11 flat pieces, each turning on one pin: torso, head (with hair and topknot), front and back hakama legs, two feet, upper arms with wide kimono sleeves, forearms with fists, and the katana. They stand in the lane facing each other, drawn in profile; a fighter facing left is drawn mirrored, so every fighter shows the same side. Back limbs are the same pieces, shaded a little darker.
 
 **The sash is the name tag:** it's the quickest way to tell Kami (indigo) from Sumi (gold), so it is never covered. The hakama legs sit behind the torso, and the sash is a wide band with a two-tailed knot hanging at the back of the hip (Marz's playtest of the first cut-out build: the hakama hid the belt). From each flat piece the game builds:
 
 | Layer | What it is |
 |---|---|
-| Ink edge | The piece's outline grown by 4.7 cm, in ink: the thin outer hairline |
-| Sticker | The outline grown by 3 cm, in white: the sticker border, so every piece looks cut out |
-| Card | The piece itself, 2.2 cm thick, in its paper colour |
-| Print | Details on the card (hair, face, collar, sash, pleats, grip), on both sides |
+| White rim | Every piece's outline grown by 6.8 cm, in white, behind the whole sheet: a thin white rim round the body |
+| Body outline | Grown by 4.2 cm, in ink, also behind the whole sheet: together they make one heavy outline round the whole cut-out |
+| Ink lines | Each piece's own 2.2 cm ink line, only seen where a limb crosses the body (an arm over the chest, the torso over the legs) |
+| Sword outline | The sword's own ink line (2 cm) and white rim (3.5 cm), at the sword's layer, so it stands out over the body |
+| Paper | The piece itself, half a centimetre thick, in its paper colour |
+| Print | Details on the paper (hair, face, collar, sash, pleats, grip), on both sides |
 | Slash marks | A red six-sided slash where a hit crossed the paper, cut through every piece it passes (torso, sleeves, arms) |
+
+**The kendo stance:** arms held out, both hands on the grip. High guard points the sword up at the rival's head, low guard down at the knees; the high wind-up is overhead (jodan), the low one held back and low (waki). With straight arms the blade tips cross at close range, as in real kendo.
 
 **Motion (pose snaps):** each moment of a move has one key pose (guard, wind-up, strike, follow-through, stun, landing, dash, walk steps, jump). The puppet holds it and snaps to the next with a single in-between, like cut-out animation; the body still glides across the page, so spacing reads. A held wind-up is easier to read than a smooth one, which keeps pillar 3. **Turning around**, the card flips through edge-on in two held steps.
 
 **The K.O.:** every piece is cut along the blade's line into two halves. The white stops 3 cm short of the line, so a thin red edge shows. The top half flies off along the blade; the legs keel over. Both are paper physics bodies (Rapier, cosmetic only): they tumble, bounce off the pop-ups and lie flat on the page until it turns. Earlier slash marks stay on the halves. In Endless, the halves of the last 5 cut bots stay on the page; older ones fold flat into it.
 
-**Flatness is the point:** from the K.O. camera's three-quarter view the fighters show they're cards. The white border and ink edge carry them against any paper.
+**Flatness is the point:** from the K.O. camera's three-quarter view the fighters show they're paper. The bold outline carries them against any paper.
 
-Readability first: a side-on camera with a slight angle, an outline on every piece against any paper, and guard height readable from the blade alone.
+Readability first: a side-on camera with a slight angle, one bold outline round every fighter against any paper, and guard height readable from the blade alone.
 
 ## Setting and names
 | Thing | Name | Notes |
@@ -131,14 +135,14 @@ Icons in `art/icons/` (katana, high, low, jump, clean cut, dodge): flat paper sh
 - **Next:** key poses as Blender poses (they're in code today), then new fighters and blades on the same piece list, so each one is a drawing job, not a coding job.
 
 Concept prompt:
-> Original paper cut-out samurai puppet, flat pieces of white card joined at the joints like a split-pin puppet, side view facing right, wide kimono sleeves, flared pleated hakama, black paper hair with a topknot, stern face with a heavy brow, indigo sash, katana with an indigo-wrapped grip, thick white sticker border with a thin black edge around each piece, standing on blue graph paper in an open notebook, flat colors, straight edges only, no text, no red anywhere.
+> Original paper cut-out samurai puppet, flat pieces of white card joined at the joints like a split-pin puppet, side view facing right, wide kimono sleeves, flared pleated hakama, black paper hair with a topknot, stern face with a heavy brow, indigo sash, katana with an indigo-wrapped grip, one bold black outline with a thin white rim around the whole figure, the sword outlined separately, kendo stance with arms extended, standing on blue graph paper in an open notebook, flat colors, straight edges only, no text, no red anywhere.
 
 Check the commercial-use terms of any image tool, and don't name other franchises' characters in prompts.
 
 ## Decided 2026-11-01 (updated 2026-11-02)
 - A 3D weapon fighting game: paper health strip plus red body cuts, best of 5 rounds of 60 seconds with page turns between, the cursor guard stance (above or below the waist), light and heavy slashes, fast feet and deadly commits, the counter cut as the touch of death.
 - Kami (player 1) and Sumi (player 2 / dummy); Rapier physics for the cut halves (cosmetic).
-- 2026-11-02: fighters are flat cut-out puppets made in Blender, moving in pose snaps; Endless keeps the last 5 bots' halves on the page.
+- 2026-11-02: fighters are flat cut-outs made in Blender (one sheet, bold ink outline, kendo stance), moving in pose snaps; Endless keeps the last 5 bots' halves on the page.
 - Mouse controls: cursor guard, left click light, right click heavy, keyboard movement; feint and riposte; no two players on one PC, no gamepads for now.
 - A practice dummy in Milestone 1 and a computer fighter later; one shared move set in Milestone 1; simple specials later.
 - Since the first build (2026-11-02): Endless mode, custom room rules and tournaments use the same two looks (Kami and Sumi) with player names on the HUD; their rules are in the GDD. Whether bots and tournament players get looks of their own is an open art question.

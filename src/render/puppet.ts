@@ -12,7 +12,7 @@ export interface Piece {
   name: string;
   /** The pin, where the piece turns, in the rest layout (metres; y up, z towards the camera). */
   rest: THREE.Vector3;
-  /** The paper itself: these get the white sticker border and ink edge. */
+  /** The paper itself: these make the body outline. */
   shells: Shape[];
   /** Printed on top of the paper, back to front. */
   details: Shape[];
@@ -33,7 +33,7 @@ function readPiece(node: THREE.Object3D): Piece {
     const role = (mat.name || 'paper').replace(/^pc_/, ''), color = '#' + (mat.color?.getHexString() ?? 'ffffff');
     const g = m.geometry, pos = g.attributes.position.array, index = g.index ? g.index.array : null;
     for (const loop of loopsFromTriangles(pos, index)) {
-      if (Math.abs(loop.z) < 0.0005) shells.push({ pts: loop.pts, role, color });
+      if (Math.abs(loop.z) < 0.0002) shells.push({ pts: loop.pts, role, color });
       else details.push({ pts: loop.pts, role, color, z: loop.z });
     }
   });
