@@ -50,14 +50,14 @@ The **Sound** button (on the title screen next to "How to play", and top-right d
 
 ## Recordings in the game
 
-22 files in `public/sfx/` (240 KB in all), from three free Kenney packs, downloaded 2026-11-01. All Kenney packs are CC0 (public domain): no credit is required, but we credit Kenney (www.kenney.nl) anyway. Several files for one sound = one is picked at random each time.
+19 files in `public/sfx/`, from three free Kenney packs, downloaded 2026-11-01. All Kenney packs are CC0 (public domain): no credit is required, but we credit Kenney (www.kenney.nl) anyway. Several files for one sound = one is picked at random each time.
 
 | Sound | Files | Pack | How it's used |
 |---|---|---|---|
 | Clash | impactMetal_light_000, _001, _003 | Impact Sounds | The hit; a quieter code-made ring adds the sword tail |
 | Block | impactPlate_light_000, _002, _003 | Impact Sounds | Slowed a little for heavies |
-| Light hit | scratch_001, scratch_002 | Interface Sounds | |
-| Heavy hit, K.O. | knifeSlice2, scratch_005 | RPG Audio, Interface Sounds | Plus a code-made thump |
+| Light hit | knifeSlice2 | RPG Audio | Played faster and quieter, with a soft code-made paper snip |
+| Heavy hit, K.O. | knifeSlice2 | RPG Audio | Played slower, with a soft code-made paper tear and thump. The Interface pack's scratch sounds were dropped after the #19 playtest: they squeaked |
 | Counter cut | drawKnife3 | RPG Audio | A sword-draw "shing" on top of the K.O. |
 | Page turn | bookFlip2, bookFlip3 | RPG Audio | |
 | Feint | cloth4 | RPG Audio | |

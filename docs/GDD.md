@@ -184,3 +184,4 @@ The one question it answers: **does mouse-driven paper swordplay feel good?** Si
 | 2026-11-01 | Round start: kabuki wooden clappers for "Round N", a taiko hit for "Cut!"; no announcer voice | Marz's pick. Fits the stage feel; a voice needs recordings and computer voices sound bad. |
 | 2026-11-01 | A heavy's wind-up makes a quiet rising creak | My addition: the counter-cut opening can be heard as well as seen (pillar 3). Kept quiet so it informs without making heavies trivial to react to; easy to turn down if it does. |
 | 2026-11-01 | Separate Music and Effects volume sliders replace the Sound on/off button | Standard for any game with music. |
+| 2026-11-01 | Cut sounds: the knife-slice recording plus a soft code-made paper tear; the squeaky interface "scratch" recordings are dropped. The counter cut's sword-draw shing stays | Marz's playtest of #19: cuts squeaked, the counter cut sounded great (pillar 2). |
