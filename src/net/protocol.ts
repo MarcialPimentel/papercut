@@ -5,7 +5,11 @@ import type { MatchCfg } from '../sim/config';
 
 export type ToServer =
   | { t: 'host'; cfg?: MatchCfg } // make a private room for an invite link, with its rules
-  | { t: 'join'; code: string }
+  | { t: 'join'; code: string; name?: string } // a 1v1 room or a tournament
+  | { t: 'tourney'; cfg?: MatchCfg; name?: string } // make a tournament room (3-8 players)
+  | { t: 'name'; name: string } // rename yourself in a tournament lobby
+  | { t: 'begin' } // the tournament's host starts the bracket
+  | { t: 'result'; winner: number } // a tournament fighter: who won the match that just ended
   | { t: 'quick' } // pair with whoever is waiting
   | { t: 'cancel' } // leave the room or the queue
   | { t: 'in'; f: number; b: number } // my buttons for frame f
@@ -15,10 +19,19 @@ export type ToClient =
   | { t: 'room'; code: string } // your invite room is ready
   | { t: 'waiting' } // you're in the quick-match queue
   | { t: 'start'; seat: 0 | 1; delay: number; code: string; cfg: MatchCfg } // the fight begins: seat 0 is Kami, 1 is Sumi
-  | { t: 'in'; f: number; b: number }
+  | { t: 'in'; f: number; b: number; s?: 0 | 1 } // s: whose buttons, for players watching a tournament fight
   | { t: 'hash'; f: number; h: number }
+  | { t: 'lobby'; code: string; names: string[]; you: number; host: boolean; cfg: MatchCfg } // a tournament waiting to start
+  | { t: 'bracket'; names: string[]; rounds: BracketMatch[][]; current: [number, number] | null; champion: number | null; you: number }
+  | { t: 'match'; seat: 0 | 1 | -1; delay: number; cfg: MatchCfg; names: [string, string]; code: string } // a tournament fight starts (-1: you watch)
   | { t: 'gone' } // your opponent left
   | { t: 'err'; msg: string };
+
+/** One match in a tournament bracket. a and b index the players (-1 = a bye, null = not decided yet). */
+export interface BracketMatch { a: number | null; b: number | null; winner: number | null; forfeit: boolean }
+
+/** A free pass in a bracket. */
+export const BYE_SLOT = -1;
 
 export const CODE_LETTERS = 'BCDFGHJKLMNPQRSTVWXZ';
 export const CODE_LENGTH = 4;

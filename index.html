@@ -50,6 +50,7 @@
 
         <div data-screen="main" class="stack">
           <button class="mbtn red" id="bFriend" type="button">Fight a friend<small>Pick the rules, get an invite link to send</small></button>
+          <button class="mbtn" id="bTourney" type="button">Tournament<small>3 to 8 friends, knockout bracket, one winner</small></button>
           <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting</small></button>
           <button class="mbtn" id="bEndless" type="button">Endless<small id="bestRun">How many bots can you cut?</small></button>
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
@@ -65,11 +66,11 @@
         </div>
 
         <form data-screen="setup" class="stack setup" id="setupForm" hidden>
-          <p class="big">Room rules</p>
+          <p class="big" id="setupTitle">Room rules</p>
           <label>Rounds <select id="optWins"><option value="1">Best of 1</option><option value="2">Best of 3</option><option value="3" selected>Best of 5</option><option value="4">Best of 7</option><option value="0">Endless</option></select></label>
           <label>Health <select id="optHp"><option value="50">50 (deadly)</option><option value="80" selected>80 (normal)</option><option value="100">100</option><option value="150">150 (long)</option></select></label>
           <label>Round timer <select id="optTime"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="0">No timer</option></select></label>
-          <p class="muted">Your friend plays by these rules too.</p>
+          <p class="muted" id="setupNote">Your friend plays by these rules too.</p>
           <button class="mbtn red" type="submit">Create room</button>
           <button class="hbtn" data-cancel type="button">Back</button>
         </form>
@@ -79,6 +80,24 @@
           <div class="link"><input id="inviteLink" readonly aria-label="Invite link"><button class="hbtn" id="copyLink" type="button">Copy link</button></div>
           <p id="hostWait" class="muted">Making your room…</p>
           <button class="hbtn" data-cancel type="button">Cancel</button>
+        </div>
+
+        <div data-screen="tlobby" class="stack" hidden>
+          <p class="big">Tournament <b id="tCode">····</b></p>
+          <div class="link"><input id="tLink" readonly aria-label="Invite link"><button class="hbtn" id="tCopy" type="button">Copy link</button></div>
+          <p class="muted" id="tRules"></p>
+          <label class="tname">Your name <input id="tName" maxlength="14" autocomplete="off" spellcheck="false"></label>
+          <ol class="tplayers" id="tPlayers"></ol>
+          <button class="mbtn red" id="tBegin" type="button" hidden>Start tournament</button>
+          <p class="muted" id="tWait"></p>
+          <button class="hbtn" data-cancel type="button">Leave</button>
+        </div>
+
+        <div data-screen="bracket" class="stack" hidden>
+          <p class="big" id="bTitle">Bracket</p>
+          <div class="bracket" id="bracket"></div>
+          <p class="muted" id="bNext"></p>
+          <button class="hbtn" data-cancel type="button" id="bLeaveT">Leave tournament</button>
         </div>
 
         <div data-screen="search" class="stack" hidden>

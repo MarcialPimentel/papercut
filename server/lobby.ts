@@ -1,7 +1,8 @@
-// Pairs players into rooms and relays their inputs. No fight logic lives here.
+// Pairs players into rooms (1v1 or tournament) and relays their inputs. No fight logic lives here.
 
 import { CODE_LENGTH, CODE_LETTERS, delayFor, normalizeCode, type ToClient, type ToServer } from '../src/net/protocol';
 import { DEFAULT_CFG, cleanCfg, type MatchCfg } from '../src/sim/config';
+import { TOURNEY_MAX, Tourney } from './tourney';
 
 export interface Peer {
   send(msg: ToClient): void;
@@ -15,15 +16,36 @@ export class Lobby {
   private rooms = new Map<string, Room>();
   private roomOf = new Map<Peer, Room>();
   private waiting: Room | null = null;
+  private tourneys = new Map<string, Tourney>();
+  private tourneyOf = new Map<Peer, Tourney>();
 
-  constructor(private rand: () => number = Math.random) {}
+  constructor(private rand: () => number = Math.random, private later: (fn: () => void, ms: number) => unknown = setTimeout) {}
 
   get stats() {
-    return { rooms: this.rooms.size, fighting: [...this.rooms.values()].filter((r) => r.guest).length, players: this.roomOf.size };
+    return {
+      rooms: this.rooms.size + this.tourneys.size,
+      fighting: [...this.rooms.values()].filter((r) => r.guest).length + [...this.tourneys.values()].filter((t) => t.current).length,
+      players: this.roomOf.size + this.tourneyOf.size,
+    };
   }
 
   message(p: Peer, m: ToServer) {
+    const t = this.tourneyOf.get(p);
     switch (m.t) {
+      case 'tourney': {
+        this.leave(p, false);
+        // Every bracket match must end, so endless rounds aren't allowed in a tournament.
+        const cfg = cleanCfg(m.cfg);
+        if (cfg.wins === 0) cfg.wins = DEFAULT_CFG.wins;
+        const tn = new Tourney(this.newCode(), cfg, this.rand, this.later);
+        this.tourneys.set(tn.code, tn);
+        this.tourneyOf.set(p, tn);
+        tn.add(p, m.name);
+        return;
+      }
+      case 'name': t?.rename(p, m.name); return;
+      case 'begin': t?.begin(p); return;
+      case 'result': t?.report(p, m.winner); return;
       case 'host': {
         this.leave(p, false);
         const r = this.open(p, false, cleanCfg(m.cfg));
@@ -31,7 +53,18 @@ export class Lobby {
         return;
       }
       case 'join': {
-        const r = this.rooms.get(normalizeCode(String(m.code)));
+        const code = normalizeCode(String(m.code));
+        const tn = this.tourneys.get(code);
+        if (tn) {
+          if (tn.started) return p.send({ t: 'err', msg: 'That tournament has already started.' });
+          if (tn.live.length >= TOURNEY_MAX) return p.send({ t: 'err', msg: `That tournament is full (${TOURNEY_MAX} players).` });
+          if (tn.indexOf(p) >= 0) return;
+          this.leave(p, false);
+          this.tourneyOf.set(p, tn);
+          tn.add(p, m.name);
+          return;
+        }
+        const r = this.rooms.get(code);
         if (!r || r.quick) return p.send({ t: 'err', msg: 'That room does not exist any more. Ask your friend for a new link.' });
         if (r.host === p) return p.send({ t: 'err', msg: 'This is your own room. Send the link to a friend.' });
         if (r.guest) return p.send({ t: 'err', msg: 'That room already has two fighters.' });
@@ -57,6 +90,8 @@ export class Lobby {
         return;
       case 'in':
       case 'hash': {
+        if (typeof m.f !== 'number') return;
+        if (t) { t.relay(p, m); return; }
         const r = this.roomOf.get(p);
         const o = r && (r.host === p ? r.guest : r.host);
         if (!o || typeof m.f !== 'number') return;
@@ -70,12 +105,17 @@ export class Lobby {
   /** A player disconnected. */
   close(p: Peer) { this.leave(p, true); }
 
-  private open(host: Peer, quick: boolean, cfg: MatchCfg): Room {
+  private newCode() {
     let code = '';
     do {
       code = '';
       for (let i = 0; i < CODE_LENGTH; i++) code += CODE_LETTERS[Math.floor(this.rand() * CODE_LETTERS.length)];
-    } while (this.rooms.has(code));
+    } while (this.rooms.has(code) || this.tourneys.has(code));
+    return code;
+  }
+
+  private open(host: Peer, quick: boolean, cfg: MatchCfg): Room {
+    const code = this.newCode();
     const r: Room = { code, host, quick, cfg };
     this.rooms.set(code, r);
     this.roomOf.set(host, r);
@@ -91,6 +131,11 @@ export class Lobby {
   }
 
   private leave(p: Peer, tell: boolean) {
+    const t = this.tourneyOf.get(p);
+    if (t) {
+      this.tourneyOf.delete(p);
+      if (t.leave(p)) { t.stop(); this.tourneys.delete(t.code); }
+    }
     const r = this.roomOf.get(p);
     if (!r) return;
     const o = r.host === p ? r.guest : r.host;
