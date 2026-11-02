@@ -27,7 +27,7 @@ export class Controls {
   touchLow: boolean | null = null;
   /** True while a fight is on screen: Space and arrows don't scroll the page. */
   active = false;
-  onCommand: (c: 'restart' | 'menu' | 'rematch') => void = () => {};
+  onCommand: (c: 'restart' | 'menu' | 'rematch' | 'hitboxes') => void = () => {};
   onAnyInput: () => void = () => {};
 
   constructor(canvas: HTMLCanvasElement, chips: HTMLElement, aim: HTMLElement) {
@@ -37,6 +37,7 @@ export class Controls {
       if (e.ctrlKey || e.metaKey || e.altKey || typing(e)) return;
       if (e.code === 'Escape') { this.onCommand('menu'); return; }
       if (e.code === 'KeyR' && !e.repeat) { this.onCommand('restart'); return; }
+      if (e.code === 'KeyH' && !e.repeat) { this.onCommand('hitboxes'); return; }
       const k = KEYS[e.code];
       if (!k || !this.active) return;
       e.preventDefault();

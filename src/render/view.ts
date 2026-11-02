@@ -7,6 +7,7 @@ import { C, LOOKS, clamp, lerp, reduceMotion } from './common';
 import { FighterView } from './fighter';
 import { PaperPhysics } from './physics';
 import { Fx } from './fx';
+import { Hitboxes } from './hitboxes';
 import { Notebook } from './notebook';
 import { sfx } from '../audio/sounds';
 
@@ -20,6 +21,8 @@ export class View {
   readonly fighters: FighterView[];
   readonly fx: Fx;
   readonly physics = new PaperPhysics();
+  /** The hitbox view (H): what the fight checks, drawn over the art. */
+  readonly hitboxes: Hitboxes;
   private sceneryPage = -1;
   /** Called when a fighter loses part of the strip (for the HUD's falling sliver). */
   onStrip: (seat: number, hp: number, lost: number) => void = () => {};
@@ -45,6 +48,7 @@ export class View {
     this.renderer.localClippingEnabled = true;
     this.book = new Notebook(this.renderer);
     this.fighters = LOOKS.map((look, i) => new FighterView(this.book.scene, look, i, this.physics));
+    this.hitboxes = new Hitboxes(this.book.scene);
     this.fx = new Fx(this.book.scene, this.camera, labels, (p, m) => this.book.flatShape(p, m));
     for (const f of this.fighters) f.onLand = (x, dir) => { this.shake = Math.max(this.shake, 0.07); this.fx.burst(x, 0.1, [C.paper, C.red], 8, dir); };
     this.setPage(0);
@@ -119,8 +123,8 @@ export class View {
         break;
       case 'block': {
         const dir = s.f[e.p].facing;
-        fx.razor(e.x, e.y, e.ang, C.ink, 2.2); fx.burst(e.x, e.y, [C.paper, C.paper, C.ink], 8, dir); fx.label('Block', e.x, e.y + 0.6); sfx.block(e.heavy, pan(e.x));
-        this.shake = e.heavy ? 0.08 : 0.04;
+        fx.razor(e.x, e.y, e.ang, C.ink, 2.2); fx.burst(e.x, e.y, [C.paper, C.paper, C.ink], 8, dir); fx.label(e.stagger ? 'Stagger' : 'Block', e.x, e.y + 0.6, e.stagger ? 'gold' : undefined); sfx.block(e.heavy, pan(e.x));
+        this.shake = e.stagger ? 0.11 : e.heavy ? 0.08 : 0.04;
         if (e.chip) this.onStrip(1 - e.p, s.f[1 - e.p].hp, e.chip);
         break;
       }
@@ -181,6 +185,7 @@ export class View {
     this.physics.step(real * scale);
     s.f.forEach((f, i) => { this.fighters[i].draw(f, real, fold, this.clock); this.fighters[i].updateHalves(real * scale, fold); });
     this.fx.update(real, real * scale, fold);
+    this.hitboxes.update(s);
     const g = this.fx.glint;
     if (glint && glint.k > 0 && s.f[glint.seat].alive) {
       const tip = this.fighters[glint.seat].tip(new THREE.Vector3());

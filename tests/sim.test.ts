@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BTN, cloneState, hashState, newMatch, step, type FightEvent, type State } from '../src/sim/sim';
-import { MOVES, RULES } from '../src/sim/rules';
+import { MOVES, RULES, rangeOf } from '../src/sim/rules';
 import { Dummy } from '../src/sim/dummy';
 import { DEFAULT_CFG, ENDLESS, ENDLESS_CFG, cleanCfg } from '../src/sim/config';
 
@@ -21,6 +21,11 @@ function run(s: State, frames: number, inp: (n: number) => [number, number] = ()
   return ev;
 }
 const kinds = (ev: FightEvent[]) => ev.map((e) => e.k);
+/** The dummy stops walking in out of reach, so walk seat 0 toward its rival to keep the fight going. */
+const closer = (s: State) => {
+  const dx = s.f[1].x - s.f[0].x;
+  return Math.abs(dx) < rangeOf(MOVES.light) - 0.2 ? 0 : dx > 0 ? BTN.right : BTN.left;
+};
 
 describe('slashes', () => {
   it('a light slash at the wrong guard height cuts 10 of 80 health', () => {
@@ -55,6 +60,92 @@ describe('slashes', () => {
     const w = ev.find((e) => e.k === 'whiff');
     expect(w && w.k === 'whiff' && w.over).toBe(true);
     expect(s.f[1].hp).toBe(DEFAULT_CFG.maxHp);
+  });
+});
+
+/** Frames until each fighter is back in guard (free to act). */
+function untilFree(s: State) {
+  const free: [number, number] = [-1, -1];
+  for (let n = 1; n < 200 && (free[0] < 0 || free[1] < 0); n++) {
+    step(s, [0, 0]);
+    for (const i of [0, 1]) if (free[i] < 0 && s.f[i].state === 'guard') free[i] = n;
+  }
+  return free;
+}
+
+describe('heavy', () => {
+  it('a blocked heavy staggers the blocker: the attacker recovers 4 frames first', () => {
+    const s = fightAt();
+    const ev = run(s, MOVES.heavy.wind + 1, (n) => [n === 0 ? heavy : 0, 0]);
+    const b = ev.find((e) => e.k === 'block');
+    expect(b && b.k === 'block' && b.stagger).toBe(true);
+    expect(s.f[1].state).toBe('stagger');
+    const [att, def] = untilFree(s);
+    expect(def - att).toBe(4);
+  });
+
+  it('after a staggered block the attacker is still in reach for a light, and it beats the blocker\'s light', () => {
+    const s = fightAt(rangeOf(MOVES.heavy) - 0.01); // a heavy from as far as it reaches
+    run(s, MOVES.heavy.wind + 1, (n) => [n === 0 ? heavy : 0, 0]);
+    expect(Math.abs(s.f[1].x - s.f[0].x)).toBeLessThanOrEqual(rangeOf(MOVES.light));
+    // Both mash a light at different heights: Kami's comes out first.
+    const ev = run(s, 60, () => [light, low | light]);
+    const first = ev.find((e) => e.k === 'hit' || e.k === 'ko');
+    expect(first && first.p).toBe(0);
+  });
+
+  it('a light or riposte blocked does not stagger', () => {
+    const s = fightAt();
+    run(s, MOVES.light.wind + 1, (n) => [n === 0 ? light : 0, 0]);
+    expect(s.f[1].state).toBe('guard');
+  });
+
+  it('a clean hit leaves the hitter ahead: +2 for a light, +4 for a heavy', () => {
+    for (const [btn, adv] of [[light, 2], [heavy, 4]] as const) {
+      const s = fightAt();
+      run(s, (btn === light ? MOVES.light : MOVES.heavy).wind + 1, (n) => [low | (n === 0 ? btn : 0), 0]);
+      expect(s.f[1].state).toBe('stun');
+      const [att, def] = untilFree(s);
+      expect(def - att).toBe(adv);
+    }
+  });
+
+  it('steps in at the end of its wind-up, after the feint point', () => {
+    const s = fightAt(4);
+    const x0 = s.f[0].x;
+    run(s, RULES.feintBefore - 1, (n) => [n === 0 ? heavy : 0, 0]);
+    expect(s.f[0].x).toBe(x0); // still feintable, hasn't moved
+    run(s, MOVES.heavy.wind - RULES.feintBefore + 2);
+    expect(s.f[0].x - x0).toBeCloseTo(MOVES.heavy.lunge, 6);
+  });
+});
+
+describe('hit areas', () => {
+  for (const atk of ['light', 'heavy'] as const) {
+    it(`a ${atk} lands just inside its range and whiffs just outside`, () => {
+      const btn = atk === 'light' ? light : heavy, R = rangeOf(MOVES[atk]);
+      for (const [gap, lands] of [[R - 0.02, true], [R + 0.02, false]] as const) {
+        const s = fightAt(gap);
+        const ev = run(s, MOVES[atk].wind + 1, (n) => [low | (n === 0 ? btn : 0), 0]);
+        expect(kinds(ev).includes('hit'), `${atk} at ${gap.toFixed(2)}`).toBe(lands);
+      }
+    });
+  }
+
+  it('a slash in the air at the top of a jump sails over a grounded head', () => {
+    const s = fightAt(1.6);
+    // Slash on the way up so it comes out near the top of the jump.
+    const ev = run(s, 20 + MOVES.light.wind, (n) => [(n === 0 ? jump : 0) | (n === 16 ? light : 0), 0]);
+    const w = ev.find((e) => e.k === 'whiff');
+    expect(w && w.k === 'whiff' && w.over).toBe(true);
+    expect(s.f[1].hp).toBe(DEFAULT_CFG.maxHp);
+  });
+
+  it('a low slash still cuts a jumper whose feet are below the blade', () => {
+    const s = fightAt(1.6);
+    // Sumi has only just left the ground when the slash comes out.
+    const ev = run(s, MOVES.light.wind + 1, (n) => [low | (n === 0 ? light : 0), n === MOVES.light.wind - 2 ? jump : 0]);
+    expect(kinds(ev)).toContain('hit');
   });
 });
 
@@ -147,6 +238,18 @@ describe('counter cut', () => {
     const ev = run(s, MOVES.light.wind + 1, (n) => [n === 0 ? light : 0, 0]);
     expect(ev.some((e) => e.k === 'ko' && e.counter)).toBe(true);
     expect(s.why).toBe('miss');
+  });
+
+  it('after a miss, the counter cut only lasts a moment; a later hit is a normal hit', () => {
+    const s = fightAt(4);
+    run(s, MOVES.heavy.wind + 1, (n) => [0, n === 0 ? heavy : 0]); // Sumi's heavy misses
+    expect(s.f[1].whiffed).toBe(true);
+    // Wait until Sumi is past the open moment, then cut.
+    while (!(s.f[1].state === 'recover' && s.f[1].t >= RULES.missOpen - MOVES.light.wind + 1)) step(s, [0, 0]);
+    s.f[0].x = s.f[1].x - 1.6;
+    const ev = run(s, MOVES.light.wind + 1, (n) => [n === 0 ? light : 0, 0]);
+    expect(kinds(ev)).toContain('hit');
+    expect(ev.some((e) => e.k === 'ko')).toBe(false);
   });
 
   it('two light slashes on the same frame at different heights trade normal damage', () => {
@@ -269,9 +372,7 @@ describe('determinism', () => {
     const s = newMatch(), d0 = new Dummy(rand, 0), d1 = new Dummy(rand, 1);
     let overs = 0;
     for (let n = 0; n < 60 * 60 * 12; n++) {
-      // The dummy only walks in to 2.4 m, so push one of them closer to keep the fight going.
-      const near = Math.abs(s.f[0].x - s.f[1].x) < 1.5;
-      for (const e of step(s, [d0.think(s) | (near ? 0 : BTN.right), d1.think(s)])) if (e.k === 'over') overs++;
+      for (const e of step(s, [d0.think(s) | closer(s), d1.think(s)])) if (e.k === 'over') overs++;
     }
     expect(overs).toBeGreaterThan(0);
   });
@@ -371,8 +472,7 @@ describe('custom rules', () => {
         bot.level = level; you.level = 2;
         let overs = 0;
         for (let n = 0; n < 60 * 60 * 6 && !overs; n++) {
-          const near = Math.abs(s.f[0].x - s.f[1].x) < 1.5;
-          for (const e of step(s, [you.think(s) | (near ? 0 : BTN.right), bot.think(s)])) if (e.k === 'over') overs++;
+          for (const e of step(s, [you.think(s) | closer(s), bot.think(s)])) if (e.k === 'over') overs++;
         }
         expect(overs).toBe(1);
       }

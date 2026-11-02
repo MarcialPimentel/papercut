@@ -264,7 +264,8 @@ document.addEventListener('pointerlockchange', () => { if (document.pointerLockE
 document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('.mbtn, .hbtn')) { wakeAudio(); sfx.ui(); } });
 $('#rematch').addEventListener('click', () => command('rematch'));
 
-function command(c: 'restart' | 'menu' | 'rematch') {
+function command(c: 'restart' | 'menu' | 'rematch' | 'hitboxes') {
+  if (c === 'hitboxes') { view.hitboxes.toggle(); return; }
   if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto') showMenu('main'); return; }
   if (mode.kind === 'practice') {
     if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); hud.best = loadBest(); view.reset(mode.s); controls.lockWanted = true; controls.lock(); }

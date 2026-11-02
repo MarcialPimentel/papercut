@@ -4,7 +4,7 @@
 // Only + - * / and comparisons here (no Math.random, no trig), so every browser computes the same.
 
 import { DEFAULT_CFG, ENDLESS, type MatchCfg } from './config';
-import { FINAL_PAGE, FPS, MOVES, RULES, pageForRound, type Move } from './rules';
+import { BODY, FINAL_PAGE, FPS, MOVES, RULES, pageForRound, type Move } from './rules';
 
 /** One player's controls for one frame, packed into a number. */
 export const BTN = {
@@ -23,8 +23,9 @@ const PRESSES = ['light', 'heavy', 'feint', 'jump', 'dashL', 'dashR'] as const;
 type Press = (typeof PRESSES)[number];
 
 export type Stance = 'high' | 'low';
-export type FState = 'guard' | 'wind' | 'active' | 'recover' | 'feint' | 'stun' | 'dash' | 'land';
-const FSTATES: FState[] = ['guard', 'wind', 'active', 'recover', 'feint', 'stun', 'dash', 'land'];
+/** stagger: the guard knocked aside by a blocked heavy (open to hits, like stun). */
+export type FState = 'guard' | 'wind' | 'active' | 'recover' | 'feint' | 'stun' | 'dash' | 'land' | 'stagger';
+const FSTATES: FState[] = ['guard', 'wind', 'active', 'recover', 'feint', 'stun', 'dash', 'land', 'stagger'];
 export type Atk = keyof typeof MOVES;
 export type Phase = 'intro' | 'fight' | 'ko' | 'turn' | 'over';
 
@@ -77,7 +78,7 @@ export type FightEvent =
   | { k: 'feint' | 'jump' | 'dash'; p: number }
   | { k: 'whiff'; p: number; x: number; y: number; ang: number; heavy: boolean; over: boolean }
   | { k: 'clash'; p: number; x: number; y: number; ang: number }
-  | { k: 'block'; p: number; x: number; y: number; ang: number; heavy: boolean; chip: number }
+  | { k: 'block'; p: number; x: number; y: number; ang: number; heavy: boolean; chip: number; stagger: boolean }
   | { k: 'parry'; p: number; x: number; y: number; ang: number }
   | { k: 'hit'; p: number; x: number; y: number; ang: number; heavy: boolean; atk: Atk; dmg: number }
   | { k: 'ko'; p: number; x: number; y: number; ang: number; counter: boolean; dmg: number; why?: 'wind' | 'miss' }
@@ -152,7 +153,8 @@ export const cloneState = (s: State): State => structuredClone(s);
 /** Where and at what angle a slash cuts, in the fight's side-on plane. */
 export function slashLine(a: Fighter) {
   const base = a.slash === 'high' ? -22 * DEG : 14 * DEG;
-  return { ang: a.facing * base, y: (a.slash === 'high' ? 1.6 : 0.62) + a.y };
+  // Chest and knee height, where the drawn strike poses hold the blade.
+  return { ang: a.facing * base, y: (a.slash === 'high' ? 1.45 : 0.62) + a.y };
 }
 
 const easeOut = (k: number) => 1 - (1 - k) * (1 - k);
@@ -267,10 +269,13 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
       case 'guard':
         if (f.y <= 0) { f.x += dir * RULES.walk; f.walk = dir; } else f.x += f.vx;
         break;
-      case 'wind':
+      case 'wind': {
+        const M = MOVES[f.atk], n = Math.min(4, M.wind);
         if (f.y > 0) f.x += f.vx;
-        if (f.t >= MOVES[f.atk].wind) { f.state = 'active'; f.t = 0; freshlyActive.push(i); }
+        else if (M.lunge > 0 && f.t > M.wind - n) f.x += (f.facing * M.lunge) / n; // the step-in, after the feint point
+        if (f.t >= M.wind) { f.state = 'active'; f.t = 0; freshlyActive.push(i); }
         break;
+      }
       case 'active':
         if (f.t >= MOVES[f.atk].act) { f.state = 'recover'; f.t = 0; }
         break;
@@ -283,7 +288,7 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
       case 'feint':
         if (f.t >= RULES.feintFrames) f.state = 'guard';
         break;
-      case 'stun':
+      case 'stun': case 'stagger':
         if (f.t >= f.stunT) f.state = 'guard';
         break;
       case 'land':
@@ -308,7 +313,7 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
   // Slashes land after both fighters have moved, judged against where both stood at that moment,
   // so neither player is favoured when both swing on the same frame.
   if (freshlyActive.length) {
-    const snap = s.f.map((f) => ({ state: f.state, atk: f.atk, slash: f.slash, whiffed: f.whiffed })) as [Snap, Snap];
+    const snap = s.f.map((f) => ({ state: f.state, t: f.t, atk: f.atk, slash: f.slash, whiffed: f.whiffed })) as [Snap, Snap];
     if (freshlyActive.length === 2 && snap[0].slash === snap[1].slash && snap[0].atk === snap[1].atk) clash(s, ev);
     else {
       const outcomes = freshlyActive.map((i) => judge(s, i, snap[1 - i]));
@@ -358,18 +363,20 @@ function act(s: State, i: number, p: Press, b: number, ev: FightEvent[]) {
   }
 }
 
-interface Snap { state: FState; atk: Atk; slash: Stance; whiffed: boolean }
+interface Snap { state: FState; t: number; atk: Atk; slash: Stance; whiffed: boolean }
 type Outcome =
   | { k: 'whiff'; att: number; over: boolean }
   | { k: 'counter' | 'hit' | 'parry' | 'block'; att: number };
 
 /** Decide what a slash that just came out does, against the defender as they stood this frame. */
 export function judge(s: State, att: number, def: Snap): Outcome {
-  const a = s.f[att], d = s.f[1 - att], M = MOVES[a.atk];
-  if (!d.alive || Math.abs(d.x - a.x) > M.reach) return { k: 'whiff', att, over: false };
-  if (a.slash === 'low' && d.y > 0.3) return { k: 'whiff', att, over: true };
-  // The counter cut: caught winding up a heavy, or recovering from a miss.
-  if ((def.state === 'wind' && def.atk === 'heavy') || (def.state === 'recover' && def.whiffed)) return { k: 'counter', att };
+  const a = s.f[att], d = s.f[1 - att], M = MOVES[a.atk], y = slashLine(a).y;
+  // The blade's tip must pass the front of the body...
+  if (!d.alive || Math.abs(d.x - a.x) - BODY.half > M.reach) return { k: 'whiff', att, over: false };
+  // ...and its cut line must cross the body: a low slash passes under a jumper's feet, an air slash can sail overhead.
+  if (y < d.y + BODY.feet || y > d.y + BODY.top) return { k: 'whiff', att, over: true };
+  // The counter cut: caught winding up a heavy, or just after a miss.
+  if ((def.state === 'wind' && def.atk === 'heavy') || (def.state === 'recover' && def.whiffed && def.t < RULES.missOpen)) return { k: 'counter', att };
   if (def.state === 'guard' && d.y <= 0.3 && d.stance === a.slash) {
     const parried = s.frame - d.stanceAt < RULES.parryWindow && a.atk !== 'riposte';
     return { k: parried ? 'parry' : 'block', att };
@@ -391,16 +398,19 @@ function apply(s: State, o: Outcome, ev: FightEvent[]) {
       return;
     case 'parry':
       d.riposte = RULES.riposteWindow;
-      a.state = 'stun'; a.t = 0; a.stunT = RULES.parryStun; a.airSlash = false; a.x -= a.facing * 0.3;
+      a.state = 'stun'; a.t = 0; a.stunT = RULES.parryStun; a.airSlash = false; a.x -= a.facing * RULES.slide.parry;
       s.hitstop = Math.max(s.hitstop, RULES.hitstop.parry);
       ev.push({ k: 'parry', p: o.att, ...P, ang: L.ang });
       return;
     case 'block': {
-      a.x -= a.facing * 0.25; d.x += a.facing * 0.2;
+      // A blocked heavy staggers the guard: nobody slides, and the attacker recovers first and keeps the turn.
+      const stagger = a.atk === 'heavy';
+      if (stagger) { d.state = 'stagger'; d.t = 0; d.stunT = RULES.blockStagger; }
+      else { a.x -= a.facing * RULES.slide.blockAtt; d.x += a.facing * RULES.slide.blockDef; }
       const before = d.hp;
       if (M.chip) d.hp = Math.max(1, d.hp - M.chip);
       s.hitstop = Math.max(s.hitstop, heavy ? RULES.hitstop.blockHeavy : RULES.hitstop.block);
-      ev.push({ k: 'block', p: o.att, ...P, ang: L.ang, heavy, chip: before - d.hp });
+      ev.push({ k: 'block', p: o.att, ...P, ang: L.ang, heavy, chip: before - d.hp, stagger });
       return;
     }
     case 'hit': {
@@ -417,7 +427,7 @@ function apply(s: State, o: Outcome, ev: FightEvent[]) {
 
 function clash(s: State, ev: FightEvent[]) {
   const [a, b] = s.f, L = slashLine(a);
-  a.x -= a.facing * 0.35; b.x -= b.facing * 0.35;
+  a.x -= a.facing * RULES.slide.clash; b.x -= b.facing * RULES.slide.clash;
   s.hitstop = Math.max(s.hitstop, RULES.hitstop.clash);
   ev.push({ k: 'clash', p: 0, x: (a.x + b.x) / 2, y: L.y, ang: L.ang });
 }
