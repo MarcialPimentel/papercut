@@ -112,6 +112,7 @@ export class View {
         this.onStrip(def, 0, e.dmg);
         break;
       }
+      case 'heal': fx.label(`Strip +${e.amt}`, s.f[e.p].x, s.f[e.p].y + 2.3, 'gold'); break;
       case 'turn': sfx.page(); this.turnFrom = s.page; break;
       case 'swap':
         this.fx.clearFlecks();

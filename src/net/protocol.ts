@@ -1,8 +1,10 @@
 // Messages between the game and the rooms server (JSON over one WebSocket).
 // The server never runs the fight: it pairs two players and passes their inputs along.
 
+import type { MatchCfg } from '../sim/config';
+
 export type ToServer =
-  | { t: 'host' } // make a private room for an invite link
+  | { t: 'host'; cfg?: MatchCfg } // make a private room for an invite link, with its rules
   | { t: 'join'; code: string }
   | { t: 'quick' } // pair with whoever is waiting
   | { t: 'cancel' } // leave the room or the queue
@@ -12,7 +14,7 @@ export type ToServer =
 export type ToClient =
   | { t: 'room'; code: string } // your invite room is ready
   | { t: 'waiting' } // you're in the quick-match queue
-  | { t: 'start'; seat: 0 | 1; delay: number; code: string } // the fight begins: seat 0 is Kami, 1 is Sumi
+  | { t: 'start'; seat: 0 | 1; delay: number; code: string; cfg: MatchCfg } // the fight begins: seat 0 is Kami, 1 is Sumi
   | { t: 'in'; f: number; b: number }
   | { t: 'hash'; f: number; h: number }
   | { t: 'gone' } // your opponent left

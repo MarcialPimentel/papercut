@@ -12,7 +12,7 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 ## Core loop (30 seconds / one match / one session / long term)
 - **30 seconds:** dance in and out of range, poke with light slashes, move the cursor to guard high or low, feint a heavy to bait them, and wait for the rival to commit or miss. Hit them mid-attack and it's a counter cut: instant K.O.
 - **One match:** best of 5 rounds of 60 seconds. Every hit slices the rival's paper health strip and leaves a red cut on their body; a K.O. splits them. Between rounds the notebook's page turns to the next spread.
-- **One session:** a few online matches against friends (since the first build). Sumi doubles as a practice dummy; a computer fighter comes later.
+- **One session:** a few online matches against friends (since the first build), or an Endless run against bots that get harder every 5. Sumi doubles as a practice dummy; a full computer fighter comes later.
 - **Long term:** new fighters with their own moves and specials, new blades and spreads, each a new Blender model and rig to test. Kept small on purpose: the game is also a test bed.
 
 ## Design pillars (every feature must serve one; in a conflict the lower number wins)
@@ -47,6 +47,8 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 - **Jump:** low slashes pass underneath; slashes in the air cut high, and nobody can block mid-air, so a high slash knocks a jumper down. Landing after an air slash leaves you stuck for 10 frames (no blocking), so a blocked jump-in can be punished.
 - **Dash and backdash:** double-tap toward or away from the rival.
 - **Rounds:** 60 seconds. A K.O. or the most strip left at time wins the round; a tie replays it. Best of 5 (first to 3 rounds). The page turns between rounds; rounds 4 and 5 reuse the graph and ruled spreads.
+- **Custom rooms:** whoever creates an invite room picks the rules, and both players play by them: rounds (best of 1, 3, 5, 7 or endless), health (50, 80, 100 or 150) and the round timer (30, 60 or 90 seconds, or none). Quick match always uses the defaults (best of 5, 80, 60 s).
+- **Endless mode (solo):** one round per bot, one bot after another. Your strip carries over from bot to bot and refills by half every 5 bots; each bot starts with a full strip. Every 5 bots the bots level up: they read your wind-ups and block them (late enough to parry at high levels), counter-cut your misses, knock you out of the air, punish your landings and attack more often. One lost round ends the run. Score: bots cut; the best run is remembered in the browser and shown on the title screen.
 - **Camera:** side-on with a slight angle to show volume, framing both fighters. On a K.O. it swings to a three-quarter view with slow motion; on a page turn it pulls up to show the whole book.
 - **Controls (the mouse fights, the keyboard moves):**
 
@@ -85,7 +87,7 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 ## Scope for the first playable (Milestone 1: "Feel test")
 The one question it answers: **does mouse-driven paper swordplay feel good?** Since the first build it can also be played person against person online (input delay; rollback comes in Milestone 2).
 - **In:** the 3D notebook with three round spreads and the back cover; Kami and Sumi built from code shapes with outlines, red insides and cut marks; mouse controls (cursor guard, clicks) with keyboard movement; Sumi as a practice dummy that switches guard, swings and feints; guard stance, light and heavy slashes, block, parry, riposte, feint, clash, counter cut, hit stun, jump, dash and backdash; paper health strips, 60-second timer, best of 5 rounds with page turns; K.O. split with Rapier halves; hitstop, shake, slash line, paper sounds, K.O. camera with slow motion; R to restart; an on-screen tuning panel for the feel numbers (frame timings, damage, parry window, counter window).
-- **Also in (first build):** online fights by invite link, room code or quick match; rematch.
+- **Also in (first build):** online fights by invite link, room code or quick match; rematch. Since then: custom room rules and Endless mode (2026-11-01).
 - **Out:** rollback, two players on one PC, gamepads, menus beyond the start screen, the computer fighter, specials, different move sets, Blender art, more fighters or blades.
 - **Done when:** Marz can play ten minutes against the dummy with the mouse and the guard, slashes, feints, parries and counter cuts all feel good, and the tuned numbers are saved as defaults.
 
@@ -173,3 +175,5 @@ The one question it answers: **does mouse-driven paper swordplay feel good?** Si
 | 2026-11-01 | Counter cut is taught with words, not an in-fight marker: the round banner says why it was an instant K.O. ("hit while winding up a heavy" / "hit right after missing a slash"), and How to play explains the two open moments | Marz's pick after the first online playtest, where the instant kill felt unexplained. A marker over open fighters was offered and declined for now; revisit if players still miss it. |
 | 2026-11-01 | Jump: 10 frames stuck on landing after an air slash. How to play teaches the answer (guard high, or slash high to knock jumpers down) | Playtest: the jump-in felt oppressive. It was always blockable high, but players didn't know, and a blocked jump-in cost nothing. Marz's pick over also shortening the jump. |
 | 2026-11-01 | The mouse is locked to the game during a fight, with a drawn crosshair; Esc frees it, the match end releases it | Marz's request: the cursor slipping out of the window mid-fight drops guards and clicks. |
+| 2026-11-01 | Custom rooms: the room creator picks rounds (best of 1/3/5/7 or endless), health (50/80/100/150) and the timer (30/60/90 s or none); the server checks the choice and sends it to both players. Quick match keeps the defaults | Marz's request and picks. The rules live in each match's data, so both browsers still compute the same fight. Quick match stays standard so strangers always know what they're getting. |
+| 2026-11-01 | Endless mode: one round per bot, strip carries over, half a strip back every 5 bots, bots level up every 5, one loss ends the run, best run kept in the browser. Pulls part of "the computer fighter" forward from Milestone 4 | Marz's request and picks (partial heal over full heal; local best over an online leaderboard). Gives solo players a goal. Note: this is new content ahead of the hit-feel work (#7–#9), which pillar 2 ("feel first") would put first; Marz chose to add it now. |

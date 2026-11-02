@@ -1,13 +1,14 @@
-// Papercut: menus, practice against the dummy, online fights, and the 60-frames-a-second loop.
+// Papercut: menus, practice against the dummy, Endless runs against bots, online fights, and the 60-frames-a-second loop.
 
 import './style.css';
-import { Hud } from './hud';
+import { Hud, botLevel } from './hud';
 import { Controls } from './input';
 import { Net } from './net/client';
 import { Lockstep } from './net/lockstep';
 import { normalizeCode, type ToClient } from './net/protocol';
 import { sound, wakeAudio } from './render/sfx';
 import { View } from './render/view';
+import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
 import { Dummy } from './sim/dummy';
 import { hashState, newMatch, step, type State } from './sim/sim';
 
@@ -29,14 +30,14 @@ $('#build').textContent = `build ${__BUILD__}`;
 
 type Mode =
   | { kind: 'menu'; s: State }
-  | { kind: 'practice'; s: State; dummy: Dummy }
+  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean }
   | { kind: 'online'; lock: Lockstep; code: string };
 let mode: Mode = { kind: 'menu', s: newMatch() };
 const stateOf = (m: Mode) => (m.kind === 'online' ? m.lock.state : m.s);
 const seatOf = (m: Mode) => (m.kind === 'online' ? m.lock.seat : 0);
 
 // ---------- menus ----------
-type Screen = 'main' | 'howto' | 'host' | 'search' | 'join' | 'error';
+type Screen = 'main' | 'howto' | 'setup' | 'host' | 'search' | 'join' | 'error';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   screen = to;
@@ -52,6 +53,7 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (to === 'host' && !opts.code) { $<HTMLInputElement>('#inviteLink').value = ''; $('#inviteCode').textContent = '····'; $('#hostWait').textContent = 'Making your room…'; }
   if (to === 'join') $('#joinWait').textContent = `Joining room ${opts.code}…`;
   if (to === 'error') $('#errorMsg').textContent = opts.msg ?? 'Something went wrong.';
+  if (to === 'main') { const b = loadBest(); $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}` : 'How many bots can you cut?'; }
 }
 function hideMenu() { screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
 
@@ -65,16 +67,24 @@ function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
   showMenu(to, opts);
 }
 
-function startPractice() {
+// Endless: the best run is kept in this browser only.
+const BEST_KEY = 'papercut.endlessBest';
+function loadBest() { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } }
+function saveBest(n: number) { try { if (n > loadBest()) localStorage.setItem(BEST_KEY, String(n)); } catch { /* storage blocked: the run just isn't remembered */ } }
+
+function startPractice(endless = false) {
   wakeAudio();
-  mode = { kind: 'practice', s: newMatch(), dummy: new Dummy() };
+  const cfg = endless ? ENDLESS_CFG : DEFAULT_CFG;
+  mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless };
+  hud.setRules(cfg); hud.best = loadBest();
   begin();
   hud.you = null; hud.online = false; hud.setNames();
 }
 
-function startOnline(seat: 0 | 1, delay: number, code: string) {
+function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg) {
   wakeAudio();
-  const lock = new Lockstep(seat, delay, (m) => net.send(m));
+  const lock = new Lockstep(seat, delay, (m) => net.send(m), cfg);
+  hud.setRules(cfg);
   mode = { kind: 'online', lock, code };
   begin();
   hud.you = seat; hud.online = true; hud.setNames();
@@ -96,10 +106,17 @@ function ensureNet(then: () => void) {
 }
 let pendingSend: (() => void) | null = null;
 
-$('#bPractice').addEventListener('click', startPractice);
+$('#bPractice').addEventListener('click', () => startPractice());
+$('#bEndless').addEventListener('click', () => startPractice(true));
 $('#bHowTo').addEventListener('click', () => showMenu('howto'));
 $('#bHowToBack').addEventListener('click', () => showMenu('main'));
-$('#bFriend').addEventListener('click', () => { showMenu('host'); ensureNet(() => net.send({ t: 'host' })); });
+$('#bFriend').addEventListener('click', () => showMenu('setup'));
+$('#setupForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = (id: string) => Number($<HTMLSelectElement>(id).value);
+  const cfg = cleanCfg({ wins: v('#optWins'), maxHp: v('#optHp'), roundSecs: v('#optTime') });
+  showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg }));
+});
 $('#bQuick').addEventListener('click', () => { showMenu('search'); ensureNet(() => net.send({ t: 'quick' })); });
 $('#joinForm').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -121,7 +138,7 @@ $('#rematch').addEventListener('click', () => command('rematch'));
 function command(c: 'restart' | 'menu' | 'rematch') {
   if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto') showMenu('main'); return; }
   if (mode.kind === 'practice') {
-    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(); mode.dummy.reset(); view.reset(mode.s); controls.lockWanted = true; controls.lock(); }
+    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); hud.best = loadBest(); view.reset(mode.s); controls.lockWanted = true; controls.lock(); }
   } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
 }
 controls.onCommand = command;
@@ -137,7 +154,7 @@ net.onMessage = (m: ToClient) => {
   switch (m.t) {
     case 'room': showMenu('host', { code: m.code }); break;
     case 'waiting': showMenu('search'); break;
-    case 'start': startOnline(m.seat, m.delay, m.code); break;
+    case 'start': startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg)); break;
     case 'in': case 'hash': if (mode.kind === 'online') mode.lock.receive(m); break;
     case 'gone': if (mode.kind === 'online') toMenu('error', { msg: 'Your rival left the fight.' }); break;
     case 'err': toMenu('error', { msg: m.msg }); break;
@@ -148,6 +165,7 @@ net.onMessage = (m: ToClient) => {
 let last = performance.now(), acc = 0;
 const statusEl = $('#status');
 let lastStatus = '';
+const rulesLabel = (c: MatchCfg) => `${roundsLabel(c.wins)}, ${c.maxHp} health, ${c.roundSecs ? c.roundSecs + 's' : 'no timer'}`;
 function frame(now: number) {
   requestAnimationFrame(frame);
   const real = Math.min(0.05, (now - last) / 1000); last = now;
@@ -157,7 +175,9 @@ function frame(now: number) {
     acc += real;
     while (acc >= STEP) {
       const s = m.s;
+      if (m.endless) m.dummy.level = botLevel(s.f[0].wins);
       const ev = step(s, [controls.sample(view.waistY(s, 0)), m.dummy.think(s)]);
+      if (m.endless && ev.some((e) => e.k === 'over')) saveBest(s.f[0].wins);
       view.onStep(s, ev);
       acc -= STEP;
     }
@@ -185,12 +205,12 @@ function frame(now: number) {
   stage.style.background = view.sky;
 
   let status = '';
-  if (m.kind === 'practice') status = 'Practice: Sumi is a dummy · Esc for the menu';
+  if (m.kind === 'practice') status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · Esc for the menu` : 'Practice: Sumi is a dummy · Esc for the menu';
   else if (m.kind === 'online') {
     const l = m.lock;
     status = l.desynced ? `Out of sync at frame ${l.frame}. Please tell Marz.`
       : l.waiting > 20 ? "Waiting for your rival's connection…"
-      : `Online · room ${m.code} · ${l.delay}-frame delay`;
+      : `Online · room ${m.code} · ${rulesLabel(l.state.cfg)} · ${l.delay}-frame delay`;
   }
   if (m.kind !== 'menu' && controls.lockWanted && !controls.locked && matchMedia('(hover: hover) and (pointer: fine)').matches && !status.startsWith('Out')) {
     status = 'Click the fight to hold the mouse · ' + status;

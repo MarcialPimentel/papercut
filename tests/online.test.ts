@@ -3,6 +3,7 @@ import { Lobby, type Peer } from '../server/lobby';
 import { Lockstep } from '../src/net/lockstep';
 import { delayFor, type ToClient, type ToServer } from '../src/net/protocol';
 import { BTN, hashState } from '../src/sim/sim';
+import { DEFAULT_CFG } from '../src/sim/config';
 
 class FakePeer implements Peer {
   inbox: ToClient[] = [];
@@ -20,7 +21,7 @@ describe('lobby', () => {
     expect(room.t).toBe('room');
     if (room.t !== 'room') return;
     lobby.message(b, { t: 'join', code: room.code.toLowerCase() });
-    expect(a.last()).toEqual({ t: 'start', seat: 0, delay: delayFor(40, 60), code: room.code });
+    expect(a.last()).toEqual({ t: 'start', seat: 0, delay: delayFor(40, 60), code: room.code, cfg: DEFAULT_CFG });
     expect(b.last()).toMatchObject({ t: 'start', seat: 1 });
     expect(lobby.stats).toMatchObject({ rooms: 1, fighting: 1, players: 2 });
   });
@@ -121,5 +122,21 @@ describe('lockstep over a laggy connection', () => {
     expect(hashState(a.state)).toBe(hashState(b.state));
     expect(a.desynced || b.desynced).toBe(false);
     expect(stalls).toBeGreaterThan(0); // the lag really did make them wait sometimes
+  });
+});
+
+describe('custom rooms', () => {
+  it("the host's rules reach both players; quick matches use the defaults", () => {
+    const lobby = new Lobby(), a = new FakePeer(), b = new FakePeer();
+    lobby.message(a, { t: 'host', cfg: { wins: 1, maxHp: 150, roundSecs: 0, gauntlet: true } });
+    const code = (a.last() as { code: string }).code;
+    lobby.message(b, { t: 'join', code });
+    const want = { wins: 1, maxHp: 150, roundSecs: 0, gauntlet: false }; // Endless is offline only
+    expect(a.last()).toMatchObject({ t: 'start', cfg: want });
+    expect(b.last()).toMatchObject({ t: 'start', cfg: want });
+    const c = new FakePeer(), d = new FakePeer();
+    lobby.message(c, { t: 'quick' });
+    lobby.message(d, { t: 'quick' });
+    expect(d.last()).toMatchObject({ t: 'start', cfg: DEFAULT_CFG });
   });
 });

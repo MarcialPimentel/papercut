@@ -23,11 +23,12 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 | Rematch (when the match ends) | R or the Rematch button |
 | Free the mouse / back to the menu | Esc frees the mouse (held during a fight), Esc again or Leave for the menu |
 
-## Three ways to play
+## Ways to play
 
 1. **Practice vs Sumi:** Sumi is a dummy. Watch for the yellow glint on the blade: Sumi is about to switch guard. R restarts.
-2. **Fight a friend:** you get a link and a 4-letter room code. Send the link; the fight starts as soon as they open it. You are Kami (left, indigo sash), they are Sumi (right, gold sash). Your name has a yellow "you" tag.
-3. **Find a fight:** pairs you with the next person who presses it.
+2. **Endless:** one bot after another, one round each. Your strip carries over and refills by half every 5 bots, and the bots get smarter every 5. One lost round ends the run; your best run shows on the title screen.
+3. **Fight a friend:** first pick the room's rules (rounds, health, timer), then you get a link and a 4-letter room code. Send the link; the fight starts as soon as they open it. You are Kami (left, indigo sash), they are Sumi (right, gold sash). Your name has a yellow "you" tag.
+4. **Find a fight:** pairs you with the next person who presses it (standard rules: best of 5, 80 health, 60 seconds).
 
 ## What to try
 
@@ -37,6 +38,8 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 - **Counter cut:** hit someone while their heavy winds up, or right after they miss: instant K.O. The round banner says which it was.
 - **Jump a low slash.** Then try a jump-in slash against someone guarding high: after it's blocked you're stuck for a moment on landing, and they can cut you.
 - **A full match:** best of 5 (first to 3), the page turns between rounds, the winner stands on the back cover.
+- **Custom room:** try best of 1 with 50 health (deadly), or endless rounds with no timer. The status line in the corner shows the room's rules.
+- **Endless:** how far do you get? From level 2 (bot 6) the bots block heavies they see coming, punish your misses and swat jumpers.
 
 ## What to report
 

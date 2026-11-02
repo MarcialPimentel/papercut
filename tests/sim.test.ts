@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BTN, cloneState, hashState, newMatch, step, type FightEvent, type State } from '../src/sim/sim';
 import { MOVES, RULES } from '../src/sim/rules';
 import { Dummy } from '../src/sim/dummy';
+import { DEFAULT_CFG, ENDLESS, ENDLESS_CFG, cleanCfg } from '../src/sim/config';
 
 const { low, light, heavy, feint, jump } = BTN;
 
@@ -26,18 +27,18 @@ describe('slashes', () => {
     const s = fightAt();
     const ev = run(s, MOVES.light.wind + 1, (n) => [low | (n === 0 ? light : 0), 0]);
     expect(kinds(ev)).toContain('hit');
-    expect(s.f[1].hp).toBe(RULES.maxHp - MOVES.light.dmg);
+    expect(s.f[1].hp).toBe(DEFAULT_CFG.maxHp - MOVES.light.dmg);
     expect(s.f[1].state).toBe('stun');
   });
 
   it('a guard at the right height blocks; a heavy chips 3', () => {
     const s = fightAt();
     run(s, MOVES.light.wind + 1, (n) => [n === 0 ? light : 0, 0]);
-    expect(s.f[1].hp).toBe(RULES.maxHp);
+    expect(s.f[1].hp).toBe(DEFAULT_CFG.maxHp);
     run(s, 40);
     const ev = run(s, MOVES.heavy.wind + 1, (n) => [n === 0 ? heavy : 0, 0]);
     expect(kinds(ev)).toContain('block');
-    expect(s.f[1].hp).toBe(RULES.maxHp - MOVES.heavy.chip);
+    expect(s.f[1].hp).toBe(DEFAULT_CFG.maxHp - MOVES.heavy.chip);
   });
 
   it('a slash out of reach whiffs', () => {
@@ -53,7 +54,7 @@ describe('slashes', () => {
     const ev = run(s, 12 + MOVES.light.wind, (n) => [low | (n === 12 ? light : 0), n === 0 ? jump : 0]);
     const w = ev.find((e) => e.k === 'whiff');
     expect(w && w.k === 'whiff' && w.over).toBe(true);
-    expect(s.f[1].hp).toBe(RULES.maxHp);
+    expect(s.f[1].hp).toBe(DEFAULT_CFG.maxHp);
   });
 });
 
@@ -103,7 +104,7 @@ describe('parry and riposte', () => {
     const ev2 = run(s, 12, (n) => [0, low | (n === 0 ? light : 0)]);
     const hit = ev2.find((e) => e.k === 'hit');
     expect(hit && hit.k === 'hit' && hit.atk).toBe('riposte');
-    expect(s.f[0].hp).toBe(RULES.maxHp - MOVES.riposte.dmg);
+    expect(s.f[0].hp).toBe(DEFAULT_CFG.maxHp - MOVES.riposte.dmg);
   });
 
   it('a guard held early is a block, not a parry', () => {
@@ -152,16 +153,16 @@ describe('counter cut', () => {
     const s = fightAt();
     const ev = run(s, MOVES.light.wind + 1, (n) => [low | (n === 0 ? light : 0), n === 0 ? light : 0]);
     expect(kinds(ev).filter((k) => k === 'hit')).toHaveLength(2);
-    expect(s.f[0].hp).toBe(RULES.maxHp - MOVES.light.dmg);
-    expect(s.f[1].hp).toBe(RULES.maxHp - MOVES.light.dmg);
+    expect(s.f[0].hp).toBe(DEFAULT_CFG.maxHp - MOVES.light.dmg);
+    expect(s.f[1].hp).toBe(DEFAULT_CFG.maxHp - MOVES.light.dmg);
   });
 
   it('two identical slashes on the same frame clash', () => {
     const s = fightAt();
     const ev = run(s, MOVES.light.wind + 1, (n) => [n === 0 ? light : 0, n === 0 ? light : 0]);
     expect(kinds(ev)).toContain('clash');
-    expect(s.f[0].hp).toBe(RULES.maxHp);
-    expect(s.f[1].hp).toBe(RULES.maxHp);
+    expect(s.f[0].hp).toBe(DEFAULT_CFG.maxHp);
+    expect(s.f[1].hp).toBe(DEFAULT_CFG.maxHp);
   });
 });
 
@@ -211,7 +212,7 @@ describe('rounds', () => {
     const s = newMatch();
     const pages: number[] = [];
     let over: FightEvent | undefined;
-    for (let r = 0; r < RULES.winsNeeded; r++) {
+    for (let r = 0; r < DEFAULT_CFG.wins; r++) {
       while (s.phase !== 'fight') { for (const e of step(s, [0, 0])) if (e.k === 'swap') pages.push(e.page); }
       s.f[0].x = -0.6; s.f[1].x = 0.6;
       run(s, 10, (n) => [low | (n === 2 ? light : 0), n === 0 ? heavy : 0]);
@@ -229,7 +230,7 @@ describe('rounds', () => {
     expect(kinds(ev)).toContain('restart');
     expect(s.round).toBe(1);
     expect(s.f[0].wins).toBe(0);
-    expect(s.f[0].hp).toBe(RULES.maxHp);
+    expect(s.f[0].hp).toBe(DEFAULT_CFG.maxHp);
   });
 });
 
@@ -273,5 +274,88 @@ describe('determinism', () => {
       for (const e of step(s, [d0.think(s) | (near ? 0 : BTN.right), d1.think(s)])) if (e.k === 'over') overs++;
     }
     expect(overs).toBeGreaterThan(0);
+  });
+});
+
+describe('custom rules', () => {
+  /** Kami counter-cuts Sumi's heavy: a quick, sure round win for seat 0. */
+  function kamiWinsRound(s: State) {
+    while (s.phase !== 'fight') step(s, [0, 0]);
+    s.f[0].x = -0.6; s.f[1].x = 0.6;
+    run(s, 10, (n) => [low | (n === 2 ? light : 0), n === 0 ? heavy : 0]);
+    expect(s.phase).toBe('ko');
+  }
+  const untilNext = (s: State) => { const ev: FightEvent[] = []; for (let n = 0; n < 400 && (s.phase === 'ko' || s.phase === 'turn'); n++) ev.push(...step(s, [0, 0])); return ev; };
+
+  it('best of 1 ends after one round', () => {
+    const s = newMatch({ ...DEFAULT_CFG, wins: 1 });
+    kamiWinsRound(s);
+    untilNext(s);
+    expect(s.phase).toBe('over');
+  });
+
+  it('endless rounds never end the match', () => {
+    const s = newMatch({ ...DEFAULT_CFG, wins: 0 });
+    for (let r = 0; r < 6; r++) { kamiWinsRound(s); untilNext(s); }
+    expect(s.phase).toBe('intro');
+    expect(s.f[0].wins).toBe(6);
+  });
+
+  it('the strip size and the timer follow the rules', () => {
+    const s = newMatch({ ...DEFAULT_CFG, maxHp: 150, roundSecs: 0 });
+    expect(s.f[0].hp).toBe(150);
+    while (s.phase !== 'fight') step(s, [0, 0]);
+    run(s, 60 * 70);
+    expect(s.phase).toBe('fight'); // no timer: 70 seconds in, still fighting
+  });
+
+  it('room settings from the network are checked', () => {
+    expect(cleanCfg({ wins: 2, maxHp: 50, roundSecs: 0 })).toEqual({ wins: 2, maxHp: 50, roundSecs: 0, gauntlet: false });
+    expect(cleanCfg({ wins: 99, maxHp: -5, roundSecs: 'x', gauntlet: true })).toEqual({ ...DEFAULT_CFG, gauntlet: false });
+    expect(cleanCfg(undefined)).toEqual(DEFAULT_CFG);
+  });
+
+  describe('Endless', () => {
+    it('keeps your strip between bots, refills half every 5, and gives each bot a full strip', () => {
+      const s = newMatch(ENDLESS_CFG);
+      const heals: number[] = [];
+      for (let r = 0; r < ENDLESS.healEvery; r++) {
+        while (s.phase !== 'fight') step(s, [0, 0]);
+        s.f[0].hp = 20; // took a beating
+        kamiWinsRound(s);
+        for (const e of untilNext(s)) if (e.k === 'heal') heals.push(e.amt);
+        if (r < ENDLESS.healEvery - 1) expect(s.f[0].hp).toBe(20);
+        expect(s.f[1].hp).toBe(ENDLESS_CFG.maxHp);
+      }
+      expect(heals).toEqual([ENDLESS_CFG.maxHp * ENDLESS.healShare]);
+      expect(s.f[0].hp).toBe(20 + ENDLESS_CFG.maxHp * ENDLESS.healShare);
+    });
+
+    it('one lost round ends the run, and the bot stands on the back cover', () => {
+      const s = newMatch(ENDLESS_CFG);
+      kamiWinsRound(s); untilNext(s);
+      while (s.phase !== 'fight') step(s, [0, 0]);
+      s.f[0].x = -0.6; s.f[1].x = 0.6;
+      run(s, 10, (n) => [n === 0 ? heavy : 0, low | (n === 2 ? light : 0)]); // Sumi counter-cuts Kami
+      let over: FightEvent | undefined;
+      for (const e of untilNext(s)) if (e.k === 'over') over = e;
+      expect(over).toMatchObject({ winner: 1 });
+      expect(s.f[0].wins).toBe(1);
+    });
+
+    it('bots at every level keep playing whole runs without getting stuck', () => {
+      let seed = 3;
+      const rand = () => { seed = (Math.imul(seed, 48271) + 1) >>> 0; return seed / 4294967296; };
+      for (const level of [1, 3, 6]) {
+        const s = newMatch(ENDLESS_CFG), you = new Dummy(rand, 0), bot = new Dummy(rand, 1);
+        bot.level = level; you.level = 2;
+        let overs = 0;
+        for (let n = 0; n < 60 * 60 * 6 && !overs; n++) {
+          const near = Math.abs(s.f[0].x - s.f[1].x) < 1.5;
+          for (const e of step(s, [you.think(s) | (near ? 0 : BTN.right), bot.think(s)])) if (e.k === 'over') overs++;
+        }
+        expect(overs).toBe(1);
+      }
+    });
   });
 });

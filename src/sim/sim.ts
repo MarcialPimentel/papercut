@@ -3,7 +3,8 @@
 // two computers fed the same inputs end on the same state. That is what online play relies on.
 // Only + - * / and comparisons here (no Math.random, no trig), so every browser computes the same.
 
-import { FINAL_PAGE, MOVES, RULES, pageForRound, type Move } from './rules';
+import { DEFAULT_CFG, ENDLESS, type MatchCfg } from './config';
+import { FINAL_PAGE, FPS, MOVES, RULES, pageForRound, type Move } from './rules';
 
 /** One player's controls for one frame, packed into a number. */
 export const BTN = {
@@ -50,6 +51,7 @@ export interface Fighter {
 }
 
 export interface State {
+  cfg: MatchCfg; // the rules this match is played with (same for both players)
   frame: number;
   round: number;
   page: number;
@@ -83,37 +85,48 @@ export type FightEvent =
   | { k: 'turn'; to: number; final: boolean }
   | { k: 'swap'; page: number }
   | { k: 'over'; winner: number }
+  | { k: 'heal'; p: number; amt: number }
   | { k: 'restart' };
 
 const DEG = Math.PI / 180;
 
-function newFighter(side: 0 | 1): Fighter {
+function newFighter(side: 0 | 1, maxHp: number): Fighter {
   return {
     x: side === 0 ? -RULES.startX : RULES.startX, y: 0, vx: 0, vy: 0,
     facing: side === 0 ? 1 : -1,
     stance: side === 0 ? 'high' : 'low', stanceAt: -999,
     state: 'guard', t: 0, atk: 'light', slash: 'high', whiffed: false, airSlash: false,
-    hp: RULES.maxHp, wins: 0, alive: true, riposte: 0, buf: '', bufLeft: 0,
+    hp: maxHp, wins: 0, alive: true, riposte: 0, buf: '', bufLeft: 0,
     dashDir: 0, dashFrom: 0, dashLen: 0, stunT: 0, walk: 0,
   };
 }
 
-export function newMatch(): State {
+export function newMatch(cfg: MatchCfg = DEFAULT_CFG): State {
   const s: State = {
-    frame: 0, round: 1, page: 0, phase: 'intro', phaseT: 0, clock: RULES.roundFrames, hitstop: 0,
+    cfg: { ...cfg },
+    frame: 0, round: 1, page: 0, phase: 'intro', phaseT: 0, clock: cfg.roundSecs * FPS, hitstop: 0,
     roundWinner: -1, how: '', why: '', final: false, turnTo: 0, rematch: [false, false],
-    f: [newFighter(0), newFighter(1)],
+    f: [newFighter(0, cfg.maxHp), newFighter(1, cfg.maxHp)],
   };
   return s;
 }
 
-function resetForRound(s: State) {
+function resetForRound(s: State, ev: FightEvent[]) {
+  const wonLast = s.roundWinner === 0, hp0 = s.f[0].hp;
   for (const i of [0, 1] as const) {
     const wins = s.f[i].wins;
-    s.f[i] = newFighter(i);
+    s.f[i] = newFighter(i, s.cfg.maxHp);
     s.f[i].wins = wins;
   }
-  s.phase = 'intro'; s.phaseT = 0; s.clock = RULES.roundFrames; s.hitstop = 0;
+  if (s.cfg.gauntlet) {
+    // Endless: you keep your strip from bot to bot, and every few bots you get some of it back.
+    s.f[0].hp = hp0;
+    if (wonLast && s.f[0].wins % ENDLESS.healEvery === 0) {
+      const amt = Math.min(s.cfg.maxHp - hp0, Math.round(s.cfg.maxHp * ENDLESS.healShare));
+      if (amt > 0) { s.f[0].hp += amt; ev.push({ k: 'heal', p: 0, amt }); }
+    }
+  }
+  s.phase = 'intro'; s.phaseT = 0; s.clock = s.cfg.roundSecs * FPS; s.hitstop = 0;
   s.roundWinner = -1; s.how = ''; s.why = '';
 }
 
@@ -144,7 +157,9 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
       break;
     case 'ko':
       if (s.phaseT >= RULES.koFrames) {
-        s.final = s.f.some((f) => f.wins >= RULES.winsNeeded);
+        s.final = s.cfg.gauntlet
+          ? s.roundWinner === 1 || !s.f[0].alive // Endless: one lost round ends the run
+          : s.cfg.wins > 0 && s.f.some((f) => f.wins >= s.cfg.wins);
         s.turnTo = s.final ? FINAL_PAGE : pageForRound(s.round + 1);
         s.phase = 'turn'; s.phaseT = 0;
         ev.push({ k: 'turn', to: s.turnTo, final: s.final });
@@ -153,10 +168,10 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
     case 'turn':
       if (s.phaseT === RULES.turnSwap) {
         s.page = s.turnTo;
-        if (!s.final) { s.round++; const p = s.page; resetForRound(s); s.phase = 'turn'; s.phaseT = RULES.turnSwap; s.page = p; }
+        if (!s.final) { s.round++; const p = s.page; resetForRound(s, ev); s.phase = 'turn'; s.phaseT = RULES.turnSwap; s.page = p; }
         else {
           // The match winner stands alone on the back cover.
-          const w = s.f[0].wins > s.f[1].wins ? 0 : 1;
+          const w = matchWinner(s);
           Object.assign(s.f[w], { x: 0, y: 0, vx: 0, vy: 0, state: 'guard', t: 0, alive: true, facing: 1 });
           s.f[1 - w].alive = false;
         }
@@ -165,7 +180,7 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
       if (s.phaseT >= RULES.turnFrames) {
         if (s.final) {
           s.phase = 'over'; s.phaseT = 0; s.rematch = [false, false];
-          ev.push({ k: 'over', winner: s.f[0].wins > s.f[1].wins ? 0 : 1 });
+          ev.push({ k: 'over', winner: matchWinner(s) });
         } else {
           s.phase = 'intro'; s.phaseT = 0;
           ev.push({ k: 'round', round: s.round, page: s.page });
@@ -176,7 +191,7 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
       for (const i of [0, 1]) if (inputs[i] & BTN.rematch) s.rematch[i] = true;
       if (s.rematch[0] && s.rematch[1]) {
         const frame = s.frame;
-        Object.assign(s, newMatch());
+        Object.assign(s, newMatch(s.cfg));
         s.frame = frame;
         ev.push({ k: 'restart' }, { k: 'round', round: 1, page: 0 });
       }
@@ -184,6 +199,9 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
   }
   return ev;
 }
+
+/** Who won the match. In Endless the bot always ends the run. */
+export const matchWinner = (s: State) => (s.cfg.gauntlet ? 1 : s.f[0].wins > s.f[1].wins ? 0 : 1);
 
 function trackStances(s: State, inputs: readonly [number, number]) {
   for (const i of [0, 1]) {
@@ -205,7 +223,8 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
     }
     return;
   }
-  s.clock--;
+  const timed = s.cfg.roundSecs > 0;
+  if (timed) s.clock--;
   const freshlyActive: number[] = [];
   for (const i of [0, 1]) {
     const f = s.f[i], o = s.f[1 - i], b = inputs[i];
@@ -283,7 +302,7 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
       }
     }
     for (const f of s.f) f.x = Math.max(-RULES.edge, Math.min(RULES.edge, f.x));
-    if (s.clock <= 0) timeUp(s, ev);
+    if (timed && s.clock <= 0) timeUp(s, ev);
   }
 }
 

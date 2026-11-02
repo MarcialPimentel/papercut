@@ -23,6 +23,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY tsconfig.json ./
 COPY server server
 COPY src/net/protocol.ts src/net/protocol.ts
+COPY src/sim/config.ts src/sim/config.ts
 COPY --from=build /app/dist dist
 EXPOSE 8790
 USER node
