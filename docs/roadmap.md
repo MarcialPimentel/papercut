@@ -17,7 +17,7 @@ On GitHub this is the milestone "M1 Feel test: mouse vs dummy" with issues #2–
 | #5 | Fight rules as data (fixed frames, tested) | Guard stance, light and heavy slashes, block, parry, riposte, feint, clash, counter cut, hit stun, jump, dash and backdash, input buffer, on a fixed 60 Hz clock driven only by inputs, with unit tests. |
 | #6 | Sumi as a practice dummy | Switches guard with a glint tell, swings back now and then and sometimes feints a heavy, so one person can practise everything alone. |
 | #7 | Hits, cuts and the K.O. split | Red cut bands on struck parts, the paper health strip, the K.O. split with the red inside, halves as Rapier physics bodies (cosmetic). |
-| #8 | Hit feel | Hitstop, shake, slash lines, paper sounds, K.O. camera with slow motion. |
+| #8 | Hit feel | Hitstop, shake, slash lines, paper sounds, K.O. camera with slow motion. Sounds and music done in the sound pass (see [sound.md](sound.md)). |
 | #9 | Tuning panel and restart | On-screen sliders for every move's frames, damage, chip and stun, the parry, riposte, feint and counter windows, the cursor waist line; save as defaults; R restarts. |
 | #10 | Playtest guide | `docs/playtest.md`: how to open the build, the mouse controls, what to try, what to report. |
 | #11 | Mouse controls | Cursor guard (waist line, small dead zone, a visible guard cue), left and right click, feint, keyboard movement, on-screen buttons on touch screens only. |

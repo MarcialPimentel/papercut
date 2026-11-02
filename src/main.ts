@@ -6,9 +6,12 @@ import { Controls } from './input';
 import { Net } from './net/client';
 import { Lockstep } from './net/lockstep';
 import { normalizeCode, type ToClient } from './net/protocol';
-import { sound, wakeAudio } from './render/sfx';
+import { engine } from './audio/engine';
+import { music, type MusicMode, type Tension } from './audio/music';
+import { sfx } from './audio/sounds';
 import { View } from './render/view';
 import { Dummy } from './sim/dummy';
+import { RULES } from './sim/rules';
 import { hashState, newMatch, step, type State } from './sim/sim';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
@@ -25,6 +28,7 @@ try {
 const hud = new Hud();
 const controls = new Controls(canvas, $('#chips'), $('#aim'));
 const net = new Net();
+const wakeAudio = () => { engine.wake(); };
 $('#build').textContent = `build ${__BUILD__}`;
 
 type Mode =
@@ -53,7 +57,7 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (to === 'join') $('#joinWait').textContent = `Joining room ${opts.code}…`;
   if (to === 'error') $('#errorMsg').textContent = opts.msg ?? 'Something went wrong.';
 }
-function hideMenu() { screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
+function hideMenu() { showSound(false); screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
 
 function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
   if (mode.kind === 'online') net.send({ t: 'cancel' });
@@ -69,7 +73,7 @@ function startPractice() {
   wakeAudio();
   mode = { kind: 'practice', s: newMatch(), dummy: new Dummy() };
   begin();
-  hud.you = null; hud.online = false; hud.setNames();
+  hud.you = null; hud.online = false; hud.setNames(); view.you = 0;
 }
 
 function startOnline(seat: 0 | 1, delay: number, code: string) {
@@ -77,7 +81,7 @@ function startOnline(seat: 0 | 1, delay: number, code: string) {
   const lock = new Lockstep(seat, delay, (m) => net.send(m));
   mode = { kind: 'online', lock, code };
   begin();
-  hud.you = seat; hud.online = true; hud.setNames();
+  hud.you = seat; hud.online = true; hud.setNames(); view.you = seat;
   if (new URLSearchParams(location.search).has('room')) history.replaceState(null, '', location.pathname);
 }
 
@@ -115,7 +119,29 @@ $('#copyLink').addEventListener('click', async () => {
   setTimeout(() => { $('#copyLink').textContent = 'Copy link'; }, 1600);
 });
 $('#bLeave').addEventListener('click', () => toMenu());
-$('#bSound').addEventListener('click', () => { sound.on = !sound.on; $('#bSound b').textContent = sound.on ? 'On' : 'Off'; });
+// Sound: one panel with Music and Effects sliders, opened from the menu or the fight.
+const soundBox = $('#soundBox');
+const soundBtns = [...document.querySelectorAll<HTMLButtonElement>('[data-sound]')];
+function showSound(open: boolean, under?: HTMLElement) {
+  soundBox.hidden = !open;
+  for (const b of soundBtns) b.setAttribute('aria-expanded', String(open));
+  if (open && under) {
+    // Sit just under the button that opened it, kept on screen.
+    const r = under.getBoundingClientRect(), w = soundBox.offsetWidth;
+    soundBox.style.top = r.bottom + 8 + 'px';
+    soundBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w)) + 'px';
+  }
+}
+for (const b of soundBtns) b.addEventListener('click', () => { wakeAudio(); showSound(soundBox.hidden, b); });
+for (const [id, key] of [['#volMusic', 'music'], ['#volSfx', 'sfx']] as const) {
+  const input = $<HTMLInputElement>(id);
+  input.value = String(Math.round(engine.vol[key] * 100));
+  input.addEventListener('input', () => engine.setVolumes({ [key]: Number(input.value) / 100 }));
+  if (key === 'sfx') input.addEventListener('change', () => sfx.hit(0)); // a sample of the new level
+}
+document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement) showSound(false); }); // back in the fight
+// A soft paper tap on every menu button.
+document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('.mbtn, .hbtn')) { wakeAudio(); sfx.ui(); } });
 $('#rematch').addEventListener('click', () => command('rematch'));
 
 function command(c: 'restart' | 'menu' | 'rematch') {
@@ -143,6 +169,17 @@ net.onMessage = (m: ToClient) => {
     case 'err': toMenu('error', { msg: m.msg }); break;
   }
 };
+
+/** Which music fits the moment: calm on menus, drums for "Round N", the full fight, silence from a K.O. to the next round. */
+function musicFor(m: Mode, s: State): [MusicMode, Tension] {
+  if (m.kind === 'menu') return ['menu', 0];
+  if (s.phase === 'intro') return ['intro', 0];
+  if (s.phase === 'over') return s.phaseT > 240 ? ['menu', 0] : ['off', 0];
+  if (s.phase !== 'fight') return ['off', 0];
+  const deciding = s.f.every((f) => f.wins === RULES.winsNeeded - 1);
+  const close = s.f.some((f) => f.hp <= 25) || s.clock <= 10 * 60;
+  return ['fight', deciding || close ? 1 : 0];
+}
 
 // ---------- the loop ----------
 let last = performance.now(), acc = 0;
@@ -181,6 +218,7 @@ function frame(now: number) {
     controls.lockWanted = s.phase !== 'over';
     if (!controls.lockWanted) controls.unlock();
   }
+  music.set(...musicFor(m, s));
   view.draw(s, real, m.kind === 'practice' ? { seat: 1, k: m.dummy.tell / m.dummy.tellFrames } : undefined);
   stage.style.background = view.sky;
 

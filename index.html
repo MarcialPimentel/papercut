@@ -22,7 +22,7 @@
       <div class="bar r" id="bar1"><div class="row"><span class="nm">Sumi</span><div class="strip"><i></i></div></div><div class="pips" aria-label="Rounds won"></div></div>
     </div>
     <div class="hud opts fight-only">
-      <button class="hbtn" id="bSound" type="button">Sound: <b>On</b></button>
+      <button class="hbtn" data-sound type="button" aria-expanded="false" aria-controls="soundBox">Sound</button>
       <button class="hbtn" id="bLeave" type="button">Leave</button>
     </div>
     <div class="hud banner fight-only" id="banner" hidden><div id="bannerText"></div></div>
@@ -52,7 +52,10 @@
           <button class="mbtn red" id="bFriend" type="button">Fight a friend<small>Get an invite link to send</small></button>
           <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting</small></button>
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
-          <button class="hbtn" id="bHowTo" type="button">How to play</button>
+          <div class="row2">
+            <button class="hbtn" id="bHowTo" type="button">How to play</button>
+            <button class="hbtn" data-sound type="button" aria-expanded="false" aria-controls="soundBox">Sound</button>
+          </div>
           <form id="joinForm" class="join">
             <label for="joinCode">Have a room code?</label>
             <input id="joinCode" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD">
@@ -103,6 +106,10 @@
           <button class="mbtn" id="bHowToBack" type="button">Got it</button>
         </div>
       </div>
+    </div>
+    <div class="hud soundbox" id="soundBox" hidden>
+      <label>Music <input type="range" id="volMusic" min="0" max="100" step="5"></label>
+      <label>Effects <input type="range" id="volSfx" min="0" max="100" step="5"></label>
     </div>
     <div class="build" id="build"></div>
   </main>

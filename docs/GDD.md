@@ -27,6 +27,12 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 - **World:** an open notebook on a desk. Round 1 is fought on the Graph Paper Dojo spread, round 2 on the Ruled Courtyard, round 3 on the Legal Pad Grove; the match winner stands on the marble back cover.
 - **HUD:** paper health strips that get sliced shorter, a paper countdown tag, round markers. Straight lines and flat facets only. Red is paper, not blood. One non-red accent per fighter.
 
+## Sound (summary; full detail in [sound.md](sound.md))
+- **Mix:** free CC0 recordings for the big moments (blade clash, cuts, K.O., page turn), code-made sounds for the rest. Every sound has a code-made fallback.
+- **Sword and paper at once:** a clash rings like steel with a paper snap on top; hits are paper slices and tears, not blood or flesh. A clash, a block and a parry each sound different, so the ear reads the exchange too (pillar 3).
+- **Round flow:** kabuki clappers for "Round N", a taiko hit for "Cut!", ticks in the last 10 seconds, stings for round and match results.
+- **Music:** made in code (taiko, high drum, koto-like plucks on a Japanese scale), calm on menus, busier when a round is close to deciding, silent from a K.O. to the next round.
+
 ## The fight (rules)
 - **The lane:** both fighters move along one path across the spread and always face each other. The world, fighters and camera are fully 3D; the fight is on a line.
 - **Guard stance:** the cursor sets it. Above your fighter's waist on screen you guard **high**, below it **low**; the blade follows. When not attacking, you guard at that height, even while walking.
@@ -110,7 +116,6 @@ The one question it answers: **does mouse-driven paper swordplay feel good?** Si
 - Exact frame timings, damage, chip, parry window and counter window. (Tuned in Milestone 1; record the final numbers here.)
 - Does a backdash have invincible frames?
 - Each fighter's specials and differences (Milestone 4).
-- Sound style: real paper sounds, stylised, or both?
 
 ## Decision Log
 | Date | Decision | Why |
@@ -173,3 +178,9 @@ The one question it answers: **does mouse-driven paper swordplay feel good?** Si
 | 2026-11-01 | Counter cut is taught with words, not an in-fight marker: the round banner says why it was an instant K.O. ("hit while winding up a heavy" / "hit right after missing a slash"), and How to play explains the two open moments | Marz's pick after the first online playtest, where the instant kill felt unexplained. A marker over open fighters was offered and declined for now; revisit if players still miss it. |
 | 2026-11-01 | Jump: 10 frames stuck on landing after an air slash. How to play teaches the answer (guard high, or slash high to knock jumpers down) | Playtest: the jump-in felt oppressive. It was always blockable high, but players didn't know, and a blocked jump-in cost nothing. Marz's pick over also shortening the jump. |
 | 2026-11-01 | The mouse is locked to the game during a fight, with a drawn crosshair; Esc frees it, the match end releases it | Marz's request: the cursor slipping out of the window mid-fight drops guards and clicks. |
+| 2026-11-01 | Sound pass: a mix of free CC0 recordings (Kenney) for the big moments and code-made sounds for the rest, every sound with a code-made fallback. Answers the open "sound style" question | Marz's pick (my recommendation). Recorded clashes and tears feel best (pillar 2); code keeps the download small and the game never silent. |
+| 2026-11-01 | Clash gets its own sound (a bright double blade ring with a paper snap), separate from block and parry | Marz's request: blades meeting should sound like it. Different sounds for clash, block and parry help read the exchange (pillar 3). |
+| 2026-11-01 | Music: a reactive drum loop made in code (taiko, koto-like plucks); busier in tense moments, silent after a K.O. | Marz's pick. Reacts to the fight, no music files, fresh melodies so it doesn't loop stale. |
+| 2026-11-01 | Round start: kabuki wooden clappers for "Round N", a taiko hit for "Cut!"; no announcer voice | Marz's pick. Fits the stage feel; a voice needs recordings and computer voices sound bad. |
+| 2026-11-01 | A heavy's wind-up makes a quiet rising creak | My addition: the counter-cut opening can be heard as well as seen (pillar 3). Kept quiet so it informs without making heavies trivial to react to; easy to turn down if it does. |
+| 2026-11-01 | Separate Music and Effects volume sliders replace the Sound on/off button | Standard for any game with music. |
