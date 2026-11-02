@@ -8,7 +8,7 @@ export interface Move {
   act: number; // active frames
   rec: number; // recovery frames
   reach: number; // metres from the attacker's centre
-  dmg: number; // health taken on a clean hit (out of RULES.maxHp)
+  dmg: number; // health taken on a clean hit (a full strip is MatchCfg.maxHp, 80 by default)
   chip: number; // health taken through a block
   stun: number; // hit-stun frames
   push: number; // metres the defender slides on a hit
@@ -39,9 +39,6 @@ export const RULES = {
   bodyGap: 0.85, // fighters can't stand closer than this (jumping over is fine)
   edge: 7.7, // the page's edge
   startX: 1.8,
-  roundFrames: 60 * FPS,
-  maxHp: 80, // a full health strip; light cuts take 10, heavies 35
-  winsNeeded: 3, // best of 5
   // phase lengths
   introCut: 60, // "Round N" banner, then "Cut!"
   introFrames: 87,

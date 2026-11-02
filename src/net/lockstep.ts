@@ -3,13 +3,14 @@
 // games step through exactly the same inputs. If the rival's inputs are late, the game waits.
 // (Rollback, which hides lag instead of waiting, can be built on the same pieces later.)
 
+import { DEFAULT_CFG, type MatchCfg } from '../sim/config';
 import { hashState, newMatch, step, type FightEvent, type State } from '../sim/sim';
 import type { ToClient, ToServer } from './protocol';
 
 const HASH_EVERY = 60;
 
 export class Lockstep {
-  readonly state: State = newMatch();
+  readonly state: State;
   private mine = new Map<number, number>();
   private theirs = new Map<number, number>();
   private nextMine: number;
@@ -19,7 +20,8 @@ export class Lockstep {
   waiting = 0;
   desynced = false;
 
-  constructor(readonly seat: 0 | 1, readonly delay: number, private send: (m: ToServer) => void) {
+  constructor(readonly seat: 0 | 1, readonly delay: number, private send: (m: ToServer) => void, cfg: MatchCfg = DEFAULT_CFG) {
+    this.state = newMatch(cfg);
     for (let f = 0; f < delay; f++) { this.mine.set(f, 0); this.theirs.set(f, 0); }
     this.nextMine = delay;
   }

@@ -91,7 +91,7 @@ export class View {
     if (s.phase === 'fight' && sec !== this.lastSec && sec <= 10 && sec > 0) sfx.tick(sec);
     this.lastSec = sec;
     // The round result sounds when its banner appears.
-    if (s.phase === 'ko' && s.phaseT === 54 && s.roundWinner >= 0 && !s.f.some((f) => f.wins >= RULES.winsNeeded)) sfx.roundEnd(s.roundWinner === this.you);
+    if (s.phase === 'ko' && s.phaseT === 54 && s.roundWinner >= 0 && !(s.cfg.wins > 0 && s.f.some((f) => f.wins >= s.cfg.wins))) sfx.roundEnd(s.roundWinner === this.you);
   }
 
   private event(s: State, e: FightEvent) {
@@ -137,6 +137,7 @@ export class View {
         this.onStrip(def, 0, e.dmg);
         break;
       }
+      case 'heal': fx.label(`Strip +${e.amt}`, s.f[e.p].x, s.f[e.p].y + 2.3, 'gold'); break;
       case 'turn': sfx.page(); this.turnFrom = s.page; break;
       case 'swap':
         this.fx.clearFlecks();
