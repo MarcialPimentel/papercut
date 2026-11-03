@@ -21,7 +21,7 @@ describe('lobby', () => {
     expect(room.t).toBe('room');
     if (room.t !== 'room') return;
     lobby.message(b, { t: 'join', code: room.code.toLowerCase() });
-    expect(a.last()).toEqual({ t: 'start', seat: 0, delay: delayFor(40, 60), code: room.code, cfg: DEFAULT_CFG, looks: ['', ''] });
+    expect(a.last()).toEqual({ t: 'start', seat: 0, delay: delayFor(40, 60), code: room.code, cfg: DEFAULT_CFG, looks: ['', ''], names: ['Kami', 'Sumi'] });
     expect(b.last()).toMatchObject({ t: 'start', seat: 1 });
     expect(lobby.stats).toMatchObject({ rooms: 1, fighting: 1, players: 2 });
   });
