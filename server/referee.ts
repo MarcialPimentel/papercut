@@ -8,7 +8,11 @@ import { newMatch, step, type State } from '../src/sim/sim';
 import { Tally, type MatchTally } from '../src/sim/tally';
 
 export type MatchMode = 'quick' | 'room' | 'tourney';
-export type GuardStyle = 'flick' | 'cursor' | '';
+/** How a player sets their guard: the mouse (Flick or Cursor) or a controller. */
+export const GUARDS = ['flick', 'cursor', 'pad'] as const;
+export type GuardStyle = (typeof GUARDS)[number] | '';
+/** A guard style from an untrusted message ('' if unknown). */
+export const cleanGuard = (x: unknown): GuardStyle => ((GUARDS as readonly unknown[]).includes(x) ? (x as GuardStyle) : '');
 
 /** Inputs as changes: [frame, seat 0 buttons, seat 1 buttons] whenever either changes. */
 export type InputLog = [number, number, number][];

@@ -5,7 +5,7 @@
 import type { MatchCfg } from '../sim/config';
 
 export type ToServer =
-  | { t: 'hello'; guard: 'flick' | 'cursor' } // which guard style this browser uses (for the stats)
+  | { t: 'hello'; guard: 'flick' | 'cursor' | 'pad' } // how this player guards: mouse style or a controller (for the stats)
   | { t: 'host'; cfg?: MatchCfg } // make a private room for an invite link, with its rules
   | { t: 'join'; code: string; name?: string } // a 1v1 room or a tournament
   | { t: 'tourney'; cfg?: MatchCfg; name?: string } // make a tournament room (3-8 players)
