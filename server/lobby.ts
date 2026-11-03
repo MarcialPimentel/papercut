@@ -12,7 +12,13 @@ export interface Peer {
   rtt?: number;
   /** The guard style this player's browser uses (it says so in a 'hello'). */
   guard?: GuardStyle;
+  /** The fight version this player's game runs (server/fightVersion.ts). */
+  v?: string;
 }
+
+/** Told to a player whose game runs different fight rules from the server's. */
+export const MISMATCH_MSG = "This copy of Papercut doesn't match the online version. Update it (or reload the page) to fight online. Practice and Endless still work.";
+const PAIRING = new Set(['host', 'join', 'quick', 'tourney']);
 
 interface Room { code: string; host: Peer; guest?: Peer; quick: boolean; cfg: MatchCfg; ref?: Referee }
 
@@ -23,10 +29,15 @@ export class Lobby {
   private tourneys = new Map<string, Tourney>();
   private tourneyOf = new Map<Peer, Tourney>();
 
+  /**
+   * @param fight the server's fight version. When set, only players on that version can make or join rooms,
+   *   so two different rule sets never meet in one fight (they would fall out of sync).
+   * @param record called with every finished match, for the stats.
+   */
   constructor(
     private rand: () => number = Math.random,
     private later: (fn: () => void, ms: number) => unknown = setTimeout,
-    /** Called with every finished match, for the stats. */
+    private fight: string | null = null,
     private record: (r: MatchRecord) => void = () => {},
   ) {}
 
@@ -40,6 +51,7 @@ export class Lobby {
 
   message(p: Peer, m: ToServer) {
     const t = this.tourneyOf.get(p);
+    if (this.fight && PAIRING.has(m.t) && p.v !== this.fight) { p.send({ t: 'err', msg: MISMATCH_MSG }); return; }
     switch (m.t) {
       case 'tourney': {
         this.leave(p, false);
