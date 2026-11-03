@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { readClaim, verifyRun } from './endless';
 import { fightVersion } from './fightVersion';
+import { dbStatus, prepare } from './health';
 import { Lobby, type Peer } from './lobby';
 import { page, readFilter, summarize } from './stats';
 import { Ranked, playerId, rankInfo, tokenOk } from './ranked';
@@ -31,6 +32,8 @@ const TYPES: Record<string, string> = {
 };
 
 const store = await openStore();
+// Make the tables before taking players, so the first ranked match or Endless run never meets a missing table.
+await prepare(store);
 const saveError = (what: string) => (e: Error) => console.error(`Could not save ${what}:`, e.message);
 // Ranked ratings need the database to last; on your own PC they're kept in memory like the stats.
 const ranked = new Ranked(store);
@@ -167,8 +170,10 @@ async function serveFile(req: IncomingMessage, res: ServerResponse) {
 
 const server = createServer((req, res) => {
   if (req.url?.startsWith('/api/health')) {
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    res.end(JSON.stringify({ ok: true, build: BUILD, fight: FIGHT, uptime: Math.round((Date.now() - started) / 1000), stats: store.kind, ...lobby.stats }));
+    // `build` stays a plain "build":"abc1234" field: the deploy reads it (and `db`) with sed and grep.
+    dbStatus(store).then((db) => json(res, 200, {
+      ok: true, build: BUILD, db, fight: FIGHT, uptime: Math.round((Date.now() - started) / 1000), stats: store.kind, ...lobby.stats,
+    }), () => res.writeHead(500).end());
     return;
   }
   const path = (req.url || '/').split('?')[0];

@@ -56,6 +56,8 @@ function start() {
         client.localplayer.setRichPresence('steam_display', token ? String(token) : null);
       } catch { /* friends just don't see it */ }
     },
+    /** The player's Steam name (their persona), or '' if Steam can't say. */
+    name() { try { return String(client.localplayer.getName() || ''); } catch { return ''; } },
     /** Steam Cloud, when the player and the app both have it on. */
     cloud: {
       enabled() { try { return client.cloud.isEnabledForAccount() && client.cloud.isEnabledForApp(); } catch { return false; } },

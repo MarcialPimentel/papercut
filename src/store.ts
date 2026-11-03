@@ -21,6 +21,8 @@ export interface DesktopBridge {
 }
 
 export interface SteamBridge {
+  /** The player's Steam name, or '' if unknown. */
+  name: string;
   /** Unlock an achievement by its id in src/achievements.ts. */
   unlock(id: string): void;
   /** Rich presence: a token from steam/rich_presence.vdf (e.g. '#Endless') and the values it shows. */

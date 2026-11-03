@@ -3,7 +3,8 @@
 #   1. keep the running build as :previous
 #   2. start the new build
 #   3. wait for it to report healthy; if it never does, switch back to :previous and fail the run
-#   4. check https://papercut.marz.gg/api/health from outside reports this build
+#   4. check https://papercut.marz.gg/api/health from outside reports this build and "db":"ok"
+# A CI run for a commit that is no longer main's newest is skipped (the newer one deploys instead).
 #
 # Run it by hand from the Actions tab (Deploy -> Run workflow) to redeploy main,
 # or give it a commit from main to roll back to that build.
@@ -77,6 +78,16 @@ jobs:
             git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$REQUESTED is not on main. Only builds from main can go live."; exit 1; }
             echo "Rolling back to $(git log -1 --format='%h %s' "$sha")"
           fi
+          # Two merges close together: CI for the older one can finish last. Only main's newest commit goes
+          # live automatically, so an older build never replaces a newer one (its own deploy follows).
+          if [ "${{ github.event_name }}" = workflow_run ]; then
+            tip=$(git rev-parse origin/main)
+            if [ "$sha" != "$tip" ]; then
+              echo "::notice::Skipped ${sha:0:7}: main has moved on to ${tip:0:7}, which deploys on its own."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
           if [ "${{ github.event_name }}" = workflow_dispatch ]; then
             passed=$(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$sha" --status success --json databaseId -q 'length')
             [ "$passed" -gt 0 ] || { echo "::error::CI never passed on ${sha:0:7}, so it can't go live."; exit 1; }
@@ -84,20 +95,20 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - uses: docker/login-action@v3
-        if: steps.ready.outputs.ok == 'true'
+        if: steps.ready.outputs.ok == 'true' && steps.pick.outputs.skip != 'true'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Mark the build as latest
-        if: steps.ready.outputs.ok == 'true'
+        if: steps.ready.outputs.ok == 'true' && steps.pick.outputs.skip != 'true'
         run: |
           docker manifest inspect "$IMAGE:${{ steps.pick.outputs.sha }}" > /dev/null 2>&1 || { echo "::error::There is no saved build for this commit. Pick a commit from main that CI built."; exit 1; }
           docker buildx imagetools create -t "$IMAGE:latest" "$IMAGE:${{ steps.pick.outputs.sha }}"
 
       - name: Switch builds on the hub, check health (rolls back on failure)
-        if: steps.ready.outputs.ok == 'true'
+        if: steps.ready.outputs.ok == 'true' && steps.pick.outputs.skip != 'true'
         uses: appleboy/ssh-action@v1
         env:
           DEPLOY_SHA: ${{ steps.pick.outputs.sha }}
@@ -171,16 +182,22 @@ jobs:
             rm -f "$script"
             exit "$rc"
 
-      - name: Check the live site runs this build
-        if: steps.ready.outputs.ok == 'true'
+      - name: Check the live site runs this build and reaches its database
+        if: steps.ready.outputs.ok == 'true' && steps.pick.outputs.skip != 'true'
         env:
           WANT: ${{ steps.pick.outputs.sha }}
         run: |
           want=${WANT:0:7}
           for _ in $(seq 1 12); do
-            got=$(curl -fsS -m 10 "$SITE/api/health" | sed -n 's/.*"build":"\([^"]*\)".*/\1/p' || true)
-            if [ "$got" = "$want" ]; then echo "$SITE is live on build $got"; exit 0; fi
+            health=$(curl -fsS -m 10 "$SITE/api/health" || true)
+            got=$(echo "$health" | sed -n 's/.*"build":"\([^"]*\)".*/\1/p')
+            db=$(echo "$health" | sed -n 's/.*"db":"\([^"]*\)".*/\1/p')
+            if [ "$got" = "$want" ] && [ "$db" = ok ]; then echo "$SITE is live on build $got, database ok"; exit 0; fi
             sleep 5
           done
-          echo "::error::$SITE/api/health reports build '${got:-nothing}', expected $want."
+          if [ "$got" = "$want" ]; then
+            echo "::error::$SITE is live on build $got, but its database is '${db:-unknown}' (should be ok). Ranked, Endless and /stats can't save. Check the hub's Postgres (docs/deploy.md)."
+          else
+            echo "::error::$SITE/api/health reports build '${got:-nothing}', expected $want."
+          fi
           exit 1

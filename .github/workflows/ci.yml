@@ -21,39 +21,6 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  # The desktop app (Steam build): a Windows zip and a Linux folder (Steam Deck), built on their own systems.
-  # Download them from the run's Summary page, under Artifacts. See docs/desktop.md.
-  desktop:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            script: build:desktop:win
-            name: Papercut-windows
-            files: release/*.zip
-          - os: ubuntu-latest
-            script: build:desktop:linux
-            name: Papercut-linux
-            files: release/*.tar.gz
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run ${{ matrix.script }}
-        env:
-          BUILD_SHA: ${{ github.sha }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: ${{ matrix.files }}
-          retention-days: 14
-          compression-level: 0
-
   # Builds the Docker image at the same time as the tests. On PRs it only checks the
   # Dockerfile still builds. On main it pushes the image tagged with the commit SHA,
   # and Deploy (deploy.yml) ships that exact image once this whole run has passed.

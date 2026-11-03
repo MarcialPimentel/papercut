@@ -1,0 +1,43 @@
+# The desktop app (Steam build), on its own so a slow or broken Electron build never holds up
+# the website's deploy (Deploy waits only for CI). Runs on the same pushes and PRs as CI.
+
+name: Desktop
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # The desktop app (Steam build): a Windows zip and a Linux folder (Steam Deck), built on their own systems.
+  # Download them from the run's Summary page, under Artifacts. See docs/desktop.md.
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: build:desktop:win
+            name: Papercut-windows
+            files: release/*.zip
+          - os: ubuntu-latest
+            script: build:desktop:linux
+            name: Papercut-linux
+            files: release/*.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+        env:
+          BUILD_SHA: ${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.files }}
+          retention-days: 14
+          compression-level: 0

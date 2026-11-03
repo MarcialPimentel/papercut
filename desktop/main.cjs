@@ -146,6 +146,7 @@ app.whenReady().then(() => {
   ipcMain.on('fullscreen:get', (e) => { e.returnValue = !!win?.isFullScreen(); });
   ipcMain.on('quit', () => app.quit());
   ipcMain.on('steam', (e) => { e.returnValue = !!steam; });
+  ipcMain.on('steam:name', (e) => { e.returnValue = steam ? steam.name() : ''; });
   ipcMain.on('steam:unlock', (_e, id) => steam?.unlock(id));
   ipcMain.on('steam:presence', (_e, token, vars) => steam?.presence(token, vars));
 

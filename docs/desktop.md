@@ -7,7 +7,7 @@ Papercut also runs as a desktop app for Windows and Linux (Steam Deck). It is th
 Every pull request builds the app on GitHub:
 
 1. Open the pull request on GitHub and click the **Checks** tab.
-2. Click **CI** on the left, then **Summary** at the top left.
+2. Click **Desktop** on the left, then **Summary** at the top left.
 3. Scroll to **Artifacts** at the bottom and download **Papercut-windows** (or **Papercut-linux** for Steam Deck).
 4. GitHub wraps it in a zip. Unzip that to get `Papercut-0.1.0-win-x64.zip`, then unzip that one too, into a folder of its own (for example `Documents\Papercut`).
 
@@ -39,7 +39,7 @@ The rooms server only pairs players whose games run the same fight rules (both c
 ## For Claude: building and testing
 
 - `npm run desktop`: build the game and open it in Electron from the source folder.
-- `npm run build:desktop:win` / `build:desktop:linux`: the Windows zip / Linux tar.gz in `release/`. `npm run build:desktop` makes both (the Linux build works best on Linux; CI builds each on its own system).
+- `npm run build:desktop:win` / `build:desktop:linux`: the Windows zip / Linux tar.gz in `release/`. `npm run build:desktop` makes both (the Linux build works best on Linux; the Desktop workflow builds each on its own system).
 - `PAPERCUT_SERVER=http://localhost:8790` points the app at a local rooms server (run it with `npm start`). `PAPERCUT_DATA=<folder>` keeps a test run's settings apart from the real ones.
 - `npx electron desktop/make-icon.cjs` redraws `desktop/icon.png` from `public/favicon.svg`.
 - Files: `desktop/main.cjs` (window, serving the game, the settings file, F11), `desktop/preload.cjs` (what the page may ask the app for), `src/store.ts` (saving: localStorage on the web, the file in the app), `src/settings.ts` (display settings).
