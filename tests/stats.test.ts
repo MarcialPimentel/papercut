@@ -164,7 +164,7 @@ describe('the stats', () => {
   });
 
   it('reads filters safely', () => {
-    expect(readFilter(new URL('http://x/stats?build=<x>&rules=all&guard=line'))).toEqual({ build: '', rules: 'all', guard: 'flick' });
+    expect(readFilter(new URL('http://x/stats?build=<x>&rules=all&guard=flick'))).toEqual({ build: '', rules: 'all', guard: 'flick' });
     expect(readFilter(new URL('http://x/stats'))).toEqual({ build: '', rules: 'standard', guard: 'any' });
   });
 });
