@@ -50,7 +50,7 @@ export class Hitboxes {
 
   private fighter(f: Fighter) {
     const open = (f.state === 'wind' && f.atk === 'heavy') || (f.state === 'recover' && f.whiffed && f.t < RULES.missOpen);
-    const body = open ? RED : f.state === 'stagger' || f.state === 'stun' ? GOLD : GREEN;
+    const body = open ? RED : f.state === 'stagger' || f.state === 'stun' || f.state === 'taunt' ? GOLD : GREEN;
     this.box(f.x - BODY.half, f.y + BODY.feet, f.x + BODY.half, f.y + BODY.top, body);
     if (f.state !== 'wind' && f.state !== 'active') return;
     const M = MOVES[f.atk], y = slashLine(f).y;

@@ -479,3 +479,36 @@ describe('custom rules', () => {
     });
   });
 });
+
+describe('taunt (emote)', () => {
+  const { emote } = BTN;
+  it('locks you in for its whole length, then back to guard', () => {
+    const s = fightAt(3);
+    const x = s.f[0].x;
+    const ev = run(s, 1, () => [emote, 0]);
+    expect(kinds(ev)).toContain('taunt');
+    expect(s.f[0].state).toBe('taunt');
+    run(s, RULES.emoteFrames - 2, () => [BTN.right | jump | light | low, 0]);
+    expect(s.f[0].state).toBe('taunt');
+    expect(s.f[0].x).toBe(x);
+    expect(s.f[0].y).toBe(0);
+    run(s, 2);
+    expect(s.f[0].state).toBe('guard');
+  });
+  it("can't block: a slash at the right height still lands as a clean hit", () => {
+    const s = fightAt();
+    const hp = s.f[0].hp;
+    step(s, [emote, 0]);
+    const ev = run(s, 30, (n) => [0, n === 0 ? light : 0]);
+    expect(kinds(ev)).toContain('hit');
+    expect(kinds(ev)).not.toContain('block');
+    expect(s.f[0].hp).toBe(hp - MOVES.light.dmg);
+    expect(s.f[0].state).not.toBe('taunt');
+  });
+  it('only from a standing guard', () => {
+    const s = fightAt(3);
+    step(s, [light, 0]);
+    step(s, [emote, 0]);
+    expect(s.f[0].state).not.toBe('taunt');
+  });
+});

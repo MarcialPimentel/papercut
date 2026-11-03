@@ -16,7 +16,7 @@ import { PAD, actionForKey, load as loadBindings, save as saveBindings, type Act
 import { PadReader, readPad, type Nav } from './pad';
 import { store } from './store';
 
-type PressName = 'light' | 'heavy' | 'feint' | 'jump' | 'dashL' | 'dashR' | 'rematch';
+type PressName = 'light' | 'heavy' | 'feint' | 'jump' | 'dashL' | 'dashR' | 'rematch' | 'emote';
 type Hold = 'left' | 'right' | 'guardLow';
 /** Who is holding a direction or the low guard: bits, so letting go on one device doesn't cancel another. */
 const KB = 1, TOUCH = 2, PADBIT = 4;
@@ -184,7 +184,7 @@ export class Controls {
     } else if (a === 'guardLow') this.held.guardLow |= bit;
     else if (repeat) return;
     else if (a === 'dash') this.dashPress = true;
-    else if (a === 'light' || a === 'heavy' || a === 'feint' || a === 'jump') this.press(a);
+    else if (a === 'light' || a === 'heavy' || a === 'feint' || a === 'jump' || a === 'emote') this.press(a);
   }
 
   private up(a: Action, bit: number) { if (a === 'left' || a === 'right' || a === 'guardLow') this.held[a] &= ~bit; }
@@ -218,7 +218,7 @@ export class Controls {
     if (f.tapDash) this.press(f.tapDash < 0 ? 'dashL' : 'dashR');
     for (const a of f.presses) {
       if (a === 'dash') this.dashPress = true;
-      else if (a === 'light' || a === 'heavy' || a === 'feint' || a === 'jump') this.press(a);
+      else if (a === 'light' || a === 'heavy' || a === 'feint' || a === 'jump' || a === 'emote') this.press(a);
     }
   }
 
