@@ -8,7 +8,7 @@
 //
 // A clip's inputs are two lists, one per fighter (kami = seat 0, sumi = seat 1), of [frame, "buttons"]:
 //   held buttons (left, right, low) stay held until the next entry;
-//   presses (light, heavy, feint, jump, dashL, dashR) happen on that frame only.
+//   presses (light, heavy, feint, jump, dashL, dashR, emote = the taunt) happen on that frame only.
 // "low" held = guard low, otherwise the guard is high. Frames count from the clip's first frame (0).
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -45,7 +45,7 @@ export interface Clip {
   caps?: [number, number, string][];
 }
 
-const PRESS = ['light', 'heavy', 'feint', 'jump', 'dashL', 'dashR'];
+const PRESS = ['light', 'heavy', 'feint', 'jump', 'dashL', 'dashR', 'emote'];
 const HELD = ['left', 'right', 'low'];
 
 export function loadClips(): Clip[] {

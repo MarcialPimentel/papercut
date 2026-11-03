@@ -2,7 +2,7 @@
   "about": "Scripted inputs for the highlights trailer (npm run store:highlights). Check them with: npx tsx tools/store/tas.ts. The format is explained at the top of tools/store/tas.ts.",
   "edit": [
     "miss_punish", "card:title:2.5", "pokes", "stagger", "feint_bait", "exchange", "greedy", "jump_in", "anti_air",
-    "jump_punish", "double_ko", "endless", "card:match:1.25", "parry_riposte", "card:end:5"
+    "jump_punish", "double_ko", "taunt", "endless", "card:match:1.25", "parry_riposte", "card:end:5"
   ],
   "clips": [
     {
@@ -86,10 +86,18 @@
       "caps": [[0, 999, "Trade, and you both fall"]]
     },
     {
+      "name": "taunt", "page": 2, "looks": ["plum.d.stripes.hamon", "pine.l.waves.bokken"],
+      "setup": { "x": [-1.5, 1.5], "hp": [80, 30] },
+      "kami": [[0, ""], [20, "right"], [27, ""], [30, "heavy"], [31, ""]],
+      "sumi": [[0, ""], [8, "emote"], [9, ""]],
+      "frames": 200, "expect": ["taunt:1", "ko:0"], "show": [[0, 150]],
+      "caps": [[0, 30, "Come at me?"], [30, 999, "A taunt leaves you open"]]
+    },
+    {
       "name": "endless", "page": 0, "endless": true, "looks": ["sumi.d.stripes.katana", "kraft.l.waves.bokken"],
       "setup": { "x": [0, 5.1] },
       "kami": [], "sumi": [],
-      "frames": 2400, "expect": ["ko:0", "ko:0", "ko:0", "ko:0", "ko:0", "ko:0"], "show": [[2010, 2230]],
+      "frames": 2400, "expect": ["ko:0", "ko:0", "ko:0", "ko:0", "ko:0", "ko:0"], "show": [[1790, 1900], [2010, 2230]],
       "caps": [[0, 99999, "Endless: how many can you cut?"]]
     },
     {
