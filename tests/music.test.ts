@@ -40,6 +40,16 @@ describe('music tracks', () => {
     }
   });
 
+  it('makes the title screen livelier than the other menu-screen tracks', () => {
+    const hits = (a: ReturnType<typeof arrangement>) => a.kit.don.length + a.kit.ka.length + a.kit.tick.length + (a.kit.clap?.length ?? 0);
+    const title = arrangement('menu', 'menu', 0);
+    for (const k of ['tourney', 'cover'] as const) {
+      const other = arrangement(k, 'menu', 0);
+      expect(title.bpm).toBeGreaterThan(other.bpm);
+      expect(hits(title)).toBeGreaterThan(hits(other));
+    }
+  });
+
   it('builds Endless up with each level and tops out', () => {
     let prev = endlessLayers(1, 0);
     const hits = (l: typeof prev) => l.kit.don.length + l.kit.ka.length + l.kit.tick.length + (l.kit.clap?.length ?? 0);
