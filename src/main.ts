@@ -698,6 +698,11 @@ syncVolumeInputs();
 document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement) showSound(false); }); // back in the fight
 // A soft paper tap on every menu button.
 document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('.mbtn, .hbtn')) { wakeAudio(); sfx.ui(); } });
+// Moving the mouse onto a menu button: the same quick flick as the stick and d-pad.
+document.addEventListener('mouseover', (e) => {
+  const b = (e.target as HTMLElement).closest('.mbtn, .hbtn');
+  if (b && !b.contains(e.relatedTarget as Node | null)) sfx.nav();
+});
 $('#rematch').addEventListener('click', () => command('rematch'));
 
 function command(c: Command) {

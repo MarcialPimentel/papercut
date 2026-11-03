@@ -4,6 +4,7 @@
 import { ACTIONS, PAD_FIXED, SLOTS, bindKey, bindPad, defaults, keyName, padName, type Action } from './bindings';
 import type { Controls } from './input';
 import type { Nav } from './pad';
+import { sfx } from './audio/sounds';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const kbd = (t: string) => `<kbd>${t}</kbd>`;
@@ -104,6 +105,7 @@ const FOCUSABLE = 'button, select, input:not([type=hidden]), a[href]';
 function focusOn(el: HTMLElement) {
   for (const o of document.querySelectorAll('.nav-at')) o.classList.remove('nav-at');
   el.classList.add('nav-at');
+  if (document.activeElement !== el) sfx.nav();
   el.focus();
 }
 
