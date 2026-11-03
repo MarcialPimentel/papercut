@@ -14,7 +14,8 @@ export const FPS = 30; // trailer and capture frame rate (the fight itself alway
 
 /** The game's dev server (Vite), which also serves these tools' own pages. */
 export async function startServer() {
-  const server = await createServer({ root: ROOT, configFile: join(ROOT, 'vite.config.ts'), logLevel: 'error', server: { port: 5299, strictPort: false, proxy: {} } });
+  // Not vite.config.ts: its proxy to the rooms server (not running here) would only log connection errors.
+  const server = await createServer({ root: ROOT, configFile: false, logLevel: 'error', define: { __BUILD__: JSON.stringify('store') }, server: { port: 5299, strictPort: false } });
   await server.listen();
   const url = server.resolvedUrls.local[0];
   return { server, url };

@@ -55,12 +55,16 @@ function pickMatch(ev) {
   return best;
 }
 const fightStart = (ev, f) => Math.max(...ev.filter((e) => e.k === 'round' && e.f <= f).map((e) => e.f)) + INTRO;
-/** The busiest stretch of `len` frames in [a, b] (most hits, blocks, parries and feints). */
-function busiest(ev, a, b, len) {
-  let top = { n: -1, f: a };
-  for (let f = a; f + len <= b; f += 10) {
-    const n = ev.filter((e) => e.f >= f && e.f < f + len && ['hit', 'block', 'parry', 'feint'].includes(e.k)).length;
-    if (n > top.n) top = { n, f };
+/** The busiest stretch of `len` frames of actual fighting (no intros, K.O.s or page turns) that stays clear of `avoid` [a, b] ranges. */
+function busiest(ev, len, avoid) {
+  let top = { n: -1, f: 0 };
+  for (const r of ev.filter((e) => e.k === 'round')) {
+    const a = r.f + INTRO, end = ev.find((e) => e.f > a && e.k === 'ko')?.f ?? a;
+    for (let f = a; f + len <= end - 10; f += 10) {
+      if (avoid.some(([x, y]) => f < y + 40 && f + len > x - 40)) continue;
+      const n = ev.filter((e) => e.f >= f && e.f < f + len && ['hit', 'block', 'parry', 'feint'].includes(e.k)).length;
+      if (n > top.n) top = { n, f };
+    }
   }
   return top.f;
 }
@@ -76,19 +80,22 @@ console.log('endless: bot', sixth.wins, 'cut at', sixth.f);
 
 // ---------- 2. what to capture ----------
 const counterStart = Math.max(fightStart(m.ev, k2.f) - 40, k2.f - 260);
-const bStart = busiest(m.ev, k1.f + 220, counterStart - 300, 240); // ends well before the next clip
+const openStart = Math.max(fightStart(m.ev, k1.f), k1.f - 170), legalStart = Math.max(fightStart(m.ev, k3.f), k3.f - 150);
+const bStart = busiest(m.ev, 240, [[openStart, k1.f + 130], [counterStart, k2.f + 276], [legalStart, k3.f + 130]]);
 const hit1 = m.ev.find((e) => e.k === 'hit' && e.p === 0 && e.page === k1.page) || m.ev.find((e) => e.k === 'hit' && e.p === 0);
 const parry = m.ev.find((e) => e.k === 'parry') || m.ev.find((e) => e.k === 'block');
 const feint = m.ev.find((e) => e.k === 'feint' && e.p === 1) || m.ev.find((e) => e.k === 'feint');
 
-// Trailer: [first frame, last frame, captions [[from, to, text]]] in fight frames, in the order they happen.
+// Trailer clips: first and last fight frame, captions [[from, to, text]]. Captured in fight order (sorted below);
+// the edit further down puts them in the trailer's order.
 const clips = [
-  { name: 'open', a: Math.max(fightStart(m.ev, k1.f), k1.f - 170), b: k1.f + 130, caps: [] },
+  { name: 'open', a: openStart, b: k1.f + 130, caps: [] },
   { name: 'guard', a: bStart, b: bStart + 240, caps: [[bStart, bStart + 240, 'Guard high or low with the mouse']] },
   { name: 'counter', a: counterStart, b: k2.f + 276, caps: [[-1e9, k2.f - 6, 'Feint. Parry. Read them.'], [k2.f - 6, k2.f + 180, 'Catch them mid-swing: counter cut'], [k2.f + 180, 1e9, 'Every round, a new page']] },
-  { name: 'legal', a: Math.max(fightStart(m.ev, k3.f), k3.f - 150), b: k3.f + 130, caps: [[-1e9, 1e9, 'Every hit cuts the paper']] },
+  { name: 'legal', a: legalStart, b: k3.f + 130, caps: [[-1e9, 1e9, 'Every hit cuts the paper']] },
   { name: 'win', a: m.over + 8, b: m.over + 160, caps: [] },
 ];
+clips.sort((x, y) => x.a - y.a);
 const endlessClip = { name: 'endless', a: sixth.f - 100, b: sixth.f + 60, caps: [[-1e9, 1e9, 'Endless: how many bots can you cut?']] };
 
 // Screenshots: [fight frame, file name].
@@ -164,7 +171,7 @@ if (what === 'shots') {
   await ep.close();
 } else {
   // The match, with its sound recorded from the first clip to the last.
-  const span = (clips.at(-1).b - clips[0].a) / 60 + 8;
+  const span = (Math.max(...clips.map((c) => c.b)) - clips[0].a) / 60 + 8;
   const page = await openGame(browser, url, { w: W, h: H, seed: SEED, level: LEVEL, audioSecs: span });
   await prepare(page);
   await runTo(page, clips[0].a - 40);
