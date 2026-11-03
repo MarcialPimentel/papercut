@@ -27,6 +27,12 @@ function hueSat(hex: string) {
   const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
   return { h: (h * 60 + 360) % 360, s: d / (1 - Math.abs(max + min - 1)), l };
 }
+/** Too close to cut red (#D7262E) or the paper's red inside (#8F1219). A dark, muted red like Oxblood is
+ *  allowed: at most 30% lightness and 55% saturation, so a fresh slash still pops on it. */
+function cutRed(hex: string) {
+  const { h, s, l } = hueSat(hex);
+  return s > 0.35 && (h < 15 || h > 345) && !(l <= 0.3 && s <= 0.55);
+}
 
 describe('look codes', () => {
   it('round-trips every combination', () => {
@@ -62,11 +68,11 @@ describe("who's who", () => {
 });
 
 describe('rule checks', () => {
-  it('no look uses red, pink or orange: red is only for cuts', () => {
+  it('no look uses bright red, pink or orange: red is for cuts (dark Oxblood is the one red allowed)', () => {
     const colours = [...COLOUR_SETS.flatMap((c) => [c.robe, c.kimono, c.hakama, c.hakamaDark]), ...SWORDS.flatMap((s) => [s.blade, s.handle, s.wrap, s.markColor, s.guard ?? '#000000'].filter(Boolean))];
     for (const c of colours) {
       const { h, s, l } = hueSat(c);
-      const red = s > 0.35 && (h < 15 || h > 345); // any real red (brown kraft and gold are fine)
+      const red = cutRed(c); // any bright red (brown kraft, gold and dark Oxblood are fine)
       const loud = s > 0.6 && l > 0.45 && (h < 35 || h > 300); // bright orange or pink
       expect(red || loud, `${c} is too close to cut red`).toBe(false);
     }
@@ -132,8 +138,8 @@ describe("Kami's and Sumi's own pieces with every look (#37 + #38)", () => {
           const shapes = dressPiece(p[name], look);
           if (name !== 'sword') expect(shapes.filter((s) => s.paper).map((s) => s.pts)).toEqual(p[name].shapes.filter((s) => s.paper).map((s) => s.pts));
           for (const s of shapes) {
-            const c = look.colors[s.role] ?? s.color, { h, s: sat } = hueSat(c);
-            expect(sat > 0.35 && (h < 15 || h > 345), `${v} ${encodePick(pick)} ${s.obj} ${s.role} ${c}`).toBe(false);
+            const c = look.colors[s.role] ?? s.color;
+            expect(cutRed(c), `${v} ${encodePick(pick)} ${s.obj} ${s.role} ${c}`).toBe(false);
           }
         }
       }

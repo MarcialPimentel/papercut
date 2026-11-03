@@ -53,11 +53,11 @@ _Since 2026-11-02, from Marz's art-direction brief ("Stylized 2D Papercraft"), h
 
 | Choice | Options | What changes |
 |---|---|---|
-| Colours | Indigo (Kami's), Kraft, Sumi ink, Pine, Graph blue, Plum; each dark (robe over trim) or light (swapped) | `robe`, `kimono`, `hakama`, `hakamaDark` roles |
+| Colours | Indigo (Kami's), Kraft, Sumi ink, Pine, Graph blue, Plum, Oxblood; each dark (robe over trim) or light (swapped) | `robe`, `kimono`, `hakama`, `hakamaDark` roles |
 | Outfit | Waves (the model's waves and sleeve crests), Stripes, Plain (hem band only) | The robe's and sleeves' prints, never the paper outline |
 | Sword | Katana (the model's), Folded (white paper blade with a centre fold), Bokken (kraft wood, no guard), Hamon (steel with an ink temper line, square guard) | Blade, guard, grip and wrap colours, the guard's shape and a blade print; the blade outline (and reach) never changes |
 
-Rules: no red, pink, orange or yellow in any look (red is for cuts, yellow for tells); blades stay pale so the guard reads from the blade; one fighter always wears a dark robe and the other a light one (on a tie player 2 flips), so who's who reads at a glance. Default player 1 is still Kami (Indigo dark) and player 2 Sumi (Indigo light). New colour sets, prints or swords are a few lines of data in `looks.ts`; new shapes (a hat, armour) need new pieces in the Blender model.
+Rules: no bright red, pink, orange or yellow in any look (red is for cuts, yellow for tells). The one exception is Oxblood (`#5C2328`), a dark brown-red about half as bright as a cut (`#D7262E`) and duller than the paper's red inside, so a fresh slash still pops on it; any other red must stay that dark (checked by `tests/looks.test.ts`); blades stay pale so the guard reads from the blade; one fighter always wears a dark robe and the other a light one (on a tie player 2 flips), so who's who reads at a glance. Default player 1 is still Kami (Indigo dark) and player 2 Sumi (Indigo light). New colour sets, prints or swords are a few lines of data in `looks.ts`; new shapes (a hat, armour) need new pieces in the Blender model.
 
 **In the game:** a thick ink line round every paper piece (seen wherever it overlaps paper behind it), a thin cream rim round the whole figure, the sword outlined on its own. Hits cut a red slash through every piece the blade crosses. The K.O. cuts every piece along the blade; each half keeps its outline, shows a thin red edge, and falls as paper physics. A fighter facing left is drawn mirrored. Poses snap like stop-motion (one in-between at most); turning around, the cut-out flips through edge-on.
 
