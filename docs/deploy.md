@@ -54,7 +54,7 @@ The script [`deploy/hub/add-stats-db.sh`](../deploy/hub/add-stats-db.sh) does ev
 1. Open **PowerShell** on your PC.
 2. Go to the Papercut folder and get the latest `main` (the script must be the merged one):
    ```
-   cd C:\Users\marci\Documents\GameDev\papercut
+   cd $HOME\Documents\GameDev\papercut
    git checkout main
    git pull
    ```

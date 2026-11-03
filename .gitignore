@@ -8,6 +8,8 @@ playwright-report/
 # --- Secrets and logs ---
 .env
 *.private.md
+# Claude session notes and local settings (local only)
+.claude/
 *.log
 
 # --- Blender backups (keep .blend, ignore autosaves) ---
