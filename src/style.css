@@ -55,6 +55,22 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 .mbtn.red small { color: #FFE9E9; }
 .mbtn.red:hover { background: var(--red-text); }
 
+/* tutorial: the paper prompt under the strips */
+.tut { top: calc(max(10px, env(safe-area-inset-top)) + 74px); left: 12px; right: 12px; display: flex; justify-content: center; }
+.tut[hidden] { display: none; }
+.tut-card { width: min(560px, 100%); background: var(--paper); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 10px 14px 12px; display: grid; gap: 4px; transform: rotate(-.6deg); }
+.tut-card p { margin: 0; }
+.tut-step { font: 800 15px/1 var(--display); text-transform: uppercase; letter-spacing: .06em; color: var(--red-text); }
+.tut-line { font: 700 17px/1.35 var(--body); }
+.tut-sub { font: 400 14px/1.35 var(--body); color: var(--muted); }
+.tut-sub:empty { display: none; }
+.tut-sub.hint { color: var(--ink); background: var(--legal); padding: 3px 6px; justify-self: start; }
+.tut-card .hbtn { justify-self: end; font-size: 12px; padding: 3px 8px; min-height: 28px; box-shadow: 2px 2px 0 var(--ink); margin-top: 2px; }
+.tut.nice .tut-card { background: var(--legal); }
+.tut.nice .hbtn { visibility: hidden; }
+.muted.small { font-size: 13px; }
+.pips .tally:empty { display: none; }
+
 /* banners, stickers, status */
 .banner { inset: 0; display: grid; place-items: center; }
 .banner div { font: 800 clamp(40px, 8vw, 86px)/.95 var(--display); text-transform: uppercase; text-align: center; color: #FFF; background: var(--red); border: 3px solid #FFF; outline: 2px solid var(--ink); padding: 10px 26px 14px; transform: rotate(-3deg); max-width: calc(100% - 32px); }

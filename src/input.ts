@@ -24,7 +24,7 @@ export type Device = 'mouse' | 'pad' | 'touch';
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-export type Command = 'restart' | 'menu' | 'rematch' | 'hitboxes' | 'tune';
+export type Command = 'restart' | 'menu' | 'rematch' | 'hitboxes' | 'tune' | 'skip';
 export type GuardStyle = 'flick' | 'cursor';
 const GUARD_KEY = 'papercut.guard';
 // Anything but 'cursor' (including the old 'line' trial) plays as flick.
@@ -102,6 +102,8 @@ export class Controls {
       const a = actionForKey(this.binds, e.code);
       if (!a) return;
       if (a === 'restart' || a === 'hitboxes' || a === 'tune') { if (!e.repeat) this.onCommand(a); return; }
+      // The tutorial's skip (Tab by default). Outside a fight Tab keeps moving the focus through menus.
+      if (a === 'skip') { if (this.active) { e.preventDefault(); if (!e.repeat) this.onCommand('skip'); } return; }
       if (!this.active) return;
       e.preventDefault();
       this.onAnyInput();
@@ -142,7 +144,7 @@ export class Controls {
       if (!this.locked) { this.track(e); if (this.lockWanted) this.lock(); }
       this.touchLow = null;
       const a = actionForKey(this.binds, `Mouse${e.button}`);
-      if (a === 'restart' || a === 'hitboxes' || a === 'tune') this.onCommand(a);
+      if (a === 'restart' || a === 'hitboxes' || a === 'tune' || a === 'skip') this.onCommand(a);
       else if (a) this.down(a, KB, false);
     });
     canvas.addEventListener('pointerup', (e) => {
@@ -209,7 +211,7 @@ export class Controls {
     for (const n of f.nav) this.onNav(n);
     set('guardLow', f.guardLowHeld);
     if (f.guardChanged && f.low !== null) { this.padLow = f.low; this.guardSrc = 'pad'; this.touchLow = null; }
-    for (const a of f.presses) if (a === 'restart' || a === 'hitboxes' || a === 'tune') this.onCommand(a);
+    for (const a of f.presses) if (a === 'restart' || a === 'hitboxes' || a === 'tune' || a === 'skip') this.onCommand(a);
     if (!fighting || !this.active) { set('left', false); set('right', false); this.padSide = 0; return; }
     set('left', f.left); set('right', f.right);
     this.padSide = f.left && !f.right ? -1 : f.right && !f.left ? 1 : 0;
