@@ -39,6 +39,7 @@ Use a desktop browser with a mouse, or plug in a controller (Xbox-style, PlaySta
 3. **Fight a friend:** first pick the room's rules (rounds, health, timer), then you get a link and a 4-letter room code. Send the link; the fight starts as soon as they open it. You are Kami (left), they are Sumi (right), each in the look you picked on the "Your fighter" screen. Your name has a yellow "you" tag.
 4. **Tournament:** 3 to 8 friends. Pick the rules, type your name, send the link; the host presses *Start tournament*. One fight at a time, everyone else watches it live; the bracket shows between fights.
 5. **Find a fight:** pairs you with the next person who presses it (standard rules: best of 5, 80 health, 60 seconds).
+6. **Ranked:** rated fights with standard rules. You're paired with someone close to your rating; the search widens the longer you wait. Your first 5 matches are placement, then you get a division: Tissue, Newsprint, Cardstock, Washi, Gold Leaf. Your division and points show under the Ranked button, and a badge sits next to each name in the fight. At the end you see your points change. There's no rematch, and leaving before the end counts as a loss. The server decides the result by re-playing the fight itself. Your ranked identity lives in this browser: a private window, another browser or another PC is a new player.
 
 ## Your fighter
 

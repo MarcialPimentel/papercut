@@ -11,6 +11,7 @@ import { cleanEndless } from './endless';
 import { fightVersion } from './fightVersion';
 import { Lobby, type Peer } from './lobby';
 import { page, readFilter, summarize } from './stats';
+import { Ranked } from './ranked';
 import { openStore } from './store';
 import type { ToServer } from '../src/net/protocol';
 
@@ -30,7 +31,9 @@ const TYPES: Record<string, string> = {
 
 const store = await openStore();
 const saveError = (what: string) => (e: Error) => console.error(`Could not save ${what}:`, e.message);
-const lobby = new Lobby(Math.random, setTimeout, FIGHT, (r) => { store.addMatch(BUILD, r).catch(saveError('a match')); });
+// Ranked ratings need the database to last; on your own PC they're kept in memory like the stats.
+const lobby = new Lobby(Math.random, setTimeout, FIGHT, (r) => { store.addMatch(BUILD, r).catch(saveError('a match')); }, new Ranked(store));
+setInterval(() => lobby.tick(), 1000).unref();
 const started = Date.now();
 // Inputs older than 90 days are dropped once a day (and once at start).
 const prune = () => store.prune().catch(saveError('the input clean-up'));

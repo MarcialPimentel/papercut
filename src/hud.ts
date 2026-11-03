@@ -1,5 +1,6 @@
 // The flat paper HUD over the scene: health strips, the clock, round diamonds and banners.
 
+import type { RankInfo } from './net/protocol';
 import { DEFAULT_CFG, ENDLESS, type MatchCfg } from './sim/config';
 import { PAGES, RULES } from './sim/rules';
 import { matchWinner, type State } from './sim/sim';
@@ -37,6 +38,10 @@ export class Hud {
   tutorial = false;
   /** Endless: your best run before this one, for the end banner. */
   best = 0;
+  /** A ranked match: both players' divisions (shown beside their names); no rematch. */
+  ranks: [RankInfo, RankInfo] | null = null;
+  /** Ranked: the result once the server has counted it, e.g. "+18 · Cardstock 1518". */
+  rankNote = '';
   /** The key or button that restarts, for "Press R or Rematch" (null if none is bound). Set by main. */
   restartKey: string | null = 'R';
   private again(what: string) { return this.restartKey ? `Press ${this.restartKey} or Rematch to ${what}.` : `Rematch to ${what}.`; }
@@ -57,6 +62,11 @@ export class Hud {
       const nm = bar.querySelector('.nm')!;
       nm.textContent = this.names?.[i] ?? LOOKS[i].name;
       bar.classList.toggle('you', this.you === i);
+      let rk = bar.querySelector<HTMLElement>('.rk');
+      if (!rk) { rk = document.createElement('span'); rk.className = 'rk'; nm.after(rk); }
+      const r = this.ranks?.[i];
+      rk.hidden = !r;
+      rk.textContent = r ? (r.placed ? `${r.division} ${r.points}` : r.division) : '';
     });
   }
 
@@ -109,7 +119,7 @@ export class Hud {
     } else if (s.phase === 'over') {
       const w = matchWinner(s);
       const waiting = mySeat !== null && s.rematch[mySeat];
-      const hint = this.tourney ? 'Back to the bracket in a moment…' : !this.online ? this.again('start a new match') : waiting ? 'Waiting for your rival to say yes…' : this.again('fight again');
+      const hint = this.ranks ? `${this.rankNote || 'Counting the result…'} Esc for the menu.` : this.tourney ? 'Back to the bracket in a moment…' : !this.online ? this.again('start a new match') : waiting ? 'Waiting for your rival to say yes…' : this.again('fight again');
       html = `${name(w)} wins<small>${s.f[w].wins}-${s.f[1 - w].wins}. ${hint}</small>`;
     }
     if (html !== this.lastBanner) {
@@ -117,6 +127,6 @@ export class Hud {
       this.banner.hidden = !html;
       if (html) this.bannerText.innerHTML = html;
     }
-    this.rematchBtn.hidden = this.tourney || s.phase !== 'over' || (mySeat !== null && s.rematch[mySeat]);
+    this.rematchBtn.hidden = this.tourney || !!this.ranks || s.phase !== 'over' || (mySeat !== null && s.rematch[mySeat]);
   }
 }

@@ -11,7 +11,7 @@ import { Controls, type Command } from './input';
 import { keysFor, navigate, renderPrompts, restartLabel, setupControlsScreen } from './controlsUi';
 import { Net } from './net/client';
 import { Lockstep } from './net/lockstep';
-import { BYE_SLOT, normalizeCode, type ToClient } from './net/protocol';
+import { BYE_SLOT, normalizeCode, type RankInfo, type ToClient } from './net/protocol';
 import { Spectator } from './net/spectator';
 import { engine } from './audio/engine';
 import { music, PAGE_TRACKS, type MusicMode, type Tension, type TrackKey } from './audio/music';
@@ -130,7 +130,7 @@ function hideMenu() { showSound(false); if (screen === 'fighter') fighterScreen.
 function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
   tuner.toggle(false); resetTuning();
   if (mode.kind === 'online' || tourney) net.send({ t: 'cancel' });
-  tourney = null; hud.tourney = false; hud.names = null; hud.tutorial = false; showTut(null);
+  tourney = null; hud.tourney = false; hud.names = null; hud.ranks = null; hud.rankNote = ''; hud.tutorial = false; showTut(null);
   controls.active = false; controls.clear();
   controls.lockWanted = false; controls.unlock();
   mode = { kind: 'menu', s: newMatch() };
@@ -144,6 +144,23 @@ function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
 const BEST_KEY = 'papercut.endlessBest';
 function loadBest() { return Number(store.get(BEST_KEY)) || 0; }
 function saveBest(n: number) { if (n > loadBest()) store.set(BEST_KEY, String(n)); }
+// Ranked: this browser's secret token (who you are to the server; it only keeps a hash of it).
+const ID_KEY = 'papercut.id';
+function myId(): string {
+  let id = store.get(ID_KEY);
+  if (!id || !/^[0-9a-f]{32}$/.test(id)) {
+    id = [...crypto.getRandomValues(new Uint8Array(16))].map((x) => x.toString(16).padStart(2, '0')).join('');
+    store.set(ID_KEY, id);
+  }
+  return id;
+}
+/** Your ranked standing, from the server. */
+let myRank: RankInfo | null = null;
+function showRank() {
+  $('#rankLine').textContent = !myRank ? 'Rated fights, paper-grade divisions'
+    : myRank.placed ? `${myRank.division} · ${myRank.points} points` : `${myRank.division} · your first 5 matches place you`;
+}
+
 /** Send a finished Endless run to the server's balance stats (no personal data; failures are ignored). */
 function reportRun(bots: number, tally: MatchTally) {
   const body = JSON.stringify({ bots, guard: controls.device === 'pad' ? 'pad' : controls.guardStyle, tally });
@@ -344,7 +361,7 @@ controls.onNav = (n) => {
 // The How to play text follows the guard style (and the device in use).
 function showGuardStyle() { renderPrompts(controls); }
 /** Tell the server how this player guards (Flick, Cursor, or a controller), so the stats can compare them. */
-function sayHello() { net.send({ t: 'hello', guard: controls.device === 'pad' ? 'pad' : controls.guardStyle }); }
+function sayHello() { net.send({ t: 'hello', guard: controls.device === 'pad' ? 'pad' : controls.guardStyle, id: myId() }); }
 showGuardStyle();
 
 // ---------- settings ----------
@@ -424,7 +441,15 @@ $('#tCopy').addEventListener('click', async () => {
   catch { input.select(); }
   setTimeout(() => { $('#tCopy').textContent = 'Copy link'; }, 1600);
 });
-$('#bQuick').addEventListener('click', () => { showMenu('search'); ensureNet(() => net.send({ t: 'quick', look: myLook() })); });
+$('#bQuick').addEventListener('click', () => { searching(false); ensureNet(() => net.send({ t: 'quick', look: myLook() })); });
+$('#bRanked').addEventListener('click', () => { searching(true); ensureNet(() => net.send({ t: 'ranked', name: myName(), look: myLook() })); });
+function searching(ranked: boolean) {
+  $('#searchTitle').textContent = ranked ? 'Looking for a ranked rival…' : 'Looking for a rival…';
+  $('#searchNote').textContent = ranked
+    ? "You'll be paired with someone close to your rating. The longer you wait, the wider the search."
+    : "You'll be paired with the next person who presses 'Find a fight'. Send a friend to papercut.marz.gg to make it quicker.";
+  showMenu('search');
+}
 $('#joinForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const code = normalizeCode($<HTMLInputElement>('#joinCode').value);
@@ -486,7 +511,7 @@ function command(c: Command) {
   if (c === 'skip') return;
   if (mode.kind === 'practice') {
     if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); mode.tally = new Tally(); hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
-  } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
+  } else if (mode.kind === 'online' && !hud.ranks && mode.lock.state.phase === 'over') controls.press('rematch');
 }
 controls.onCommand = command;
 controls.onAnyInput = wakeAudio;
@@ -501,8 +526,18 @@ net.onStatus = (open) => {
 net.onMessage = (m: ToClient) => {
   switch (m.t) {
     case 'room': showMenu('host', { code: m.code }); break;
-    case 'waiting': showMenu('search'); break;
-    case 'start': startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), null, m.looks); break;
+    case 'waiting': if (screen !== 'search') searching(!!m.ranked); break;
+    case 'start':
+      startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.ranks ? [m.ranks[0].name, m.ranks[1].name] : null, m.looks);
+      hud.ranks = m.ranks ?? null; hud.rankNote = ''; hud.setNames();
+      break;
+    case 'rank': myRank = m.you; showRank(); break;
+    case 'ranked': {
+      myRank = m.you; showRank();
+      const pts = `${m.delta >= 0 ? '+' : ''}${m.delta}`;
+      hud.rankNote = `${m.won ? 'Win' : 'Loss'} ${pts}: ${m.you.placed ? `${m.you.division} ${m.you.points}` : m.you.division}.`;
+      break;
+    }
     case 'in': case 'hash':
       if (mode.kind === 'online') mode.lock.receive(m);
       else if (mode.kind === 'watch') mode.spec.receive(m);
@@ -529,7 +564,13 @@ net.onMessage = (m: ToClient) => {
       if (m.seat === -1) startWatching(m.delay, m.code, cleanCfg(m.cfg), m.names, m.looks);
       else startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.names, m.looks);
       break;
-    case 'gone': if (mode.kind === 'online' && !tourney) toMenu('error', { msg: 'Your rival left the fight.' }); break;
+    case 'gone':
+      if (mode.kind === 'online' && !tourney) {
+        const ranked = hud.ranks && mode.lock.state.phase !== 'over' ? ` The ranked win is yours. ${hud.rankNote}` : '';
+        if (hud.ranks && mode.lock.state.phase === 'over') break; // the match was already decided: stay on the result
+        toMenu('error', { msg: 'Your rival left the fight.' + ranked });
+      }
+      break;
     case 'err': toMenu('error', { msg: m.msg }); break;
   }
 };

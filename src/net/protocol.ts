@@ -7,7 +7,8 @@ import type { MatchCfg } from '../sim/config';
 // `look`: the player's chosen look as a short code (render/looks.ts). It is only drawn, never part of the fight,
 // so it travels once with the request to play and comes back in 'start' / 'match' as `looks` (seat 0, seat 1).
 export type ToServer =
-  | { t: 'hello'; guard: 'flick' | 'cursor' | 'pad' } // how this player guards: mouse style or a controller (for the stats)
+  | { t: 'hello'; guard: 'flick' | 'cursor' | 'pad'; id?: string } // how this player guards (for the stats) and this browser's ranked token
+  | { t: 'ranked'; name?: string; look?: string } // join the ranked queue
   | { t: 'host'; cfg?: MatchCfg; look?: string } // make a private room for an invite link, with its rules
   | { t: 'join'; code: string; name?: string; look?: string } // a 1v1 room or a tournament
   | { t: 'tourney'; cfg?: MatchCfg; name?: string; look?: string } // make a tournament room (3-8 players)
@@ -22,8 +23,10 @@ export type ToServer =
 
 export type ToClient =
   | { t: 'room'; code: string } // your invite room is ready
-  | { t: 'waiting' } // you're in the quick-match queue
-  | { t: 'start'; seat: 0 | 1; delay: number; code: string; cfg: MatchCfg; looks?: [string, string] } // the fight begins: seat 0 is Kami, 1 is Sumi
+  | { t: 'waiting'; ranked?: boolean } // you're in the quick-match (or ranked) queue
+  | { t: 'start'; seat: 0 | 1; delay: number; code: string; cfg: MatchCfg; looks?: [string, string]; ranks?: [RankInfo, RankInfo] } // the fight begins: seat 0 is Kami, 1 is Sumi (ranks: a ranked match)
+  | { t: 'rank'; you: RankInfo } // your ranked standing
+  | { t: 'ranked'; won: boolean; why: 'match' | 'left'; delta: number; you: RankInfo } // a ranked match was decided
   | { t: 'in'; f: number; b: number; s?: 0 | 1 } // s: whose buttons, for players watching a tournament fight
   | { t: 'hash'; f: number; h: number }
   | { t: 'lobby'; code: string; names: string[]; you: number; host: boolean; cfg: MatchCfg } // a tournament waiting to start
@@ -31,6 +34,9 @@ export type ToClient =
   | { t: 'match'; seat: 0 | 1 | -1; delay: number; cfg: MatchCfg; names: [string, string]; code: string; looks?: [string, string] } // a tournament fight starts (-1: you watch)
   | { t: 'gone' } // your opponent left
   | { t: 'err'; msg: string };
+
+/** A ranked player as others see them: "Cardstock" (or "Placement 2/5") and rounded points. */
+export interface RankInfo { name: string; division: string; points: number; placed: boolean }
 
 /** One match in a tournament bracket. a and b index the players (-1 = a bye, null = not decided yet). */
 export interface BracketMatch { a: number | null; b: number | null; winner: number | null; forfeit: boolean }
