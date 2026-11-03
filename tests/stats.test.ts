@@ -92,7 +92,7 @@ describe('the lobby records matches', () => {
   }
   it('feeds a quick match to its referee with each player\'s guard style', () => {
     const recs: MatchRecord[] = [];
-    const lobby = new Lobby(Math.random, setTimeout, (r) => recs.push(r));
+    const lobby = new Lobby(Math.random, setTimeout, null, (r) => recs.push(r));
     const a = new FakePeer(), b = new FakePeer();
     lobby.message(a, { t: 'hello', guard: 'cursor' });
     lobby.message(b, { t: 'hello', guard: 'line' });

@@ -1,14 +1,23 @@
 {
   "name": "papercut",
+  "productName": "Papercut",
+  "version": "0.1.0",
+  "description": "A 3D paper sword-duel game.",
+  "author": "Marz",
   "private": true,
   "type": "module",
+  "main": "desktop/main.cjs",
   "scripts": {
     "dev": "concurrently -k -n server,client -c yellow,green \"npm run dev:server\" \"vite\"",
     "dev:server": "tsx watch server/index.ts",
     "build": "vite build",
     "start": "tsx server/index.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "desktop": "vite build && electron .",
+    "build:desktop": "vite build && electron-builder --win --linux --publish never",
+    "build:desktop:win": "vite build && electron-builder --win --publish never",
+    "build:desktop:linux": "vite build && electron-builder --linux --publish never"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",
@@ -17,14 +26,59 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@fontsource/atkinson-hyperlegible": "5.3.0",
+    "@fontsource/big-shoulders-stencil-display": "5.3.0",
     "@types/node": "^22.9.0",
     "@types/pg": "^8.23.1",
     "@types/three": "0.160.0",
     "@types/ws": "^8.5.13",
     "concurrently": "^9.1.0",
+    "electron": "44.9.0",
+    "electron-builder": "26.17.0",
     "three": "0.160.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
     "vitest": "^2.1.4"
+  },
+  "build": {
+    "appId": "gg.marz.papercut",
+    "productName": "Papercut",
+    "copyright": "Marz",
+    "directories": {
+      "output": "release",
+      "buildResources": "desktop"
+    },
+    "files": [
+      "desktop/main.cjs",
+      "desktop/preload.cjs",
+      "dist/**/*",
+      "!node_modules/**/*"
+    ],
+    "asar": true,
+    "artifactName": "Papercut-${version}-${os}-${arch}.${ext}",
+    "win": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "desktop/icon.png"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "desktop/icon.png",
+      "category": "Game",
+      "executableName": "papercut"
+    }
   }
 }

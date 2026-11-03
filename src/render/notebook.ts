@@ -4,8 +4,8 @@
 import * as THREE from 'three';
 import { PAGES } from '../sim/rules';
 import { C, coarse, mulberry32 } from './common';
-
-export const PW = 8.6, PD = 5.8, PZ = -0.7;
+import { PAGE_SEGS, PD, PW, PZ, pageY } from './page';
+export { PD, PW, PZ };
 
 export class Notebook {
   readonly scene = new THREE.Scene();
@@ -119,9 +119,9 @@ export class Notebook {
   private paperMat(key: string) { return this.lambert('#FFFFFF', this.texRepeat(key, PW / 2.6, PD / 2.6)); }
 
   private pageGeo(side: number) {
-    const g = new THREE.PlaneGeometry(PW, PD, 32, 1); g.rotateX(-Math.PI / 2); g.translate((side * PW) / 2, 0, PZ);
+    const g = new THREE.PlaneGeometry(PW, PD, PAGE_SEGS, 1); g.rotateX(-Math.PI / 2); g.translate((side * PW) / 2, 0, PZ);
     const p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setY(i, -0.09 * Math.exp(-Math.abs(x) * 1.5) + 0.02 * Math.pow(Math.abs(x) / PW, 2)); }
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setY(i, pageY(x)); }
     g.computeVertexNormals(); return g;
   }
 

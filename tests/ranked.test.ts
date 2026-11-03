@@ -35,7 +35,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 /** Two players queue for ranked and get paired. */
 async function pairUp(store = new MemoryStore()) {
   const ranked = new Ranked(store);
-  const lobby = new Lobby(Math.random, setTimeout, () => {}, ranked);
+  const lobby = new Lobby(Math.random, setTimeout, null, () => {}, ranked);
   const a = new FakePeer(), b = new FakePeer();
   lobby.message(a, { t: 'hello', guard: 'line', id: TOKEN_A });
   lobby.message(b, { t: 'hello', guard: 'line', id: TOKEN_B });
@@ -115,7 +115,7 @@ describe('the ranked queue', () => {
   });
 
   it('refuses a player with no token', async () => {
-    const lobby = new Lobby(Math.random, setTimeout, () => {}, new Ranked(new MemoryStore()));
+    const lobby = new Lobby(Math.random, setTimeout, null, () => {}, new Ranked(new MemoryStore()));
     const p = new FakePeer();
     lobby.message(p, { t: 'ranked' });
     await flush();
