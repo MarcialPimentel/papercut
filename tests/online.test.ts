@@ -53,8 +53,9 @@ describe('lobby', () => {
     lobby.message(a, { t: 'quick' });
     lobby.message(b, { t: 'quick' });
     lobby.message(c, { t: 'quick' });
-    lobby.message(a, { t: 'in', f: 5, b: 9 });
-    expect(b.last()).toEqual({ t: 'in', f: 5, b: 9 });
+    const f = (b.last() as Extract<ToClient, { t: 'start' }>).delay; // the first frame with real buttons
+    lobby.message(a, { t: 'in', f, b: 9 });
+    expect(b.last()).toEqual({ t: 'in', f, b: 9 });
     expect(c.inbox).toEqual([{ t: 'waiting' }]);
     lobby.close(a);
     expect(b.last()).toEqual({ t: 'gone' });

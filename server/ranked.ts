@@ -39,24 +39,38 @@ export class Ranked {
 
   constructor(private store: Store, private now: () => number = Date.now) {}
 
-  /** Load (or create) a player, kept in memory while the server runs. */
+  /**
+   * Load (or create) a player, kept in memory while the server runs. If the database can't be read,
+   * this fails and remembers nothing: a stand-in fresh player would later be saved over the real rating.
+   */
   load(id: string): Promise<Player> {
     const known = this.players.get(id);
     if (known) return Promise.resolve(known);
     let p = this.loading.get(id);
     if (!p) {
-      p = this.store.player(id)
-        .catch((e) => { console.error('Could not load a player:', e.message); return null; })
-        .then((found) => {
+      p = this.store.player(id).then(
+        (found) => {
           const pl = this.players.get(id) ?? found ?? { id, name: `Ronin ${id.slice(0, 4).toUpperCase()}`, ...START, games: 0, wins: 0 };
           this.players.set(id, pl);
           this.loading.delete(id);
           return pl;
-        });
+        },
+        (e) => {
+          console.error('Could not load a player:', e.message);
+          this.loading.delete(id);
+          throw e;
+        },
+      );
       this.loading.set(id, p);
     }
     return p;
   }
+
+  /** Rating saves still being written. */
+  private saving = new Set<Promise<unknown>>();
+
+  /** Wait for rating saves still being written (the server is about to stop). */
+  async flush() { await Promise.allSettled([...this.saving]); }
 
   /** Say hello: remember who this peer is and tell them their rank. */
   async hello(peer: RankedPeer, token: unknown) {
@@ -113,7 +127,11 @@ export class Ranked {
     Object.assign(a, na); Object.assign(b, nb);
     a.games++; b.games++;
     (winner === 0 ? a : b).wins++;
-    for (const p of [a, b]) this.store.savePlayer(p).catch((e) => console.error('Could not save a rating:', e.message));
+    for (const p of [a, b]) {
+      const save = this.store.savePlayer(p).catch((e) => console.error('Could not save a rating:', e.message));
+      this.saving.add(save);
+      save.finally(() => this.saving.delete(save));
+    }
     [a, b].forEach((p, i) => seats[i].send({
       t: 'ranked', won: winner === i, why, delta: Math.round(p.rating) - before[i], you: rankInfo(p),
     }));

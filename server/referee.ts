@@ -52,6 +52,8 @@ export class Referee {
   /** The server's own fingerprints, and the ones each browser sent that it hasn't reached yet. */
   private own = new Map<number, number>();
   private claims: [Map<number, number>, Map<number, number>] = [new Map(), new Map()];
+  /** The last frame each browser sent a fingerprint for (they come in order). */
+  private lastHash: [number, number] = [-1, -1];
   /** A browser whose fight disagreed with the server's: a modified game (or a bug). */
   readonly bad: [boolean, boolean] = [false, false];
 
@@ -67,13 +69,24 @@ export class Referee {
     for (let f = 0; f < delay; f++) { this.queued[0].set(f, 0); this.queued[1].set(f, 0); }
   }
 
-  /** A player's buttons for frame f. Runs every frame both players have now sent. */
-  input(seat: 0 | 1, f: number, b: number) {
-    if (this.closed || !Number.isInteger(f) || f < this.state.frame || f > this.state.frame + AHEAD) return;
+  /** Would `input` take this player's buttons for frame f? (The first for a frame the fight hasn't reached.) */
+  accepts(seat: 0 | 1, f: number): boolean {
+    return !this.closed && Number.isInteger(f) && f >= this.state.frame && f <= this.state.frame + AHEAD && !this.queued[seat].has(f);
+  }
+
+  /**
+   * A player's buttons for frame f. Runs every frame both players have now sent.
+   * Only the first buttons a player sends for a frame count. Returns false for anything ignored, which
+   * must not be passed on to the rival: a game sending two different inputs for one frame could
+   * otherwise show its rival a different fight from the server's and get the rival judged a cheat.
+   */
+  input(seat: 0 | 1, f: number, b: number): boolean {
+    if (!this.accepts(seat, f)) return false;
     this.queued[seat].set(f, b | 0);
     for (;;) {
+      if (this.closed) return true; // the result just ended the room (a tournament fight)
       const f0 = this.state.frame, a = this.queued[0].get(f0), c = this.queued[1].get(f0);
-      if (a === undefined || c === undefined) return;
+      if (a === undefined || c === undefined) return true;
       this.queued[0].delete(f0); this.queued[1].delete(f0);
       if (a !== this.last[0] || c !== this.last[1]) { this.log.push([f0 - this.start, a, c]); this.last = [a, c]; }
       const ev = step(this.state, [a, c]);
@@ -84,9 +97,16 @@ export class Referee {
     }
   }
 
-  /** A browser's fingerprint of its fight at frame f. */
-  hash(seat: 0 | 1, f: number, h: number) {
-    if (this.closed || !Number.isInteger(f) || f % HASH_EVERY !== 0 || f > this.state.frame + AHEAD) return;
+  /** A browser's fingerprint of its fight at frame f. Like inputs, only the first per frame counts (returns false otherwise). */
+  hash(seat: 0 | 1, f: number, h: number): boolean {
+    if (this.closed || !Number.isInteger(f) || f % HASH_EVERY !== 0 || f > this.state.frame + AHEAD) return false;
+    if (f <= this.lastHash[seat]) return false;
+    this.lastHash[seat] = f;
+    this.check(seat, f, h);
+    return true;
+  }
+
+  private check(seat: 0 | 1, f: number, h: number) {
     const mine = this.own.get(f);
     if (mine !== undefined) { if (mine !== h >>> 0) this.bad[seat] = true; }
     else if (f > this.state.frame) this.claims[seat].set(f, h >>> 0);
