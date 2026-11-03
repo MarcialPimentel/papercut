@@ -45,7 +45,7 @@ Use a desktop browser with a mouse, or plug in a controller (Xbox-style, PlaySta
 
 On the main menu, **Your fighter** opens the look picker: 6 colour sets, dark or light robe, 3 outfit prints and 4 sword styles, with a 3D preview that turns its guard high and low. **Page** only changes the preview's background, to check the look on each spread. Your pick is saved in this browser and sent to your rival when an online fight starts. One fighter always wears a dark robe and the other a light one: if you both pick the same side, player 2's robe flips. Looks never change the fight (every sword has the same reach). Endless bots wear random looks.
 
-**Title-screen leaderboard:** the panel to the right of the menu (below it on a narrow window) switches between Ranked (top 10 by rating, division and points) and Endless (top 10 best runs). Your own place shows underneath, and the game remembers which one you picked.
+**Title-screen leaderboard:** the panel out on the right side of the title screen (below the menu on a narrow window; the title screen fits without scrolling down to 1280x720) switches between Ranked (top 10 by rating, division and points) and Endless (top 10 best runs). Your own place shows underneath, and the game remembers which one you picked.
 
 ## What to try
 
