@@ -1,6 +1,7 @@
 // Player looks (issue #38): a colour set worn dark or light, an outfit print and a sword style. Every look is
 // made from the same samurai pieces: only colours and printed shapes change, never the outline, the sword's
-// length or anything in the fight. Red is never used: it stays reserved for cuts.
+// length or anything in the fight. Bright red is never used: it stays reserved for cuts. The one exception is
+// Oxblood, a dark brown-red far darker than a cut, so a fresh red slash still pops on it.
 // Looks travel online once, at match start, as a short text code (see encodePick); they are never fight inputs.
 // No three.js and no browser APIs here, so it can be unit-tested.
 
@@ -9,7 +10,8 @@ import type { Look } from './common';
 import type { Piece, Shape } from './puppet';
 
 export interface ColourSet { id: string; name: string; robe: string; kimono: string; hakama: string; hakamaDark: string }
-/** Dark side: `robe` over `kimono`. Light side: the two swapped. Hakama stays. No red, pink, orange or yellow. */
+/** Dark side: `robe` over `kimono`. Light side: the two swapped. Hakama stays. No bright red, pink, orange or
+ *  yellow; Oxblood's dark red is the only red allowed (see the rule check in tests/looks.test.ts). */
 export const COLOUR_SETS: readonly ColourSet[] = [
   { id: 'indigo', name: 'Indigo', robe: '#3C3A7E', kimono: '#F2E3C0', hakama: '#4A4A7E', hakamaDark: '#33345F' },
   { id: 'kraft', name: 'Kraft', robe: '#9A6A42', kimono: '#F2E3C0', hakama: '#5A4030', hakamaDark: '#3E2C22' },
@@ -17,6 +19,7 @@ export const COLOUR_SETS: readonly ColourSet[] = [
   { id: 'pine', name: 'Pine', robe: '#3D5E3E', kimono: '#EFE6C8', hakama: '#3D4A3A', hakamaDark: '#2A3428' },
   { id: 'sky', name: 'Graph blue', robe: '#5F8DB8', kimono: '#F4EFE2', hakama: '#34507A', hakamaDark: '#263B5C' },
   { id: 'plum', name: 'Plum', robe: '#5A3A6C', kimono: '#EFE4D6', hakama: '#47364F', hakamaDark: '#31253A' },
+  { id: 'oxblood', name: 'Oxblood', robe: '#5C2328', kimono: '#F0E4CF', hakama: '#3A2A2D', hakamaDark: '#281D20' },
 ];
 
 export const OUTFITS = [
