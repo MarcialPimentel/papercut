@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BTN, step, type FightEvent, type State } from '../src/sim/sim';
 import { HINT_AFTER, STEPS, Tutorial, freshFight } from '../src/tutorial/tutorial';
-import { CURSOR_KEYS, MOUSE_KEYS, STEP_TEXT, fill, mouseNames, type InputNames } from '../src/tutorial/text';
+import { CURSOR_KEYS, MOUSE_KEYS, PAD_KEYS, STEP_TEXT, fill, mouseNames, namesFor, type InputNames } from '../src/tutorial/text';
+import { DEFAULTS, keyName, padName } from '../src/bindings';
 import type { StepId } from '../src/tutorial/text';
 
 /** A seeded random, so the tests are the same every run. */
@@ -172,7 +173,7 @@ describe('tutorial text', () => {
   it('every step has words, and every {button} has a name', () => {
     for (const id of STEPS) {
       const t = STEP_TEXT[id];
-      for (const names of [MOUSE_KEYS, CURSOR_KEYS])
+      for (const names of [MOUSE_KEYS, CURSOR_KEYS, PAD_KEYS])
         for (const line of [t.line, t.hint, t.cheer, 'then' in t ? t.then : '']) {
           const out = fill(line ?? '', names);
           expect(out).not.toMatch(/\{\w+\}/);
@@ -189,6 +190,28 @@ describe('tutorial text', () => {
     expect(fill(STEP_TEXT.guard.line, CURSOR_KEYS)).toContain('crosshair above your waist');
     expect(fill(STEP_TEXT.parry.hint, CURSOR_KEYS)).toMatch(/crosshair to her height/);
     expect(fill(STEP_TEXT.parry.hint, MOUSE_KEYS)).not.toContain('<kbd>'); // tips go in as plain text
+  });
+
+  it('on a controller the prompts name pad buttons', () => {
+    const pad = namesFor('pad', 'flick');
+    expect(fill(STEP_TEXT.heavy.line, pad)).toContain('<kbd>RT</kbd>');
+    expect(fill(STEP_TEXT.guard.line, pad)).toContain('<kbd>left stick ↑</kbd>');
+    expect(fill(STEP_TEXT.parry.hint, pad)).toMatch(/push the stick/);
+    expect(fill(STEP_TEXT.jump.line, pad)).toContain('<kbd>A</kbd>');
+  });
+
+  it('pad names match the default controller bindings', () => {
+    for (const a of ['light', 'heavy', 'feint', 'jump', 'skip'] as const) expect(PAD_KEYS[a]).toBe(padName(DEFAULTS.pad[a][0]));
+    expect(keyName(DEFAULTS.keys.skip[0])).toBe(MOUSE_KEYS.skip);
+  });
+
+  it('remapped keys show up in the prompts', () => {
+    const n = namesFor('mouse', 'flick', { light: ['J'], heavy: ['K'], feint: ['L'], jump: [], skip: [], left: ['←'], right: ['→'] });
+    expect(n.light).toBe('J');
+    expect(n.feint).toBe('J (or L)');
+    expect(n.walk).toBe('← / →');
+    expect(n.skip).toBe(''); // unbound: the button just says "Skip step"
+    expect(namesFor('pad', 'flick', { feint: ['Y'] }).feint).toBe('Y');
   });
 
   it('another names table (a gamepad) swaps the buttons', () => {

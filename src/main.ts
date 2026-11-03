@@ -28,7 +28,7 @@ import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
 import { TuningPanel } from './tuning-panel';
 import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
 import { HINT_AFTER, STEPS, TUTORIAL_CFG, Tutorial, freshFight } from './tutorial/tutorial';
-import { STEP_TEXT, TUTORIAL_TEXT, fill, mouseNames } from './tutorial/text';
+import { STEP_TEXT, TUTORIAL_TEXT, fill, namesFor } from './tutorial/text';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const stage = $('#stage'), canvas = $<HTMLCanvasElement>('#scene');
@@ -171,6 +171,7 @@ function startTutorial() {
   markTutorial('offered');
   tuner.toggle(false); resetTuning(); // the tutorial always teaches the real numbers
   mode = { kind: 'tutorial', s: freshFight(), tut: new Tutorial() };
+  view.spawnLook = null; dress(myPick(), SUMI_PICK); // your own look against the real Sumi
   hud.setRules(TUTORIAL_CFG);
   begin();
   hud.you = 0; hud.online = false; hud.tutorial = true; hud.setNames(); view.you = 0;
@@ -187,8 +188,10 @@ function showTut(t: Tutorial | null) {
   const line = nice ? text.cheer : t.part === 1 && text.then ? text.then : text.line;
   const sub = nice ? '' : t.fails >= HINT_AFTER ? text.hint : t.need ? TUTORIAL_TEXT.progress(t.got, t.need) : '';
   const hint = !nice && t.fails >= HINT_AFTER;
-  const names = mouseNames(controls.guardStyle); // the words follow the guard style picked in Settings
-  const key = [id, line, sub, nice, controls.guardStyle].join('|');
+  // The words follow the device in use (controller or mouse), the guard style in Settings, and the player's own bindings.
+  const bound = Object.fromEntries((['light', 'heavy', 'feint', 'jump', 'skip', 'left', 'right'] as const).map((a) => [a, keysFor(controls, a)]));
+  const names = namesFor(controls.device, controls.guardStyle, bound);
+  const key = [id, line, sub, nice, JSON.stringify(names)].join('|');
   if (key === tutKey) return;
   tutKey = key;
   tutEl.hidden = false;
@@ -198,7 +201,7 @@ function showTut(t: Tutorial | null) {
   const subEl = $('#tutSub');
   subEl.innerHTML = fill(sub, names);
   subEl.classList.toggle('hint', hint);
-  $('#tutSkip').innerHTML = fill(TUTORIAL_TEXT.skip, names);
+  $('#tutSkip').innerHTML = names.skip ? fill(TUTORIAL_TEXT.skip, names) : TUTORIAL_TEXT.skipPlain;
 }
 $('#tutSkip').addEventListener('click', () => command('skip'));
 
@@ -319,7 +322,7 @@ controls.onNav = (n) => {
   if (screen) {
     if (n === 'menu') { if (screen !== 'main') command('menu'); return; }
     navigate(n, $('#menu .card'), () => {
-      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #settingsForm [type=submit]')].find((b) => !b.closest('[hidden]'));
+      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
       back?.click();
     });
     return;

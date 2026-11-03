@@ -144,7 +144,7 @@ export class Controls {
       if (!this.locked) { this.track(e); if (this.lockWanted) this.lock(); }
       this.touchLow = null;
       const a = actionForKey(this.binds, `Mouse${e.button}`);
-      if (a === 'restart' || a === 'hitboxes' || a === 'tune') this.onCommand(a);
+      if (a === 'restart' || a === 'hitboxes' || a === 'tune' || a === 'skip') this.onCommand(a);
       else if (a) this.down(a, KB, false);
     });
     canvas.addEventListener('pointerup', (e) => {
@@ -211,7 +211,7 @@ export class Controls {
     for (const n of f.nav) this.onNav(n);
     set('guardLow', f.guardLowHeld);
     if (f.guardChanged && f.low !== null) { this.padLow = f.low; this.guardSrc = 'pad'; this.touchLow = null; }
-    for (const a of f.presses) if (a === 'restart' || a === 'hitboxes' || a === 'tune') this.onCommand(a);
+    for (const a of f.presses) if (a === 'restart' || a === 'hitboxes' || a === 'tune' || a === 'skip') this.onCommand(a);
     if (!fighting || !this.active) { set('left', false); set('right', false); this.padSide = 0; return; }
     set('left', f.left); set('right', f.right);
     this.padSide = f.left && !f.right ? -1 : f.right && !f.left ? 1 : 0;

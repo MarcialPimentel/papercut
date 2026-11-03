@@ -28,8 +28,48 @@ export const CURSOR_KEYS: InputNames = {
   parryTip: 'Wait for her step in, then move the crosshair to her height. Switching too early is just a block.',
 };
 
+/** A controller with the default layout (Xbox names; Steam Deck and PlayStation pads report the same buttons). */
+export const PAD_KEYS: InputNames = {
+  up: 'left stick ↑',
+  down: 'left stick ↓',
+  light: 'RB',
+  heavy: 'RT',
+  feint: 'B',
+  jump: 'A',
+  walk: 'left stick ◀ ▶',
+  skip: 'LT',
+  guardTip: 'Push the left stick up for high, down for low. The guard stays where you last pushed it.',
+  parryTip: 'Wait for her step in, then push the stick to her height. Switching too early is just a block.',
+};
+
 /** The names table for a mouse guard style. */
 export const mouseNames = (style: 'flick' | 'cursor'): InputNames => (style === 'cursor' ? CURSOR_KEYS : MOUSE_KEYS);
+
+/** The buttons the player has bound (first name in each slot list), from the Controls screen. Missing = the default. */
+export type Bound = Partial<Record<'light' | 'heavy' | 'feint' | 'jump' | 'skip' | 'left' | 'right', string[]>>;
+
+/**
+ * The names table for the device in use: the controller, or the mouse in its guard style. Button names follow the
+ * player's own bindings, so a remapped key shows up in the prompts.
+ */
+export function namesFor(device: 'mouse' | 'pad' | 'touch', style: 'flick' | 'cursor', bound: Bound = {}): InputNames {
+  const pad = device === 'pad';
+  const base = pad ? PAD_KEYS : mouseNames(style);
+  const one = (k: keyof Bound, d: string) => (bound[k] ? bound[k][0] ?? '' : d); // '' = the player left it unbound
+  const light = one('light', base.light);
+  // A light also feints, so on the mouse the prompt says "left click (or Q)"; a controller has its own feint button.
+  const feintKey = one('feint', '');
+  const feint = pad ? (feintKey || light) : feintKey ? `${light} (or ${feintKey})` : light;
+  const lr = [bound.left?.[0], bound.right?.[0]].filter(Boolean);
+  return {
+    ...base,
+    light, feint,
+    heavy: one('heavy', base.heavy),
+    jump: one('jump', base.jump),
+    skip: one('skip', base.skip),
+    walk: pad || lr.length < 2 ? base.walk : lr.join(' / '),
+  };
+}
 
 export interface StepText {
   title: string;
@@ -107,6 +147,8 @@ export type StepId = keyof typeof STEP_TEXT;
 export const TUTORIAL_TEXT = {
   stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
   skip: 'Skip step ({skip})',
+  /** The skip button when no key is bound to skip. */
+  skipPlain: 'Skip step',
   nice: 'Nice!',
   progress: (got: number, need: number) => `${got} of ${need}`,
 };
