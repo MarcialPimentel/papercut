@@ -172,7 +172,8 @@ describe("Kami's and Sumi's own pieces with every look (#37 + #38)", () => {
     const objs = (v: 'kami' | 'sumi') => new Set(PIECE_NAMES.flatMap((n) => wornBy(puppet, v)[n].shapes.map((s) => s.obj)));
     expect([...objs('sumi')].filter((o) => o.startsWith('kami_'))).toEqual([]);
     expect([...objs('kami')].filter((o) => o.startsWith('sumi_'))).toEqual([]);
-    expect(objs('sumi')).toContain('sumi_hat');
+    expect(objs('sumi')).toContain('sumi_hair');
+    expect(objs('sumi')).not.toContain('kami_hair');
     expect(objs('kami')).toContain('kami_hair');
   });
 });

@@ -17,7 +17,11 @@
     "desktop": "vite build && electron .",
     "build:desktop": "vite build && electron-builder --win --linux --publish never",
     "build:desktop:win": "vite build && electron-builder --win --publish never",
-    "build:desktop:linux": "vite build && electron-builder --linux --publish never"
+    "build:desktop:linux": "vite build && electron-builder --linux --publish never",
+    "store:art": "node tools/store/art.mjs",
+    "store:shots": "node tools/store/capture.mjs shots",
+    "store:trailer": "node tools/store/capture.mjs trailer",
+    "store:highlights": "tsx tools/store/highlights.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",
@@ -36,6 +40,7 @@
     "concurrently": "^9.1.0",
     "electron": "44.9.0",
     "electron-builder": "26.17.0",
+    "playwright-core": "^1.49.1",
     "three": "0.160.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.11",

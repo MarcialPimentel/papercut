@@ -14,7 +14,7 @@ export interface Shape {
   pts: Pt[]; role: string; color: string; z: number; paper: boolean;
   /** The Blender paper object it came from (robe_L, kami_sleeve_R...). */
   obj: string;
-  /** Worn by one fighter only: the paper object's name starts with "kami_" or "sumi_" (Sumi's straw hat, Kami's
+  /** Worn by one fighter only: the paper object's name starts with "kami_" or "sumi_" (Sumi's long hair, Kami's
    *  topknot...). Untagged pieces are worn by both. */
   only?: Variant;
 }
@@ -29,7 +29,7 @@ export type Puppet = Record<PieceName, Piece>;
 /** Which fighter's pieces to wear. Both share one rig and one piece list; only the paper on it differs. */
 export type Variant = 'kami' | 'sumi';
 export const VARIANTS: readonly Variant[] = ['kami', 'sumi'];
-/** "sumi_hat" -> "sumi"; untagged names -> undefined. */
+/** "sumi_hair" -> "sumi"; untagged names -> undefined. */
 export const variantOfName = (name: string): Variant | undefined => VARIANTS.find((v) => name.toLowerCase().startsWith(v + '_'));
 /** The puppet as one fighter wears it: shared pieces plus that fighter's own, the other fighter's left out. */
 export function wornBy(p: Puppet, v: Variant): Puppet {

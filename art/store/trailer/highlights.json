@@ -1,0 +1,112 @@
+{
+  "about": "Scripted inputs for the highlights trailer (npm run store:highlights). Check them with: npx tsx tools/store/tas.ts. The format is explained at the top of tools/store/tas.ts.",
+  "edit": [
+    "miss_punish", "card:title:2.5", "pokes", "stagger", "feint_bait", "exchange", "greedy", "jump_in", "anti_air",
+    "jump_punish", "double_ko", "taunt", "endless", "card:match:1.25", "parry_riposte", "card:end:5"
+  ],
+  "clips": [
+    {
+      "name": "miss_punish", "page": 2, "looks": ["sumi.d.waves.hamon", "indigo.l.waves.katana"],
+      "setup": { "x": [-2.3, 2.3] },
+      "kami": [[0, ""], [26, "dashR"], [34, "light"], [35, ""]],
+      "sumi": [[0, ""], [20, "heavy"], [21, ""]],
+      "frames": 200, "expect": ["whiff:1", "ko:0"], "show": [[2, 160]],
+      "caps": [[0, 42, "Miss, and you're open"], [42, 999, "Counter cut"]]
+    },
+    {
+      "name": "pokes", "page": 0, "looks": ["indigo.d.waves.katana", "kraft.l.stripes.folded"],
+      "setup": { "x": [-1.0, 1.0] },
+      "kami": [[0, ""], [10, "light"], [30, "low"], [62, "right"], [72, "light"], [73, ""]],
+      "sumi": [[0, ""], [32, "left"], [39, "low"], [40, "low light"], [41, "low"]],
+      "frames": 160, "expect": ["block:0", "block:1", "hit:0"], "show": [[0, 105]],
+      "caps": [[0, 999, "Guard high or low"]]
+    },
+    {
+      "name": "stagger", "page": 1, "looks": ["pine.d.stripes.katana", "sky.l.plain.bokken"],
+      "setup": { "x": [-1.2, 1.2], "hp": [80, 10], "wins": [1, 0], "round": 2 },
+      "kami": [[0, ""], [10, "heavy"], [11, ""], [40, "low"], [55, "low light"], [56, "low"]],
+      "sumi": [[0, ""]],
+      "frames": 400, "expect": ["block:0", "ko:0", "turn"], "show": [[0, 140], [240, 350]],
+      "caps": [[0, 64, "A blocked heavy staggers"], [240, 999, "Every round, a new page"]]
+    },
+    {
+      "name": "feint_bait", "page": 0, "looks": ["plum.d.waves.folded", "kraft.l.waves.hamon"],
+      "setup": { "x": [-1.4, 1.4] },
+      "kami": [[0, "right"], [10, ""], [14, "heavy"], [16, "feint"], [17, ""], [24, "light"], [25, ""]],
+      "sumi": [[0, ""], [18, "heavy"], [19, ""]],
+      "frames": 200, "expect": ["feint:0", "ko:0"], "show": [[0, 150]],
+      "caps": [[0, 24, "Feint"], [24, 999, "They bite: counter cut"]]
+    },
+    {
+      "name": "exchange", "page": 2, "looks": ["sky.d.waves.folded", "sumi.l.stripes.hamon"],
+      "setup": { "x": [-1.5, 1.5], "hp": [80, 80] },
+      "kami": [[0, "right"], [6, ""], [8, "dashL"], [9, ""], [40, "right"], [60, "light"], [61, ""], [86, "right"], [92, ""], [93, "light"], [94, ""]],
+      "sumi": [[0, "left"], [6, ""], [10, "light"], [11, ""], [40, "left"], [60, "light"], [61, ""], [84, "low"], [95, ""], [106, "light"], [107, ""]],
+      "frames": 240, "expect": ["whiff:1", "clash", "parry:0", "hit:1"], "show": [[0, 170]],
+      "caps": [[0, 40, "Dash out of reach"], [40, 85, "Clash"], [85, 999, "Parry, then riposte"]]
+    },
+    {
+      "name": "greedy", "page": 2, "looks": ["kraft.d.stripes.katana", "indigo.l.plain.folded"],
+      "setup": { "x": [-1.0, 1.0] },
+      "kami": [[0, ""], [12, "heavy"], [13, ""]],
+      "sumi": [[0, ""], [15, "light"], [16, ""]],
+      "frames": 180, "expect": ["ko:1"], "show": [[0, 130]],
+      "caps": [[0, 999, "Greedy heavies get cut"]]
+    },
+    {
+      "name": "jump_in", "page": 0, "looks": ["sky.d.stripes.hamon", "sumi.l.plain.katana"],
+      "setup": { "x": [-2.2, 2.2] },
+      "kami": [[0, ""], [10, "right jump"], [11, ""], [43, "light"], [44, ""]],
+      "sumi": [[0, "low"]],
+      "frames": 120, "expect": ["jump:0", "hit:0"], "show": [[0, 80]],
+      "caps": [[0, 999, "Cut from the air"]]
+    },
+    {
+      "name": "jump_punish", "page": 1, "looks": ["kraft.d.waves.bokken", "pine.l.stripes.folded"],
+      "setup": { "x": [-2.2, 2.1], "hp": [80, 10] },
+      "kami": [[0, ""], [52, "right"], [58, "right light"], [59, ""]],
+      "sumi": [[0, ""], [10, "left jump"], [11, ""], [43, "light"], [44, ""]],
+      "frames": 220, "expect": ["block:1", "ko:0"], "show": [[0, 140]],
+      "caps": [[0, 55, "Block the jump-in"], [55, 999, "Punish the landing"]]
+    },
+    {
+      "name": "anti_air", "page": 0, "looks": ["pine.d.waves.katana", "plum.l.waves.folded"],
+      "setup": { "x": [-1.6, 1.0] },
+      "kami": [[0, ""], [10, "right jump"], [11, ""]],
+      "sumi": [[0, ""], [13, "light"], [14, ""]],
+      "frames": 120, "expect": ["jump:0", "hit:1"], "show": [[0, 75]],
+      "caps": [[0, 999, "Or get cut out of it"]]
+    },
+    {
+      "name": "double_ko", "page": 1, "looks": ["sumi.d.waves.bokken", "sky.l.stripes.katana"],
+      "setup": { "x": [-1.1, 1.1], "hp": [30, 30] },
+      "kami": [[0, ""], [12, "heavy"], [13, ""]],
+      "sumi": [[0, ""], [12, "low heavy"], [13, "low"]],
+      "frames": 200, "expect": ["ko:0", "ko:1"], "show": [[0, 140]],
+      "caps": [[0, 999, "Trade, and you both fall"]]
+    },
+    {
+      "name": "taunt", "page": 2, "looks": ["plum.d.stripes.hamon", "pine.l.waves.bokken"],
+      "setup": { "x": [-1.5, 1.5], "hp": [80, 30] },
+      "kami": [[0, ""], [20, "right"], [27, ""], [30, "heavy"], [31, ""]],
+      "sumi": [[0, ""], [8, "emote"], [9, ""]],
+      "frames": 200, "expect": ["taunt:1", "ko:0"], "show": [[0, 150]],
+      "caps": [[0, 30, "Come at me?"], [30, 999, "A taunt leaves you open"]]
+    },
+    {
+      "name": "endless", "page": 0, "endless": true, "looks": ["sumi.d.stripes.katana", "kraft.l.waves.bokken"],
+      "setup": { "x": [0, 5.1] },
+      "kami": [], "sumi": [],
+      "frames": 2400, "expect": ["ko:0", "ko:0", "ko:0", "ko:0", "ko:0", "ko:0"], "show": [[1790, 1900], [2010, 2230]],
+      "caps": [[0, 99999, "Endless: how many can you cut?"]]
+    },
+    {
+      "name": "parry_riposte", "page": 1, "looks": ["indigo.d.waves.katana", "plum.l.stripes.bokken"],
+      "setup": { "x": [-1.1, 1.1], "hp": [45, 30], "wins": [2, 2], "round": 5 },
+      "kami": [[0, "low"], [21, ""], [40, "light"], [41, ""]],
+      "sumi": [[0, ""], [20, "light"], [21, ""]],
+      "frames": 380, "expect": ["parry:1", "ko:0", "over"], "show": [[0, 150], [226, 380]],
+      "caps": [[0, 24, "Parry"], [24, 150, "Riposte"]]
+    }
+  ]
+}

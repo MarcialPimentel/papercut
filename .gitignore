@@ -20,3 +20,6 @@ Thumbs.db
 .vscode/
 .idea/
 release/
+
+# store-art renders (made by npm run store:art)
+tools/store/cache/
