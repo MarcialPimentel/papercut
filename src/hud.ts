@@ -35,6 +35,8 @@ export class Hud {
   tourney = false;
   /** Player names for the two bars (tournaments); null = the fighters' own names. */
   names: [string, string] | null = null;
+  /** The tutorial: no round tally, and a K.O. banner that only says why. */
+  tutorial = false;
   /** Endless: your best run before this one, for the end banner. */
   best = 0;
   /** A ranked match: both players' divisions (shown beside their names); no rematch. */
@@ -90,7 +92,7 @@ export class Hud {
     });
     const g = s.cfg.gauntlet, cut = s.f[0].wins;
     if (s.cfg.wins === 0) {
-      const t = g ? [`Bots cut: ${cut}`, `Level ${botLevel(cut)}`] : [`Rounds: ${s.f[0].wins}`, `Rounds: ${s.f[1].wins}`];
+      const t = this.tutorial ? ['', ''] : g ? [`Bots cut: ${cut}`, `Level ${botLevel(cut)}`] : [`Rounds: ${s.f[0].wins}`, `Rounds: ${s.f[1].wins}`];
       const key = t.join('|') + (g ? `|Bot ${cut + 1}` : '');
       if (key !== this.lastTally) {
         this.lastTally = key;
@@ -107,6 +109,9 @@ export class Hud {
       html = s.phaseT >= RULES.introCut ? 'Cut!'
         : g ? `Bot ${cut + 1}<small>Level ${botLevel(cut)} · ${PAGES[s.page].name}</small>`
         : `Round ${s.round}<small>${PAGES[s.page].name}</small>`;
+    } else if (s.phase === 'ko' && s.phaseT > 30 && this.tutorial && s.roundWinner >= 0) {
+      const why = howText(s, s.roundWinner === 0 ? LOOKS[1].name : 'You').replace(/^Counter cut! /, '').replace(/: instant K\.O\.$/, '.');
+      html = `Counter cut<small>${why} Instant K.O.</small>`;
     } else if (s.phase === 'ko' && s.phaseT > 54 && g && s.roundWinner >= 0) {
       html = s.roundWinner === 0 ? `Bot ${cut} cut<small>${howText(s, `Bot ${cut}`)}</small>` : `Cut down<small>${howText(s, 'You')}</small>`;
     } else if (s.phase === 'ko' && s.phaseT > 54) {

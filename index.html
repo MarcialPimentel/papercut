@@ -24,6 +24,14 @@
     </div>
     <div class="hud banner fight-only" id="banner" hidden><div id="bannerText"></div></div>
     <div class="hud rematch fight-only"><button class="mbtn red" id="rematch" type="button" hidden>Rematch</button></div>
+    <div class="hud tut fight-only" id="tut" hidden aria-live="polite">
+      <div class="tut-card">
+        <p class="tut-step" id="tutStep"></p>
+        <p class="tut-line" id="tutLine"></p>
+        <p class="tut-sub" id="tutSub"></p>
+        <button class="hbtn" id="tutSkip" type="button"></button>
+      </div>
+    </div>
     <div class="hud status fight-only" id="status" role="status"></div>
     <div class="aim" id="aim" hidden><i></i></div>
 
@@ -52,6 +60,7 @@
           <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting (unranked)</small></button>
           <button class="mbtn" id="bEndless" type="button">Endless<small id="bestRun">How many bots can you cut?</small></button>
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
+          <button class="mbtn" id="bTutorial" type="button">Tutorial<small>Learn every move against Sumi, step by step (3 minutes)</small></button>
           <div class="row2">
             <button class="hbtn" id="bFighter" type="button">Your fighter</button>
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
@@ -169,6 +178,22 @@
             <button class="hbtn" id="bindReset" type="button">Reset to defaults</button>
           </div>
           <button class="mbtn" id="bindBack" type="button">Done</button>
+        </div>
+
+        <div data-screen="welcome" class="stack" hidden>
+          <p class="big">New here?</p>
+          <p class="muted">Learn to fight in about 3 minutes: guard, slash, parry, and the counter cut that ends a round in one hit.</p>
+          <button class="mbtn red" id="bWelcomeGo" type="button">Start the tutorial<small>A guided fight against Sumi</small></button>
+          <button class="hbtn" id="bWelcomeSkip" type="button">Skip, I know how to fight</button>
+          <p class="muted small">The tutorial is always on the title screen.</p>
+        </div>
+
+        <div data-screen="tutdone" class="stack" hidden>
+          <p class="big">You're ready</p>
+          <p class="muted">Read your rival, punish greed, and never swing at the air. One counter cut ends any round.</p>
+          <button class="mbtn red" id="bTutPractice" type="button">Practice vs Sumi<small>Try it all against the dummy</small></button>
+          <button class="mbtn" id="bTutEndless" type="button">Endless<small>How many bots can you cut?</small></button>
+          <button class="hbtn" id="bTutMenu" type="button">Title screen</button>
         </div>
 
         <div data-screen="howto" class="stack howto" hidden>

@@ -4,7 +4,7 @@
 
 import { store } from './store';
 
-export type Action = 'light' | 'heavy' | 'feint' | 'left' | 'right' | 'jump' | 'dash' | 'guardLow' | 'restart' | 'hitboxes' | 'tune';
+export type Action = 'light' | 'heavy' | 'feint' | 'left' | 'right' | 'jump' | 'dash' | 'guardLow' | 'restart' | 'hitboxes' | 'tune' | 'skip';
 export const ACTIONS: { id: Action; name: string; note?: string }[] = [
   { id: 'light', name: 'Light slash' },
   { id: 'heavy', name: 'Heavy slash' },
@@ -17,6 +17,7 @@ export const ACTIONS: { id: Action; name: string; note?: string }[] = [
   { id: 'restart', name: 'Restart / rematch' },
   { id: 'hitboxes', name: 'Hitbox view' },
   { id: 'tune', name: 'Tuning panel', note: 'in Practice' },
+  { id: 'skip', name: 'Skip tutorial step', note: 'in the tutorial' },
 ];
 
 /** Slots per action and device. */
@@ -38,12 +39,12 @@ export const DEFAULTS: Bindings = {
   keys: {
     light: ['Mouse0', ''], heavy: ['Mouse2', ''], feint: ['KeyQ', 'Mouse1'],
     left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], jump: ['Space', 'KeyW'],
-    dash: ['', ''], guardLow: ['', ''], restart: ['KeyR', ''], hitboxes: ['KeyH', ''], tune: ['KeyT', ''],
+    dash: ['', ''], guardLow: ['', ''], restart: ['KeyR', ''], hitboxes: ['KeyH', ''], tune: ['KeyT', ''], skip: ['Tab', ''],
   },
   pad: {
     light: [PAD.RB, PAD.X], heavy: [PAD.RT, PAD.Y], feint: [PAD.B, -1],
     left: [-1, -1], right: [-1, -1], jump: [PAD.A, -1],
-    dash: [PAD.LB, -1], guardLow: [-1, -1], restart: [PAD.View, -1], hitboxes: [-1, -1], tune: [-1, -1],
+    dash: [PAD.LB, -1], guardLow: [-1, -1], restart: [PAD.View, -1], hitboxes: [-1, -1], tune: [-1, -1], skip: [PAD.LT, -1],
   },
 };
 
