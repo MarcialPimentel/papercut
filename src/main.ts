@@ -3,7 +3,7 @@
 
 import './style.css';
 import { Hud, botLevel } from './hud';
-import { Controls } from './input';
+import { Controls, type Command } from './input';
 import { Net } from './net/client';
 import { Lockstep } from './net/lockstep';
 import { BYE_SLOT, normalizeCode, type ToClient } from './net/protocol';
@@ -14,6 +14,8 @@ import { sfx } from './audio/sounds';
 import { View } from './render/view';
 import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
 import { Dummy } from './sim/dummy';
+import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
+import { TuningPanel } from './tuning-panel';
 import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
@@ -32,6 +34,9 @@ const controls = new Controls(canvas, $('#chips'), $('#aim'));
 const net = new Net();
 const wakeAudio = () => { engine.wake(); };
 $('#build').textContent = `build ${__BUILD__}`;
+// T in Practice: sliders for the fight's numbers (#9). Practice only; everything else resets them.
+const tuner = new TuningPanel(stage, __BUILD__);
+tuner.onClose = () => { controls.clear(); if (mode.kind === 'practice') { controls.active = true; controls.lockWanted = true; controls.lock(); } };
 
 type Mode =
   | { kind: 'menu'; s: State }
@@ -82,6 +87,7 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
 function hideMenu() { showSound(false); screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
 
 function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
+  tuner.toggle(false); resetTuning();
   if (mode.kind === 'online' || tourney) net.send({ t: 'cancel' });
   tourney = null; hud.tourney = false; hud.names = null;
   controls.active = false; controls.clear();
@@ -100,6 +106,8 @@ function saveBest(n: number) { try { if (n > loadBest()) localStorage.setItem(BE
 function startPractice(endless = false) {
   wakeAudio();
   const cfg = endless ? ENDLESS_CFG : DEFAULT_CFG;
+  // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) never does.
+  if (endless) resetTuning(); else applyTuning(loadSaved());
   mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless };
   hud.setRules(cfg); hud.best = loadBest();
   begin();
@@ -108,6 +116,7 @@ function startPractice(endless = false) {
 
 function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, names: [string, string] | null = null) {
   wakeAudio();
+  tuner.toggle(false); resetTuning();
   const lock = new Lockstep(seat, delay, (m) => net.send(m), cfg);
   hud.setRules(cfg);
   mode = { kind: 'online', lock, code };
@@ -118,6 +127,7 @@ function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, na
 
 /** Watch a tournament fight between two other players. */
 function startWatching(delay: number, code: string, cfg: MatchCfg, names: [string, string]) {
+  tuner.toggle(false); resetTuning();
   mode = { kind: 'watch', spec: new Spectator(cfg, delay), code, names };
   hud.setRules(cfg);
   view.reset(mode.spec.state);
@@ -275,11 +285,18 @@ document.addEventListener('pointerlockchange', () => { if (document.pointerLockE
 document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('.mbtn, .hbtn')) { wakeAudio(); sfx.ui(); } });
 $('#rematch').addEventListener('click', () => command('rematch'));
 
-function command(c: 'restart' | 'menu' | 'rematch' | 'hitboxes') {
+function command(c: Command) {
   if (c === 'hitboxes') { view.hitboxes.toggle(); return; }
+  if (c === 'tune') {
+    if (mode.kind !== 'practice' || mode.endless) return;
+    tuner.toggle();
+    if (tuner.open) { controls.clear(); controls.active = false; controls.lockWanted = false; controls.unlock(); }
+    return;
+  }
+  if (c === 'menu' && tuner.open) { tuner.toggle(false); return; }
   if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto') showMenu('main'); return; }
   if (mode.kind === 'practice') {
-    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); hud.best = loadBest(); view.reset(mode.s); controls.lockWanted = true; controls.lock(); }
+    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
   } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
 }
 controls.onCommand = command;
@@ -347,7 +364,8 @@ function frame(now: number) {
   const real = Math.min(0.05, (now - last) / 1000); last = now;
   const m = mode;
   const seat = seatOf(m);
-  if (m.kind === 'practice') {
+  if (m.kind === 'practice' && tuner.open) acc = 0; // paused while tuning
+  else if (m.kind === 'practice') {
     acc += real;
     while (acc >= STEP) {
       const s = m.s;
@@ -396,7 +414,7 @@ function frame(now: number) {
   if (m.kind !== 'menu') {
     hud.update(s, m.kind === 'online' ? seat : m.kind === 'watch' ? null : 0);
     // Hold the mouse while fighting; let it go when the match is over so Rematch and Leave can be clicked.
-    controls.lockWanted = m.kind !== 'watch' && s.phase !== 'over';
+    controls.lockWanted = m.kind !== 'watch' && s.phase !== 'over' && !tuner.open;
     if (!controls.lockWanted) controls.unlock();
   }
   music.set(...musicFor(m, s));
@@ -404,7 +422,7 @@ function frame(now: number) {
   stage.style.background = view.sky;
 
   let status = '';
-  if (m.kind === 'practice') status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · Esc for the menu` : 'Practice: Sumi is a dummy · Esc for the menu';
+  if (m.kind === 'practice') status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · Esc for the menu` : `Practice: Sumi is a dummy · T to tune${isTuned() ? ' (tuned numbers)' : ''} · Esc for the menu`;
   else if (m.kind === 'online') {
     const l = m.lock;
     status = l.desynced ? `Out of sync at frame ${l.frame}. Please tell Marz.`
