@@ -62,6 +62,12 @@ export class View {
     if (this.sceneryPage !== p) { this.sceneryPage = p; this.physics.setScenery(this.book.popupHulls()); }
   }
 
+  /** Resolution scale from the Settings screen (0.5-1): draw fewer pixels on weaker machines. */
+  setScale(scale: number) {
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2) * scale);
+    this.resize();
+  }
+
   resize() {
     const w = this.stage.clientWidth, h = this.stage.clientHeight;
     if (!w || !h) return; // not laid out yet
