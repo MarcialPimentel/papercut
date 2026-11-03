@@ -39,7 +39,7 @@ Use a desktop browser with a mouse, or plug in a controller (Xbox-style, PlaySta
 3. **Fight a friend:** first pick the room's rules (rounds, health, timer), then you get a link and a 4-letter room code. Send the link; the fight starts as soon as they open it. You are Kami (left), they are Sumi (right), each in the look you picked on the "Your fighter" screen. Your name has a yellow "you" tag.
 4. **Tournament:** 3 to 8 friends. Pick the rules, type your name, send the link; the host presses *Start tournament*. One fight at a time, everyone else watches it live; the bracket shows between fights.
 5. **Find a fight:** pairs you with the next person who presses it (standard rules: best of 5, 80 health, 60 seconds).
-6. **Ranked:** rated fights with standard rules. You're paired with someone close to your rating; the search widens the longer you wait. Your first 5 matches are placement, then you get a division: Tissue, Newsprint, Cardstock, Washi, Gold Leaf. Your division and points show under the Ranked button, and a badge sits next to each name in the fight. At the end you see your points change. There's no rematch, and leaving before the end counts as a loss. The server decides the result by re-playing the fight itself. Your ranked identity lives in this browser: a private window, another browser or another PC is a new player.
+6. **Ranked:** rated fights with standard rules. You're paired with someone close to your rating; the search widens the longer you wait. Your first 5 matches are placement, then you get a division: Tissue, Newsprint, Cardstock, Washi, Gold Leaf. Your division and points show under the Ranked button, and a badge sits next to each name in the fight. At the end you see your points change. There's no rematch, and leaving before the end counts as a loss. The server decides the result by re-playing the fight itself. Your ranked identity lives in this browser: a private window, another browser or another PC is a new player. In the desktop app with Steam open, Steam Cloud carries it, so your rating follows your Steam account.
 
 ## Your fighter
 
@@ -92,6 +92,10 @@ Online fights, tournament fights and Endless always use the game's own numbers, 
 - **Reading:** can you tell the rival's guard height and when a heavy is coming?
 - **Flick vs Cursor guard:** play a few rounds with each (Settings → Guard on the main menu). Is Flick snappy? Does the guard ever switch when you didn't mean it (while clicking or walking), or not switch when you flicked? If it's close, try the Flick sliders in the tuning panel (T in Practice) and tell me the numbers. Keep Flick, or go back to Cursor?
 - **Online:** the bottom-left line shows the room and the input delay in frames (2 is great, 8 is the most). Did it feel laggy? Did you ever see "Waiting for your rival's connection" or "Out of sync"? If "Out of sync" shows up, note the frame number and tell Claude.
+
+## Steam (desktop app)
+
+With Steam open, the desktop app connects to it: achievements, Steam Cloud, the Shift+Tab overlay and what friends see you doing. Until Papercut's own Steam app exists it runs as Valve's test app (Steam shows "Spacewar") and only four achievements pop up (Spacewar's). Click-by-click test steps and the setup for the real app: [steam.md](steam.md). Without Steam the app runs the same as before.
 
 ## Known limits of this build
 
