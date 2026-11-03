@@ -20,7 +20,8 @@
     "build:desktop:linux": "vite build && electron-builder --linux --publish never",
     "store:art": "node tools/store/art.mjs",
     "store:shots": "node tools/store/capture.mjs shots",
-    "store:trailer": "node tools/store/capture.mjs trailer"
+    "store:trailer": "node tools/store/capture.mjs trailer",
+    "store:highlights": "tsx tools/store/highlights.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",

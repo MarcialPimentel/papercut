@@ -95,12 +95,14 @@ Under **Community Assets** (or **App Admin → Community**), upload `logo/commun
 2. Drag them into this order: 04, 01, 06, 02, 05, 03, 07, 08 (the counter cut first: it's the hook).
 3. Tick **"Suitable for all ages"** on 02, 03, 05, 07 and 08 (Steam needs at least four). Leave the three with cuts (01, 04, 06) unticked.
 
-### Trailer
+### Trailers
+There are two. Upload both; the highlights cut goes first, because Steam autoplays the first trailer (muted) on the store page.
+
 1. On the landing page, open **Trailers** (or **Graphical Assets → Trailers**). Click **Upload new trailer**.
-2. Pick `art/store/trailer/papercut_trailer_1080p30.mp4`.
-3. Name it "Papercut gameplay trailer". **Category: Gameplay.**
-4. Wait for **"Converting"** to finish (minutes to an hour), then drag it to the **first** position and tick it as shown on the store page.
-5. Leave the poster as Steam's automatic one (no text allowed on it).
+2. Pick `art/store/trailer/papercut_highlights_1080p60.mp4`. Name it "Papercut highlights". **Category: Gameplay.**
+3. Upload again: `art/store/trailer/papercut_trailer_1080p30.mp4`, named "Papercut gameplay trailer", **Category: Gameplay.**
+4. Wait for **"Converting"** to finish on both (minutes to an hour). Drag **Papercut highlights** to the **first** position and tick both as shown on the store page.
+5. Leave the posters as Steam's automatic ones (no text allowed on them).
 
 ## Part 4: Check, submit for review, then go public
 
@@ -125,6 +127,12 @@ npm run store:shots
 ```bash
 npm run store:trailer
 ```
+
+```bash
+npm run store:highlights
+```
+
+The highlights trailer plays scripted inputs for both fighters, kept in `art/store/trailer/highlights.json` (the Endless clip's inputs are in `endless.inputs.json`). If the fight is tuned and a clip no longer does what it should (a parry turns into a block, say), the render stops and names the clip; Claude re-times its script with `npx tsx tools/store/tas.ts <clip> -v`.
 
 Then upload the new files over the old ones in Steamworks (same boxes) and publish again. After release, store page changes go live as soon as you publish.
 

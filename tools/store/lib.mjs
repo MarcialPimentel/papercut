@@ -34,12 +34,13 @@ const director = readFileSync(join(HERE, 'director.js'), 'utf8');
 
 /**
  * Open the game at w x h (CSS pixels; `scale` 2 renders at twice that), on the fake clock.
- * `start`: 'practice' or 'endless'. `audioSecs`: record sound for that long.
+ * `start`: 'practice' or 'endless'. `audioSecs`: record sound for that long. `storage`: saved settings to start with
+ * (e.g. volumes). `mathSeed`: seed Math.random, so drawing details repeat exactly.
  */
-export async function openGame(browser, url, { w = 1920, h = 1080, scale = 1, start = 'practice', audioSecs = 0, seed = 7, level = 3 } = {}) {
+export async function openGame(browser, url, { w = 1920, h = 1080, scale = 1, start = 'practice', audioSecs = 0, seed = 7, level = 3, storage = {}, mathSeed = 0 } = {}) {
   const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: scale });
   page.on('pageerror', (e) => console.error('page error:', e.message));
-  await page.addInitScript({ content: `window.__STORE_CFG = ${JSON.stringify({ audioSecs, seed })};\n${director}` });
+  await page.addInitScript({ content: `window.__STORE_CFG = ${JSON.stringify({ audioSecs, seed, storage, mathSeed })};\n${director}` });
   await page.goto(url);
   await page.waitForFunction(() => window.__pc && window.__store, null, { timeout: 60000 });
   // Let the models and fonts load (real time), drawing the menu on the fake clock meanwhile.
@@ -76,3 +77,18 @@ export async function runTo(page, frame) {
   }
   await page.evaluate(() => window.__store.drawing(true));
 }
+
+// Trailer captions: a paper sticker over the fight, in the logo's stencil type.
+const CAPTION_CSS = `#__cap{position:absolute;left:50%;bottom:9%;transform:translateX(-50%) rotate(-2deg);z-index:50;font:800 64px/1 'Big Shoulders Stencil Display',sans-serif;
+text-transform:uppercase;letter-spacing:.03em;color:#18171C;background:#FBFAF6;border:4px solid #18171C;box-shadow:7px 7px 0 #18171C;padding:10px 26px 14px;white-space:nowrap}
+#__cap:empty{display:none}`;
+
+/** Ready a game page for footage: hide the practice status line, add the caption sticker. */
+export async function prepare(page) {
+  await page.evaluate((css) => {
+    window.__store.hud('shots');
+    const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    const d = document.createElement('div'); d.id = '__cap'; document.getElementById('stage').appendChild(d);
+  }, CAPTION_CSS);
+}
+export const caption = (page, text) => page.evaluate((t) => { document.getElementById('__cap').textContent = t; }, text);

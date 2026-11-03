@@ -9,7 +9,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { FPS, HERE, OUT, fastForward, launch, openGame, runTo, startServer, state, tick } from './lib.mjs';
+import { FPS, HERE, OUT, caption, fastForward, launch, openGame, prepare, runTo, startServer, state, tick } from './lib.mjs';
 
 const what = process.argv[2] || 'shots';
 const SEED = 7, LEVEL = 3, ENDLESS_SEED = 7;
@@ -110,18 +110,6 @@ const shots = [
 ].sort((a, b) => a[0] - b[0]);
 
 // ---------- 3. capture ----------
-const CAPTION_CSS = `#__cap{position:absolute;left:50%;bottom:9%;transform:translateX(-50%) rotate(-2deg);z-index:50;font:800 64px/1 'Big Shoulders Stencil Display',sans-serif;
-text-transform:uppercase;letter-spacing:.03em;color:#18171C;background:#FBFAF6;border:4px solid #18171C;box-shadow:7px 7px 0 #18171C;padding:10px 26px 14px;white-space:nowrap}
-#__cap:empty{display:none}`;
-
-async function prepare(page) {
-  await page.evaluate((css) => {
-    window.__store.hud('shots');
-    const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
-    const d = document.createElement('div'); d.id = '__cap'; document.getElementById('stage').appendChild(d);
-  }, CAPTION_CSS);
-}
-const caption = (page, text) => page.evaluate((t) => { document.getElementById('__cap').textContent = t; }, text);
 
 /** Run to `a`, warm the camera up, then capture frames until `b`. Returns the fake-clock span (for the sound). */
 async function clip(page, c, dir) {

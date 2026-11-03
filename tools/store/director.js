@@ -7,6 +7,16 @@
 
 (() => {
   const cfg = window.__STORE_CFG || {};
+  // Saved settings for a fresh browser: skip the first-visit tutorial offer, plus any the tool asks for (e.g. volumes).
+  try {
+    localStorage.setItem('papercut.tutorial', 'done');
+    for (const [k, v] of Object.entries(cfg.storage || {})) localStorage.setItem(k, v);
+  } catch { /* storage blocked: the tool still works, only the menus may differ */ }
+  // Seeded Math.random for the drawing (cut angles, camera shake, Endless bot looks), so a re-render matches.
+  if (cfg.mathSeed) {
+    let ms = cfg.mathSeed;
+    Math.random = () => { ms = (ms * 1103515245 + 12345) % 2147483648; return ms / 2147483648; };
+  }
   const clock = { t: 0, cbs: [], audio0: 0 };
   window.requestAnimationFrame = (cb) => { clock.cbs.push(cb); return clock.cbs.length; };
 
@@ -97,6 +107,24 @@
       }
       const v = pc.view, onStep = v.onStep.bind(v);
       v.onStep = (s, ev) => { for (const e of ev) events.push({ f: s.frame, k: e.k, p: e.p, winner: e.winner, how: e.how, why: s.why, page: s.page, round: s.round, wins: s.f[0].wins }); onStep(s, ev); };
+    },
+    /**
+     * Tool-assisted play (the highlights trailer): put the fight in `start` (a State, as JSON) and play both seats
+     * from per-frame button lists `a` (Kami) and `b` (Sumi), indexed by the fight's frame number.
+     * With `idle`, both seats only hold their frame-0 buttons (for warming the camera up before the real run).
+     */
+    script(start, a, b, idle = false) {
+      const pc = window.__pc, m = pc.mode;
+      const at = (list, f) => (idle ? list[0] & B.low : list[Math.min(f, list.length - 1)] ?? 0);
+      pc.controls.sample = () => at(a, m.s.frame);
+      m.dummy.think = (s) => at(b, s.frame);
+      m.s = JSON.parse(start);
+      pc.view.reset(m.s);
+    },
+    /** Dress both fighters by look code (see src/render/looks.ts: encodePick). */
+    async dress(codes) {
+      const L = await import('/src/render/looks.ts');
+      window.__pc.view.setLooks([L.lookOf(L.decodePick(codes[0]), 'Kami'), L.lookOf(L.decodePick(codes[1], L.SUMI_PICK), 'Sumi')]);
     },
     /** Key art: both fighters stand still; `press` queues Kami's presses (BTN bits, one per frame). */
     hold() { me.queue.length = 0; me.held = 0; me.hold = true; const m = window.__pc.mode; if (m.dummy) m.dummy.think = () => 0; },
