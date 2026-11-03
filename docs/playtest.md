@@ -33,6 +33,7 @@ Use a desktop browser with a mouse, or plug in a controller (Xbox-style, PlaySta
 
 ## Ways to play
 
+0. **Tutorial:** a guided fight against Sumi, step by step (about 3 minutes). It's offered the first time you open the game, and it's always on the title screen. Tab skips a step.
 1. **Practice vs Sumi:** Sumi is a dummy. Watch for the yellow glint on the blade: Sumi is about to switch guard. R restarts. T opens the tuning panel (below).
 2. **Endless:** one bot after another, one round each, on one page (no page turns): each new bot steps in on your left or right. Your strip carries over and refills by half every 5 bots, and the bots get smarter every 5. One lost round ends the run; your best run shows on the title screen.
 3. **Fight a friend:** first pick the room's rules (rounds, health, timer), then you get a link and a 4-letter room code. Send the link; the fight starts as soon as they open it. You are Kami (left), they are Sumi (right), each in the look you picked on the "Your fighter" screen. Your name has a yellow "you" tag.
@@ -46,6 +47,7 @@ On the main menu, **Your fighter** opens the look picker: 6 colour sets, dark or
 
 ## What to try
 
+- **Tutorial (2026-11-02):** play it from start to finish without reading How to play. Does every step make sense from its one line? Where did you get stuck, and did the hint (after 3 tries) help? At the end, could you say what a counter cut is? Then switch Guard to Cursor in Settings and replay the first step: the prompt should talk about the crosshair instead of flicks. With a controller: start the tutorial with A, check every prompt names pad buttons (left stick, RB, RT, B, A), and that LT skips a step.
 - **Guard:** block a light, then a heavy (a heavy chips a sliver of strip through a block).
 - **Parry into riposte:** keep the wrong guard, flick the mouse to the right height just before their slash lands ("Parry"), then click at once: your slash is a riposte (fast, heavy damage, can't be parried).
 - **Feint bait:** start a heavy (right click) and cancel it with a left click. Does your rival swing into it?
