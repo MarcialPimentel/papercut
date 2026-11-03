@@ -8,6 +8,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { cleanEndless } from './endless';
+import { fightVersion } from './fightVersion';
 import { Lobby, type Peer } from './lobby';
 import { page, readFilter, summarize } from './stats';
 import { Ranked } from './ranked';
@@ -19,6 +20,8 @@ const BUILD = (process.env.BUILD_SHA || 'dev').slice(0, 7);
 const CAPACITY = Number(process.env.CAPACITY || 200);
 const ALLOWED = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
 const DIST = resolve(fileURLToPath(new URL('.', import.meta.url)), '..', 'dist');
+/** The fight rules this server pairs players for: the same fingerprint the game is built with. */
+const FIGHT = fightVersion(resolve(fileURLToPath(new URL('.', import.meta.url)), '..', 'src', 'sim'));
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -29,7 +32,7 @@ const TYPES: Record<string, string> = {
 const store = await openStore();
 const saveError = (what: string) => (e: Error) => console.error(`Could not save ${what}:`, e.message);
 // Ranked ratings need the database to last; on your own PC they're kept in memory like the stats.
-const lobby = new Lobby(Math.random, setTimeout, (r) => { store.addMatch(BUILD, r).catch(saveError('a match')); }, new Ranked(store));
+const lobby = new Lobby(Math.random, setTimeout, FIGHT, (r) => { store.addMatch(BUILD, r).catch(saveError('a match')); }, new Ranked(store));
 setInterval(() => lobby.tick(), 1000).unref();
 const started = Date.now();
 // Inputs older than 90 days are dropped once a day (and once at start).
@@ -101,10 +104,18 @@ async function serveFile(req: IncomingMessage, res: ServerResponse) {
 const server = createServer((req, res) => {
   if (req.url?.startsWith('/api/health')) {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    res.end(JSON.stringify({ ok: true, build: BUILD, uptime: Math.round((Date.now() - started) / 1000), stats: store.kind, ...lobby.stats }));
+    res.end(JSON.stringify({ ok: true, build: BUILD, fight: FIGHT, uptime: Math.round((Date.now() - started) / 1000), stats: store.kind, ...lobby.stats }));
     return;
   }
   const path = (req.url || '/').split('?')[0];
+  if (path.startsWith('/api/')) {
+    // The desktop app's page isn't served from this site, so it needs permission to call the API.
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400' }).end();
+      return;
+    }
+  }
   if (path === '/api/endless' && req.method === 'POST') { endlessReport(req, res).catch(() => res.writeHead(500).end()); return; }
   if ((path === '/stats' || path === '/api/stats') && req.method === 'GET') { statsPage(req, res, path === '/api/stats').catch(() => res.writeHead(500).end()); return; }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405).end(); return; }
@@ -120,10 +131,11 @@ server.on('upgrade', (req, socket, head) => {
   wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
 });
 
-wss.on('connection', (ws: WebSocket) => {
+wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   const peer: Peer & { pingAt: number; alive: boolean; budget: number } = {
     send: (m) => { if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(m)); },
     pingAt: 0, alive: true, budget: 400,
+    v: new URL(req.url || '/', 'http://x').searchParams.get('v') ?? undefined, // the game's fight version
   };
   const ping = () => { peer.pingAt = Date.now(); ws.ping(); };
   ws.on('pong', () => {
@@ -157,7 +169,7 @@ wss.on('connection', (ws: WebSocket) => {
   setTimeout(ping, 300);
 });
 
-server.listen(PORT, () => console.log(`Papercut build ${BUILD} on port ${PORT}`));
+server.listen(PORT, () => console.log(`Papercut build ${BUILD} (fight ${FIGHT}) on port ${PORT}`));
 
 const stop = () => { wss.clients.forEach((c) => c.close(1001, 'restarting')); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000); };
 process.on('SIGTERM', stop);

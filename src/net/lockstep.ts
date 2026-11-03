@@ -5,6 +5,7 @@
 
 import { DEFAULT_CFG, type MatchCfg } from '../sim/config';
 import { hashState, newMatch, step, type FightEvent, type State } from '../sim/sim';
+import { resetTuning } from '../tuning';
 import type { ToClient, ToServer } from './protocol';
 
 const HASH_EVERY = 60;
@@ -21,6 +22,7 @@ export class Lockstep {
   desynced = false;
 
   constructor(readonly seat: 0 | 1, readonly delay: number, private send: (m: ToServer) => void, cfg: MatchCfg = DEFAULT_CFG) {
+    resetTuning(); // the tuning panel is Practice only: every online fight runs the game's own numbers
     this.state = newMatch(cfg);
     for (let f = 0; f < delay; f++) { this.mine.set(f, 0); this.theirs.set(f, 0); }
     this.nextMine = delay;
