@@ -152,11 +152,37 @@ export class Engine {
   }
 
   /** A struck metal blade: a few out-of-tune partials ringing at once (what makes metal sound like metal). */
-  ring(o: { base: number; dur: number; gain: number; at?: number; pan?: number }) {
+  ring(o: { base: number; dur: number; gain: number; at?: number; pan?: number; bus?: AudioNode }) {
     const partials = [[1, 1], [2.76, 0.55], [5.4, 0.32], [8.93, 0.18], [1.5, 0.25]];
     for (const [r, k] of partials) {
-      this.tone({ f0: o.base * r * (0.995 + Math.random() * 0.01), dur: o.dur * (1.1 - r / 12), gain: o.gain * k, type: 'sine', attack: 0.001, at: o.at, pan: o.pan });
+      this.tone({ f0: o.base * r * (0.995 + Math.random() * 0.01), dur: o.dur * (1.1 - r / 12), gain: o.gain * k, type: 'sine', attack: 0.001, at: o.at, pan: o.pan, bus: o.bus });
     }
+  }
+
+  /** A breathy bamboo flute (shinobue-like) note: a soft triangle tone that swells in, a vibrato that
+   *  comes in late, and a puff of breath noise at the start. */
+  flute(o: { freq: number; dur: number; gain: number; at?: number; pan?: number; bus?: AudioNode }) {
+    const a = this.live; if (!a) return;
+    const t = o.at ?? a.currentTime, end = t + Math.max(0.12, o.dur);
+    const out = this.out(o.pan, o.bus);
+    const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(8000, o.freq * 4); lp.Q.value = 0.5;
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(o.gain, t + 0.06);
+    g.gain.setValueAtTime(o.gain, Math.max(t + 0.06, end - 0.12));
+    g.gain.exponentialRampToValueAtTime(0.0001, end);
+    lp.connect(g).connect(out);
+    const vib = a.createOscillator(); vib.frequency.value = 5.2;
+    const depth = a.createGain(); depth.gain.setValueAtTime(0, t); depth.gain.linearRampToValueAtTime(o.freq * 0.008, t + Math.min(0.5, o.dur));
+    vib.connect(depth);
+    for (const [mul, k, type] of [[1, 1, 'triangle'], [2, 0.12, 'sine']] as const) {
+      const osc = a.createOscillator(); osc.type = type; osc.frequency.value = o.freq * mul;
+      depth.connect(osc.frequency);
+      const kg = a.createGain(); kg.gain.value = k; osc.connect(kg).connect(lp);
+      osc.start(t); osc.stop(end + 0.02);
+    }
+    vib.start(t); vib.stop(end + 0.02);
+    this.hiss({ dur: 0.09, type: 'bandpass', freq: o.freq * 2.5, q: 1.5, gain: o.gain * 0.45, attack: 0.01, at: t, pan: o.pan, bus: o.bus });
   }
 
   /** A plucked string (Karplus-Strong), cached by pitch. Used for the koto-like music and stingers. */
