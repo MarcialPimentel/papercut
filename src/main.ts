@@ -17,6 +17,9 @@ import { engine } from './audio/engine';
 import { music, PAGE_TRACKS, type MusicMode, type Tension, type TrackKey } from './audio/music';
 import { sfx } from './audio/sounds';
 import { View } from './render/view';
+import { LOOKS } from './render/common';
+import { DEFAULT_PICK, SUMI_PICK, decodePick, encodePick, lookOf, pairPicks, randomPick, type Pick } from './render/looks';
+import { FighterScreen, myPick } from './fighter-screen';
 import { loadDisplay, saveDisplay, skipFrame } from './settings';
 import { desktop, store } from './store';
 import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
@@ -81,11 +84,23 @@ function saveName(n: string) { store.set(NAME_KEY, n); }
 const rulesLabel = (c: MatchCfg) => `${roundsLabel(c.wins)}, ${c.maxHp} health, ${c.roundSecs ? c.roundSecs + 's' : 'no timer'}`;
 const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+// ---------- looks (issue #38) ----------
+/** Dress both fighters: seat 0 and seat 1, with the who's-who rule (one dark robe, one light). */
+function dress(a: Pick, b: Pick) {
+  const [p0, p1] = pairPicks(a, b);
+  view.setLooks([lookOf(p0, LOOKS[0].name), lookOf(p1, LOOKS[1].name)]);
+}
+/** The looks from a 'start' or 'match' message ('' or anything unknown is the default Kami / Sumi look). */
+const dressOnline = (looks?: [string, string]) => dress(decodePick(looks?.[0], DEFAULT_PICK), decodePick(looks?.[1], SUMI_PICK));
+/** Your look, as sent to the server with every request to play. */
+const myLook = () => encodePick(myPick());
+
 // ---------- menus ----------
-type Screen = 'main' | 'howto' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error';
+type Screen = 'main' | 'fighter' | 'howto' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (screen === 'controls' && to !== 'controls') bindScreen.cancel();
+  if (screen === 'fighter' && to !== 'fighter') fighterScreen.close();
   const moved = screen !== to;
   screen = to;
   stage.classList.add('in-menu');
@@ -99,6 +114,7 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   }
   if (to === 'host' && !opts.code) { $<HTMLInputElement>('#inviteLink').value = ''; $('#inviteCode').textContent = '····'; $('#hostWait').textContent = 'Making your room…'; }
   if (to === 'join') $('#joinWait').textContent = `Joining room ${opts.code}…`;
+  if (to === 'fighter') fighterScreen.open();
   if (to === 'error') $('#errorMsg').textContent = opts.msg ?? 'Something went wrong.';
   if (to === 'settings') fillSettings();
   if (to === 'tlobby' || to === 'bracket') for (const h of soundHints()) h.hidden = !!engine.live;
@@ -106,7 +122,7 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (moved && controls.device === 'pad') requestAnimationFrame(() => navigate('up', $('#menu .card'), () => {}));
   if (to === 'main') { const b = loadBest(); $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}` : 'How many bots can you cut?'; }
 }
-function hideMenu() { showSound(false); screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
+function hideMenu() { showSound(false); if (screen === 'fighter') fighterScreen.close(); screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
 
 function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
   tuner.toggle(false); resetTuning();
@@ -115,6 +131,7 @@ function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
   controls.active = false; controls.clear();
   controls.lockWanted = false; controls.unlock();
   mode = { kind: 'menu', s: newMatch() };
+  view.spawnLook = null; dress(myPick(), SUMI_PICK);
   view.reset(mode.s);
   hud.you = null; hud.online = false; hud.setNames();
   showMenu(to, opts);
@@ -136,13 +153,19 @@ function startPractice(endless = false) {
   // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) never does.
   if (endless) resetTuning(); else applyTuning(loadSaved());
   mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless, tally: new Tally() };
+  // Practice is against Sumi; in Endless every bot wears a random look.
+  const mine = myPick(), botLook = () => lookOf(pairPicks(mine, randomPick(Math.random))[1], LOOKS[1].name);
+  view.spawnLook = endless ? botLook : null;
+  dress(mine, SUMI_PICK);
+  if (endless) view.fighters[1].setLook(botLook());
   hud.setRules(cfg); hud.best = loadBest();
   begin();
   hud.you = null; hud.online = false; hud.setNames(); view.you = 0;
 }
 
-function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, names: [string, string] | null = null) {
+function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, names: [string, string] | null = null, looks?: [string, string]) {
   wakeAudio();
+  view.spawnLook = null; dressOnline(looks);
   tuner.toggle(false); resetTuning();
   const lock = new Lockstep(seat, delay, (m) => net.send(m), cfg);
   hud.setRules(cfg);
@@ -153,7 +176,8 @@ function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, na
 }
 
 /** Watch a tournament fight between two other players. */
-function startWatching(delay: number, code: string, cfg: MatchCfg, names: [string, string]) {
+function startWatching(delay: number, code: string, cfg: MatchCfg, names: [string, string], looks?: [string, string]) {
+  view.spawnLook = null; dressOnline(looks);
   tuner.toggle(false); resetTuning();
   mode = { kind: 'watch', spec: new Spectator(cfg, delay), code, names };
   hud.setRules(cfg);
@@ -230,6 +254,9 @@ let pendingSend: (() => void) | null = null;
 $('#bPractice').addEventListener('click', () => startPractice());
 $('#bEndless').addEventListener('click', () => startPractice(true));
 $('#bHowTo').addEventListener('click', () => showMenu('howto'));
+const fighterScreen = new FighterScreen($<HTMLCanvasElement>('#fCanvas'), $('#fPicks'), view.physics, (p) => { if (mode.kind === 'menu') dress(p, SUMI_PICK); });
+$('#bFighter').addEventListener('click', () => showMenu('fighter'));
+$('#bFighterDone').addEventListener('click', () => showMenu('main'));
 $('#bHowToBack').addEventListener('click', () => showMenu('main'));
 // Controls: remap keys and controller buttons.
 const bindScreen = setupControlsScreen(controls);
@@ -247,7 +274,7 @@ controls.onNav = (n) => {
   if (screen) {
     if (n === 'menu') { if (screen !== 'main') command('menu'); return; }
     navigate(n, $('#menu .card'), () => {
-      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #settingsForm [type=submit]')].find((b) => !b.closest('[hidden]'));
+      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #settingsForm [type=submit]')].find((b) => !b.closest('[hidden]'));
       back?.click();
     });
     return;
@@ -328,8 +355,8 @@ $('#setupForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const v = (id: string) => Number($<HTMLSelectElement>(id).value);
   const cfg = cleanCfg({ wins: v('#optWins'), maxHp: v('#optHp'), roundSecs: v('#optTime') });
-  if (setupFor === 'room') { showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg })); }
-  else { showMenu('join', { code: 'for your tournament' }); ensureNet(() => net.send({ t: 'tourney', cfg, name: myName() })); }
+  if (setupFor === 'room') { showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg, look: myLook() })); }
+  else { showMenu('join', { code: 'for your tournament' }); ensureNet(() => net.send({ t: 'tourney', cfg, name: myName(), look: myLook() })); }
 });
 $('#tName').addEventListener('change', () => {
   const n = $<HTMLInputElement>('#tName').value.trim();
@@ -343,12 +370,12 @@ $('#tCopy').addEventListener('click', async () => {
   catch { input.select(); }
   setTimeout(() => { $('#tCopy').textContent = 'Copy link'; }, 1600);
 });
-$('#bQuick').addEventListener('click', () => { showMenu('search'); ensureNet(() => net.send({ t: 'quick' })); });
+$('#bQuick').addEventListener('click', () => { showMenu('search'); ensureNet(() => net.send({ t: 'quick', look: myLook() })); });
 $('#joinForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const code = normalizeCode($<HTMLInputElement>('#joinCode').value);
   if (code.length < 4) return;
-  showMenu('join', { code }); ensureNet(() => net.send({ t: 'join', code, name: myName() }));
+  showMenu('join', { code }); ensureNet(() => net.send({ t: 'join', code, name: myName(), look: myLook() }));
 });
 for (const b of document.querySelectorAll('[data-cancel]')) b.addEventListener('click', () => { net.send({ t: 'cancel' }); toMenu(); });
 $('#copyLink').addEventListener('click', async () => {
@@ -396,7 +423,7 @@ function command(c: Command) {
     return;
   }
   if (c === 'menu' && tuner.open) { tuner.toggle(false); return; }
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls') showMenu('main'); return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter') showMenu('main'); return; }
   if (mode.kind === 'practice') {
     if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); mode.tally = new Tally(); hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
   } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
@@ -415,7 +442,7 @@ net.onMessage = (m: ToClient) => {
   switch (m.t) {
     case 'room': showMenu('host', { code: m.code }); break;
     case 'waiting': showMenu('search'); break;
-    case 'start': startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg)); break;
+    case 'start': startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), null, m.looks); break;
     case 'in': case 'hash':
       if (mode.kind === 'online') mode.lock.receive(m);
       else if (mode.kind === 'watch') mode.spec.receive(m);
@@ -439,8 +466,8 @@ net.onMessage = (m: ToClient) => {
     case 'match':
       if (!tourney) break;
       tourney.fight = tourney.bracket?.current ?? null; tourney.reported = false; tourney.backAt = 0;
-      if (m.seat === -1) startWatching(m.delay, m.code, cleanCfg(m.cfg), m.names);
-      else startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.names);
+      if (m.seat === -1) startWatching(m.delay, m.code, cleanCfg(m.cfg), m.names, m.looks);
+      else startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.names, m.looks);
       break;
     case 'gone': if (mode.kind === 'online' && !tourney) toMenu('error', { msg: 'Your rival left the fight.' }); break;
     case 'err': toMenu('error', { msg: m.msg }); break;
@@ -554,13 +581,14 @@ function frame(now: number) {
 }
 
 hud.setNames();
+dress(myPick(), SUMI_PICK);
 view.reset(stateOf(mode));
 stage.classList.add('ready');
 const roomParam = new URLSearchParams(location.search).get('room');
 if (roomParam) {
   const code = normalizeCode(roomParam);
   showMenu('join', { code });
-  ensureNet(() => net.send({ t: 'join', code, name: myName() }));
+  ensureNet(() => net.send({ t: 'join', code, name: myName(), look: myLook() }));
 } else {
   showMenu('main');
   net.connect(); // connect early so the server can measure the connection before a fight
