@@ -1,7 +1,7 @@
 // Pairs players into rooms (1v1 or tournament) and relays their inputs. The server's referee steps
 // the same fight alongside the players to read the result and count what happened (see referee.ts).
 
-import { CODE_LENGTH, CODE_LETTERS, delayFor, normalizeCode, type RankInfo, type ToClient, type ToServer } from '../src/net/protocol';
+import { CODE_LENGTH, CODE_LETTERS, cleanLook, delayFor, normalizeCode, type RankInfo, type ToClient, type ToServer } from '../src/net/protocol';
 import { DEFAULT_CFG, cleanCfg, type MatchCfg } from '../src/sim/config';
 import { Referee, cleanGuard, type GuardStyle, type MatchRecord } from './referee';
 import type { Ranked } from './ranked';
@@ -13,6 +13,8 @@ export interface Peer {
   rtt?: number;
   /** The guard style this player's browser uses (it says so in a 'hello'). */
   guard?: GuardStyle;
+  /** The player's look code (drawn only, never part of the fight). */
+  look?: string;
   /** The fight version this player's game runs (server/fightVersion.ts). */
   v?: string;
   /** Ranked: this player's id (a hash of their token), once they said hello. */
@@ -73,6 +75,7 @@ export class Lobby {
   message(p: Peer, m: ToServer) {
     const t = this.tourneyOf.get(p);
     if (this.fight && PAIRING.has(m.t) && p.v !== this.fight) { p.send({ t: 'err', msg: MISMATCH_MSG }); return; }
+    if (PAIRING.has(m.t) && 'look' in m && m.look !== undefined) p.look = cleanLook(m.look);
     switch (m.t) {
       case 'tourney': {
         this.leave(p, false);
@@ -195,8 +198,9 @@ export class Lobby {
     r.ref = ref;
     const a = r.ranked && this.ranked?.info(r.host), b = r.ranked && this.ranked?.info(guest);
     const extra = a && b ? { ranks: [a, b] as [RankInfo, RankInfo] } : {};
-    r.host.send({ t: 'start', seat: 0, delay, code: r.code, cfg: r.cfg, ...extra });
-    guest.send({ t: 'start', seat: 1, delay, code: r.code, cfg: r.cfg, ...extra });
+    const looks: [string, string] = [r.host.look ?? '', guest.look ?? ''];
+    r.host.send({ t: 'start', seat: 0, delay, code: r.code, cfg: r.cfg, looks, ...extra });
+    guest.send({ t: 'start', seat: 1, delay, code: r.code, cfg: r.cfg, looks, ...extra });
   }
 
   /**

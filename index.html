@@ -53,6 +53,7 @@
           <button class="mbtn" id="bEndless" type="button">Endless<small id="bestRun">How many bots can you cut?</small></button>
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
           <div class="row2">
+            <button class="hbtn" id="bFighter" type="button">Your fighter</button>
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
             <button class="hbtn" id="bBoard" type="button">Leaderboard</button>
             <button class="hbtn" id="bSettings" type="button">Settings</button>
@@ -64,6 +65,14 @@
             <input id="joinCode" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD">
             <button class="hbtn" type="submit">Join</button>
           </form>
+        </div>
+
+       <div data-screen="fighter" class="stack fighter" hidden>
+          <p class="big">Your fighter</p>
+          <div class="fprev" data-paper="graph"><canvas id="fCanvas" aria-label="Your fighter, turning its guard high and low"></canvas></div>
+          <div class="fpicks" id="fPicks"></div>
+          <p class="fnote">Looks never change the fight: every sword has the same reach. Online, your rival sees your look. One fighter always wears a dark robe and the other a light one, so if you both pick the same, player 2's robe flips.</p>
+          <button class="mbtn" id="bFighterDone" type="button">Done</button>
         </div>
 
         <form data-screen="setup" class="stack setup" id="setupForm" hidden>
