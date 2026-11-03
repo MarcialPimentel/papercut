@@ -16,7 +16,8 @@ const pan = (x: number) => clamp(x / RULES.edge, -1, 1) * 0.6;
 
 export class View {
   readonly renderer: THREE.WebGLRenderer;
-  readonly camera = new THREE.PerspectiveCamera(30, 1, 0.1, 160);
+  // Near plane 0.5 (the camera never comes closer than ~6 units): depth precision for the thin paper layers.
+  readonly camera = new THREE.PerspectiveCamera(30, 1, 0.5, 160);
   readonly book: Notebook;
   readonly fighters: FighterView[];
   readonly fx: Fx;
