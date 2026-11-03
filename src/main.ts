@@ -122,7 +122,9 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (to === 'tlobby' || to === 'bracket') for (const h of soundHints()) h.hidden = !!engine.live;
   // On a controller, put the focus on the screen's first button so A does something straight away.
   if (moved && controls.device === 'pad') requestAnimationFrame(() => navigate('up', $('#menu .card'), () => {}));
+  $('#sideBoard').hidden = to !== 'main';
   if (to === 'main') {
+    showSide();
     showBest();
     if (loadBest() > 0) fetchBoard('all').then((b) => { myPlace = b?.you?.place ?? null; if (screen === 'main') showBest(); });
   }
@@ -211,6 +213,55 @@ async function showBoard(period: Period) {
     : `<li class="muted">No runs ${PERIOD_NAMES[period]} yet. Be the first.</li>`;
   $('#boardYou').textContent = b.you ? `You: #${b.you.place} ${PERIOD_NAMES[period]} with ${b.you.bots} bot${b.you.bots === 1 ? '' : 's'}.` : `You have no run ${PERIOD_NAMES[period]} yet.`;
 }
+// The title screen's leaderboard panel: Ranked (placed players by rating) or Endless (best runs, all time).
+type Side = 'ranked' | 'endless';
+const SIDE_KEY = 'papercut.sideBoard';
+/** How many places the panel shows (the full Endless list has 100). */
+const SIDE_ROWS = 10;
+let side: Side = store.get(SIDE_KEY) === 'endless' ? 'endless' : 'ranked';
+let sideAsk = 0;
+interface RankedReply { top: (RankInfo & { you: boolean })[]; you: (RankInfo & { place: number | null }) | null }
+async function fetchRanked(): Promise<RankedReply | null> {
+  try {
+    const r = await fetch(`${SITE}/api/ranked-board`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: myId() }) });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+async function showSide(which: Side = side) {
+  side = which;
+  store.set(SIDE_KEY, which);
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-side]')) {
+    const on = b.dataset.side === which;
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+  }
+  $('#sideMore').hidden = which !== 'endless';
+  const list = $('#sideList'), you = $('#sideYou'), ask = ++sideAsk;
+  if (!list.children.length) list.innerHTML = '<li class="muted">Loading…</li>';
+  const row = (i: number, name: string, right: string, mine: boolean) =>
+    `<li class="${mine ? 'you' : ''}"><span>${i + 1}</span><b>${esc(name)}</b><span>${right}</span></li>`;
+  if (which === 'ranked') {
+    const b = await fetchRanked();
+    if (ask !== sideAsk) return;
+    if (!b) { list.innerHTML = '<li class="muted">Not available right now.</li>'; you.textContent = ''; return; }
+    list.innerHTML = b.top.length
+      ? b.top.slice(0, SIDE_ROWS).map((r, i) => row(i, r.name, `${esc(r.division)} <span class="muted">${r.points}</span>`, r.you)).join('')
+      : '<li class="muted">No ranked players yet. Play 5 ranked matches to appear here.</li>';
+    you.textContent = !b.you || b.you.place === null
+      ? `You: ${b.you ? b.you.division : `Placement 0/5`} · your first 5 ranked matches place you.`
+      : `You: #${b.you.place} · ${b.you.division} ${b.you.points}`;
+  } else {
+    const b = await fetchBoard('all');
+    if (ask !== sideAsk) return;
+    if (!b) { list.innerHTML = '<li class="muted">Not available right now.</li>'; you.textContent = ''; return; }
+    list.innerHTML = b.top.length
+      ? b.top.slice(0, SIDE_ROWS).map((r, i) => row(i, r.name, `${r.bots} bot${r.bots === 1 ? '' : 's'} <span class="muted">${clock(r.secs)}</span>`, r.you)).join('')
+      : '<li class="muted">No Endless runs yet. Be the first.</li>';
+    you.textContent = b.you ? `You: #${b.you.place} with ${b.you.bots} bot${b.you.bots === 1 ? '' : 's'}` : 'You: no run yet. Press Endless to start one.';
+  }
+}
+for (const b of document.querySelectorAll<HTMLButtonElement>('[data-side]')) b.addEventListener('click', () => showSide(b.dataset.side as Side));
+$('#sideMore').addEventListener('click', () => showMenu('board'));
+
 /** The title screen's Endless line: your best run, and your place if you have one. */
 function showBest() {
   const b = loadBest();
@@ -399,7 +450,7 @@ controls.onNav = (n) => {
   if (tuner.open) { if (n === 'menu') command('menu'); else navigate(n, tuner.el, () => tuner.toggle(false)); return; }
   if (screen) {
     if (n === 'menu') { if (screen !== 'main') command('menu'); return; }
-    navigate(n, $('#menu .card'), () => {
+    navigate(n, $('#menu'), () => {
       const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
       back?.click();
     });

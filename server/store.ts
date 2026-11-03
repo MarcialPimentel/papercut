@@ -4,7 +4,7 @@
 
 import type { MatchTally } from '../src/sim/tally';
 import type { GuardStyle, MatchMode, MatchRecord } from './referee';
-import type { Rating } from './rating';
+import { PLACEMENT, type Rating } from './rating';
 
 export interface EndlessRecord {
   guard: GuardStyle;
@@ -61,6 +61,10 @@ export interface Store {
   place(player: string, period: Period): Promise<{ place: number; bots: number } | null>;
   player(id: string): Promise<Player | null>;
   savePlayer(p: Player): Promise<void>;
+  /** Ranked players who finished placement, highest rating first. */
+  rankedTop(limit: number): Promise<Player[]>;
+  /** A placed player's place on the ranked list (null: not placed yet). */
+  rankedPlace(id: string): Promise<number | null>;
 }
 
 const guardOk = (f: GuardFilter, g: GuardStyle[]) => f === 'any' || g.every((x) => x === f);
@@ -101,6 +105,9 @@ export class MemoryStore implements Store {
   async builds() { return [...new Set([...this.rows, ...this.runs].map((r) => r.build))].reverse(); }
   async player(id: string) { const p = this.players.get(id); return p ? { ...p } : null; }
   async savePlayer(p: Player) { this.players.set(p.id, { ...p }); }
+  private ranked() { return [...this.players.values()].filter((p) => p.games >= PLACEMENT).sort((a, b) => b.rating - a.rating || (a.id < b.id ? -1 : 1)); }
+  async rankedTop(limit: number) { return this.ranked().slice(0, limit).map((p) => ({ ...p })); }
+  async rankedPlace(id: string) { const i = this.ranked().findIndex((p) => p.id === id); return i < 0 ? null : i + 1; }
   async prune() {
     const cut = this.now() - KEEP_INPUTS_DAYS * 86400e3;
     for (const r of this.rows) if (r.at < cut) r.inputs = null;
@@ -243,6 +250,21 @@ export class PgStore implements Store {
     await this.init();
     const { rows } = await this.pool.query('SELECT id, name, rating, rd, vol, games, wins FROM players WHERE id = $1', [id]);
     return (rows[0] as unknown as Player | undefined) ?? null;
+  }
+
+  async rankedTop(limit: number): Promise<Player[]> {
+    await this.init();
+    const { rows } = await this.pool.query(
+      'SELECT id, name, rating, rd, vol, games, wins FROM players WHERE games >= $1 ORDER BY rating DESC, id ASC LIMIT $2', [PLACEMENT, limit]);
+    return rows as unknown as Player[];
+  }
+
+  async rankedPlace(id: string): Promise<number | null> {
+    await this.init();
+    const { rows } = await this.pool.query(
+      `SELECT (SELECT count(*) FROM players o WHERE o.games >= $1 AND (o.rating > me.rating OR (o.rating = me.rating AND o.id < me.id)))::int + 1 AS place
+       FROM players me WHERE me.id = $2 AND me.games >= $1`, [PLACEMENT, id]);
+    return (rows[0] as { place: number } | undefined)?.place ?? null;
   }
 
   async savePlayer(p: Player) {
