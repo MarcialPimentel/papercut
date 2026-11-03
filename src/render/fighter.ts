@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { RigidBody } from '@dimforge/rapier3d-compat';
-import { MOVES, RULES } from '../sim/rules';
+import { MOVES } from '../sim/rules';
 import type { Fighter } from '../sim/sim';
 import { C, D, clamp, easeIn, lerp, type Look } from './common';
 import { ccw, clipConvex, clipHalf, offset, slashLens, type Line, type Pt } from './paper2d';
@@ -202,13 +202,13 @@ function keyPose(f: Fighter, walkT: number): [Pose, string] {
     case 'active': return [POSE.strike[f.slash], 'a' + f.slash];
     case 'recover': return f.t < mv.rec * 0.45 ? [POSE.follow[f.slash], 'r' + f.slash] : [g, 'g' + f.stance];
     case 'stagger': return [STAGGER, 'sg'];
+    case 'taunt': { const n = Math.floor(f.t / TAUNT_BEAT) % 2; return [TAUNT[n], 'e' + n]; }
     case 'feint': return [lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK * 0.4), 'f' + f.slash];
     case 'stun': return [{ ...g, lean: 0.14, head: 0.16, hilt: [0.3, 0.95], sword: -35 * D }, 'st'];
     case 'land': return [{ ...g, spreadF: 0.3, spreadB: 0.26, lean: -0.1 }, 'ld'];
     case 'dash': { const back = f.dashDir !== f.facing; return [{ ...g, lean: back ? 0.12 : -0.12, spreadF: 0.24, spreadB: 0.2 }, back ? 'db' : 'df']; }
     default:
       if (f.y > 0) return f.vy > 0 ? [{ ...g, spreadF: 0.05, spreadB: 0.3, lean: -0.06 }, 'j1' + f.stance] : [{ ...g, spreadF: 0.2, spreadB: 0.2 }, 'j2' + f.stance];
-      if (f.emote > 0) { const n = Math.floor((RULES.emoteFrames - f.emote) / TAUNT_BEAT) % 2; return [TAUNT[n], 'e' + n]; }
       if (f.walk) { const s = Math.floor(walkT / 8) % 2; return [{ ...g, spreadF: s ? 0.24 : 0.06, spreadB: s ? 0.06 : 0.2 }, 'k' + s + f.stance]; }
       return [g, 'g' + f.stance];
   }

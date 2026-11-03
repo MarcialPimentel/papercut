@@ -18,15 +18,16 @@ export const BTN = {
   dashL: 128,
   dashR: 256,
   rematch: 512,
-  emote: 1024, // a press: the "come at me" taunt (only drawn, never changes the fight)
+  emote: 1024, // a press: the "come at me" taunt (locked in, can't guard: any slash lands)
 } as const;
 const PRESSES = ['light', 'heavy', 'feint', 'jump', 'dashL', 'dashR'] as const;
 type Press = (typeof PRESSES)[number];
 
 export type Stance = 'high' | 'low';
-/** stagger: the guard knocked aside by a blocked heavy (open to hits, like stun). */
-export type FState = 'guard' | 'wind' | 'active' | 'recover' | 'feint' | 'stun' | 'dash' | 'land' | 'stagger';
-const FSTATES: FState[] = ['guard', 'wind', 'active', 'recover', 'feint', 'stun', 'dash', 'land', 'stagger'];
+/** stagger: the guard knocked aside by a blocked heavy (open to hits, like stun). taunt: "come at me", locked in and
+ *  unguarded until it ends. */
+export type FState = 'guard' | 'wind' | 'active' | 'recover' | 'feint' | 'stun' | 'dash' | 'land' | 'stagger' | 'taunt';
+const FSTATES: FState[] = ['guard', 'wind', 'active', 'recover', 'feint', 'stun', 'dash', 'land', 'stagger', 'taunt'];
 export type Atk = keyof typeof MOVES;
 export type Phase = 'intro' | 'fight' | 'ko' | 'turn' | 'over';
 
@@ -50,7 +51,6 @@ export interface Fighter {
   dashDir: number; dashFrom: number; dashLen: number;
   stunT: number;
   walk: number; // -1, 0, 1: walking direction this frame
-  emote: number; // frames left of the taunt (0 = none). Only drawn: nothing in the fight reads it
 }
 
 export interface State {
@@ -77,7 +77,7 @@ export type FightEvent =
   | { k: 'round'; round: number; page: number }
   | { k: 'cut' }
   | { k: 'swing'; p: number; atk: Atk; slash: Stance }
-  | { k: 'feint' | 'jump' | 'dash'; p: number }
+  | { k: 'feint' | 'jump' | 'dash' | 'taunt'; p: number }
   | { k: 'whiff'; p: number; x: number; y: number; ang: number; heavy: boolean; over: boolean }
   | { k: 'clash'; p: number; x: number; y: number; ang: number }
   | { k: 'block'; p: number; x: number; y: number; ang: number; heavy: boolean; chip: number; stagger: boolean }
@@ -101,7 +101,7 @@ function newFighter(side: 0 | 1, maxHp: number): Fighter {
     stance: side === 0 ? 'high' : 'low', stanceAt: -999,
     state: 'guard', t: 0, atk: 'light', slash: 'high', whiffed: false, airSlash: false,
     hp: maxHp, wins: 0, alive: true, riposte: 0, buf: '', bufLeft: 0,
-    dashDir: 0, dashFrom: 0, dashLen: 0, stunT: 0, walk: 0, emote: 0,
+    dashDir: 0, dashFrom: 0, dashLen: 0, stunT: 0, walk: 0,
   };
 }
 
@@ -225,19 +225,7 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
       }
       break;
   }
-  emotes(s, inputs);
   return ev;
-}
-
-/** The taunt: plays while the fighter stands still in guard; moving, jumping, slashing or being hit ends it.
- *  It travels with the inputs, so the rival sees it online, but it never feeds back into the fight. */
-function emotes(s: State, inputs: readonly [number, number]) {
-  for (const i of [0, 1]) {
-    const f = s.f[i], free = f.alive && f.state === 'guard' && f.y <= 0 && f.walk === 0;
-    if (!free) { f.emote = 0; continue; }
-    if (f.emote > 0) f.emote--;
-    if (inputs[i] & BTN.emote && f.emote === 0) f.emote = RULES.emoteFrames;
-  }
 }
 
 /** Who won the match. In Endless the bot always ends the run. */
@@ -270,6 +258,9 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
     const f = s.f[i], o = s.f[1 - i], b = inputs[i];
     if (f.riposte > 0) f.riposte--;
     for (const p of PRESSES) if (b & BTN[p]) act(s, i, p, b, ev);
+    // The taunt: only from a standing guard. Locked in for its whole length, and it can't block (judge only blocks
+    // from 'guard'), so any slash that reaches lands as a clean hit. Presses near its end come out after it.
+    if (b & BTN.emote && f.alive && f.state === 'guard' && f.y <= 0) { f.state = 'taunt'; f.t = 0; ev.push({ k: 'taunt', p: i }); }
     if (f.buf) {
       if (f.state === 'guard') { const p = f.buf; f.buf = ''; act(s, i, p, b, ev); }
       else if (--f.bufLeft <= 0) f.buf = '';
@@ -307,6 +298,9 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
         break;
       case 'land':
         if (f.t >= RULES.landLag) f.state = 'guard';
+        break;
+      case 'taunt':
+        if (f.t >= RULES.emoteFrames) f.state = 'guard';
         break;
       case 'dash': {
         const k = Math.min(1, f.t / RULES.dashFrames);

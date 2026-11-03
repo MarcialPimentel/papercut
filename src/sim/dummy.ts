@@ -94,6 +94,8 @@ export class Dummy {
       this.airTried = true;
       if (chance(Math.min(0.8, 0.2 * L))) { this.low = false; this.tell = 0; return BTN.light; }
     }
+    // Punish a taunt with a heavy: it can't be blocked and lands well before the taunt ends.
+    if (you.state === 'taunt' && you.t === 1 && dx < heavy() - 0.1 && chance(Math.min(0.9, 0.3 * L))) return BTN.heavy;
     // Cut you while you're stuck landing.
     if (you.state === 'land' && you.t === 1 && dx < light() - 0.05 && L >= 2 && chance(0.6)) return BTN.light;
     return 0;

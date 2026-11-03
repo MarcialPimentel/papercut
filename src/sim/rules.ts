@@ -39,7 +39,7 @@ export const RULES = {
   walk: 3.7 / FPS, // metres per frame
   jumpV: 5.6 / FPS,
   gravity: 15 / (FPS * FPS),
-  emoteFrames: 60, // the "come at me" taunt plays this long (only drawn)
+  emoteFrames: 60, // the "come at me" taunt: locked in and unguarded this long
   landLag: 10, // stuck this long on landing after a slash in the air
   dashFrames: 12,
   dashForward: 2.0,
