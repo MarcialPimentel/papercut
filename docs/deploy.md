@@ -26,11 +26,11 @@ During a fight the server passes each player's button presses to the other one; 
 
 Merging to `main` deploys automatically:
 
-1. **CI** (`.github/workflows/ci.yml`): typecheck, tests and build in one job; the Docker image build in another. On `main` the image is pushed to GitHub's container registry, tagged with the commit.
-2. If CI passes, **Deploy** (`.github/workflows/deploy.yml`) tags that image `latest`, connects to the hub over SSH as the deploy user, keeps the running build as `previous`, starts the new one and waits up to 2 minutes for it to report healthy. If it never does, it switches back to `previous` and the run fails, so the old build keeps running.
-3. Finally it checks that https://papercut.marz.gg/api/health reports the new build.
+1. **CI** (`.github/workflows/ci.yml`): typecheck, tests and build in one job; the Docker image build in another. On `main` the image is pushed to GitHub's container registry, tagged with the commit. (The desktop app builds in its own **Desktop** workflow, so it never holds up a deploy.)
+2. If CI passes, **Deploy** (`.github/workflows/deploy.yml`) first checks the commit is still the newest on `main`. If another merge landed meanwhile, this run stops with a notice ("main has moved on") and the newer commit's own run deploys instead, so an older build never replaces a newer one. Otherwise it tags that image `latest`, connects to the hub over SSH as the deploy user, keeps the running build as `previous`, starts the new one and waits up to 2 minutes for it to report healthy. If it never does, it switches back to `previous` and the run fails, so the old build keeps running.
+3. Finally it checks that https://papercut.marz.gg/api/health reports the new build and `"db":"ok"` (the game reached its database). If the build is right but the database isn't, the run fails red with "its database is 'down'": the new build stays live (Practice and the page work), but Ranked, Endless scores and /stats can't save until the hub's Postgres is back.
 
-**Check what's live:** open https://papercut.marz.gg/api/health. `build` is the first 7 characters of the commit; the game also shows it in the bottom-right corner.
+**Check what's live:** open https://papercut.marz.gg/api/health. `build` is the first 7 characters of the commit; the game also shows it in the bottom-right corner. `db` is `ok` when the game reaches its database, `down` when it doesn't, `memory` with no database (your own PC). On start, the server tries the database 5 times (2 s apart) before taking players.
 
 **Redeploy or roll back:** GitHub → **Actions** → **Deploy** → **Run workflow**. Leave the box empty to redeploy the latest `main`, or paste an older commit from `main` to go back to it.
 

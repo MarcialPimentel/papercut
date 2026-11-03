@@ -122,6 +122,16 @@ export class Referee {
     }
   }
 
+  /**
+   * The seat the fight is stuck waiting on: its rival has sent buttons for the frame the fight is on,
+   * it hasn't (null: the fight isn't waiting on just one player).
+   */
+  get waitingOn(): 0 | 1 | null {
+    if (this.closed || this.state.phase === 'over') return null;
+    const f = this.state.frame, a = this.queued[0].has(f), c = this.queued[1].has(f);
+    return a === c ? null : a ? 1 : 0;
+  }
+
   /** Who the server's own fight says won (null until the match is over). */
   get winner(): number | null { return this.state.phase === 'over' ? (this.state.f[0].wins > this.state.f[1].wins ? 0 : 1) : null; }
 
