@@ -24,7 +24,7 @@ export type Device = 'mouse' | 'pad' | 'touch';
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-export type Command = 'restart' | 'menu' | 'rematch' | 'hitboxes' | 'tune';
+export type Command = 'restart' | 'menu' | 'rematch' | 'hitboxes' | 'tune' | 'skip';
 export type GuardStyle = 'flick' | 'cursor';
 const GUARD_KEY = 'papercut.guard';
 // Anything but 'cursor' (including the old 'line' trial) plays as flick.
@@ -102,6 +102,8 @@ export class Controls {
       const a = actionForKey(this.binds, e.code);
       if (!a) return;
       if (a === 'restart' || a === 'hitboxes' || a === 'tune') { if (!e.repeat) this.onCommand(a); return; }
+      // The tutorial's skip (Tab by default). Outside a fight Tab keeps moving the focus through menus.
+      if (a === 'skip') { if (this.active) { e.preventDefault(); if (!e.repeat) this.onCommand('skip'); } return; }
       if (!this.active) return;
       e.preventDefault();
       this.onAnyInput();
