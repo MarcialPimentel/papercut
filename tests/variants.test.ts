@@ -7,13 +7,13 @@ const shape = (role: string, only?: Shape['only']): Shape => ({ pts: [[0, 0], [1
 function puppet(): Puppet {
   const p = {} as Puppet;
   for (const name of PIECE_NAMES) p[name] = { name, rest: new THREE.Vector2(), shapes: [shape('robe')] };
-  p.head.shapes = [shape('skin'), shape('hair', 'kami'), shape('straw', 'sumi')];
+  p.head.shapes = [shape('skin'), shape('hair', 'kami'), shape('hairDown', 'sumi')];
   return p;
 }
 
 describe('fighter variants (#37)', () => {
   it('reads the tag from the paper object name', () => {
-    expect(variantOfName('sumi_hat')).toBe('sumi');
+    expect(variantOfName('sumi_hair')).toBe('sumi');
     expect(variantOfName('Kami_sleeve_L')).toBe('kami');
     expect(variantOfName('sleeve_L')).toBeUndefined();
     expect(variantOfName('kamisama')).toBeUndefined();
@@ -22,7 +22,7 @@ describe('fighter variants (#37)', () => {
   it('each fighter wears the shared pieces plus only their own', () => {
     const p = puppet();
     expect(wornBy(p, 'kami').head.shapes.map((s) => s.role)).toEqual(['skin', 'hair']);
-    expect(wornBy(p, 'sumi').head.shapes.map((s) => s.role)).toEqual(['skin', 'straw']);
+    expect(wornBy(p, 'sumi').head.shapes.map((s) => s.role)).toEqual(['skin', 'hairDown']);
     // Same rig and piece list for both.
     expect(Object.keys(wornBy(p, 'sumi'))).toEqual([...PIECE_NAMES]);
     expect(wornBy(p, 'sumi').torso.shapes).toHaveLength(1);

@@ -8,13 +8,13 @@ export const C = {
 
 /** A fighter's look: colours by Blender material role (robe, kimono, hakama, accent...), plus the outfit print
  *  and sword style (see looks.ts), and which fighter's own paper pieces it wears (`variant`: Kami's topknot and
- *  wide sleeves, or Sumi's straw hat and tied-back sleeves; pieces named "kami_..." / "sumi_..." in the Blender
+ *  wide sleeves, or Sumi's long hair worn down and tied-back sleeves; pieces named "kami_..." / "sumi_..." in the Blender
  *  file). Without a variant, the seat decides: player 1 is Kami, player 2 is Sumi. The samurai is painted as Kami
  *  in Blender; a look only lists what it changes. */
 export interface Look { name: string; colors: Record<string, string>; key?: string; outfit?: string; sword?: string; variant?: 'kami' | 'sumi' }
 export const KAMI: Look = { name: 'Kami', colors: {}, variant: 'kami' };
 // Sumi wears Kami's robes inverted: a cream robe over an indigo kimono, indigo prints (Marz's pick), and their own
-// straw hat and tied-back sleeves (#37, Marz's pick).
+// long hair worn down and tied-back sleeves (#37, Marz's pick).
 export const SUMI: Look = { name: 'Sumi', colors: { robe: '#F2E3C0', kimono: '#3C3A7E' }, variant: 'sumi' };
 export const LOOKS = [KAMI, SUMI] as const;
 
