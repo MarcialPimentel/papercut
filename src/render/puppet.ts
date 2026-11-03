@@ -10,7 +10,14 @@ import { loopsFromTriangles, type Pt } from './paper2d';
 
 /** One flat shape. `role` is the Blender material name without "pc_" (robe, kimono, hakama...).
  *  `paper` shapes are cut paper (they get the ink line); the rest are prints on the paper in front of them. */
-export interface Shape { pts: Pt[]; role: string; color: string; z: number; paper: boolean; /** The Blender paper object it came from (robe_L, sleeve_R...). */ obj: string }
+export interface Shape {
+  pts: Pt[]; role: string; color: string; z: number; paper: boolean;
+  /** The Blender paper object it came from (robe_L, kami_sleeve_R...). */
+  obj: string;
+  /** Worn by one fighter only: the paper object's name starts with "kami_" or "sumi_" (Sumi's straw hat, Kami's
+   *  topknot...). Untagged pieces are worn by both. */
+  only?: Variant;
+}
 export interface Piece {
   name: PieceName;
   /** The pivot in the rest pose, in game units from the feet (x toward the rival, y up). */
@@ -19,6 +26,17 @@ export interface Piece {
   shapes: Shape[];
 }
 export type Puppet = Record<PieceName, Piece>;
+/** Which fighter's pieces to wear. Both share one rig and one piece list; only the paper on it differs. */
+export type Variant = 'kami' | 'sumi';
+export const VARIANTS: readonly Variant[] = ['kami', 'sumi'];
+/** "sumi_hat" -> "sumi"; untagged names -> undefined. */
+export const variantOfName = (name: string): Variant | undefined => VARIANTS.find((v) => name.toLowerCase().startsWith(v + '_'));
+/** The puppet as one fighter wears it: shared pieces plus that fighter's own, the other fighter's left out. */
+export function wornBy(p: Puppet, v: Variant): Puppet {
+  const out = {} as Puppet;
+  for (const name of PIECE_NAMES) out[name] = { ...p[name], shapes: p[name].shapes.filter((s) => !s.only || s.only === v) };
+  return out;
+}
 
 export const PIECE_NAMES = ['skirt_R', 'skirt_L', 'arm_R', 'hand_R', 'sword', 'torso', 'head', 'arm_L', 'hand_L'] as const;
 export type PieceName = (typeof PIECE_NAMES)[number];
@@ -31,6 +49,7 @@ export const PUPPET_URL = '/models/samurai.glb';
 function readPiece(node: THREE.Object3D, root: THREE.Object3D): Piece {
   const inv = node.matrixWorld.clone().invert(), v = new THREE.Vector3();
   const objects = new Map<THREE.Object3D, { loops: { pts: Pt[]; z: number }[]; role: string; color: string }[]>();
+  const only = new Map<THREE.Object3D, Variant | undefined>();
   // Each paper object hanging under this rig node (not under a deeper rig node). A Blender object with several
   // materials arrives as a group of meshes; they belong together, so the group is the paper object.
   const visit = (o: THREE.Object3D, owner: THREE.Object3D | null) => {
@@ -41,7 +60,7 @@ function readPiece(node: THREE.Object3D, root: THREE.Object3D): Piece {
         const mat = (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.MeshStandardMaterial;
         const M = inv.clone().multiply(m.matrixWorld), p = m.geometry.attributes.position, out = new Float32Array(p.count * 3);
         for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(M); out.set([v.x, v.y, v.z], i * 3); }
-        const list = objects.get(own) ?? []; objects.set(own, list);
+        const list = objects.get(own) ?? []; objects.set(own, list); only.set(own, variantOfName(own.name));
         list.push({ loops: loopsFromTriangles(out, m.geometry.index ? m.geometry.index.array : null), role: (mat.name || 'paper').replace(/^pc_/, ''), color: '#' + (mat.color?.getHexString() ?? 'ffffff') });
       }
       visit(c, own);
@@ -53,7 +72,7 @@ function readPiece(node: THREE.Object3D, root: THREE.Object3D): Piece {
     // The paper is the object's back-most plane; anything in front of it is printed on it.
     const back = Math.min(...parts.flatMap((p) => p.loops.map((l) => l.z)));
     for (const { loops, role, color } of parts) for (const l of loops) {
-      shapes.push({ pts: l.pts.map(([x, y]) => [x * SCALE, y * SCALE] as Pt), role, color, z: l.z * SCALE, paper: l.z - back < 0.002, obj: own.name });
+      shapes.push({ pts: l.pts.map(([x, y]) => [x * SCALE, y * SCALE] as Pt), role, color, z: l.z * SCALE, paper: l.z - back < 0.002, obj: own.name, only: only.get(own) });
     }
   }
   shapes.sort((a, b) => a.z - b.z);

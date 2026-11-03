@@ -7,7 +7,7 @@ import type { ToClient } from '../src/net/protocol';
 import {
   COLOUR_SETS, DEFAULT_PICK, OUTFITS, SUMI_PICK, SWORDS, decodePick, dressPiece, encodePick, lookOf, pairPicks, randomPick, type Pick,
 } from '../src/render/looks';
-import { PIECE_NAMES, puppetFrom, type Puppet } from '../src/render/puppet';
+import { PIECE_NAMES, puppetFrom, wornBy, type Puppet } from '../src/render/puppet';
 
 let puppet: Puppet;
 beforeAll(async () => {
@@ -115,6 +115,59 @@ describe('rule checks', () => {
       const [r, g, b] = [1, 3, 5].map((i) => parseInt(st.blade.slice(i, i + 2), 16));
       expect(0.299 * r + 0.587 * g + 0.114 * b, st.name).toBeGreaterThan(170);
     }
+  });
+});
+
+describe("Kami's and Sumi's own pieces with every look (#37 + #38)", () => {
+  const arms = ['arm_L', 'arm_R'] as const;
+  const prints = (p: Puppet, look: ReturnType<typeof lookOf>, side: string) =>
+    arms.flatMap((a) => dressPiece(p[a], look)).filter((s) => !s.paper && s.obj.endsWith('sleeve_' + side));
+
+  it('every colour set, robe side, outfit and sword dresses both fighters with no red and the same outline', () => {
+    for (const v of ['kami', 'sumi'] as const) {
+      const p = wornBy(puppet, v);
+      for (const pick of ALL) {
+        const look = lookOf(pick, 'x');
+        for (const name of PIECE_NAMES) {
+          const shapes = dressPiece(p[name], look);
+          if (name !== 'sword') expect(shapes.filter((s) => s.paper).map((s) => s.pts)).toEqual(p[name].shapes.filter((s) => s.paper).map((s) => s.pts));
+          for (const s of shapes) {
+            const c = look.colors[s.role] ?? s.color, { h, s: sat } = hueSat(c);
+            expect(sat > 0.35 && (h < 15 || h > 345), `${v} ${encodePick(pick)} ${s.obj} ${s.role} ${c}`).toBe(false);
+          }
+        }
+      }
+    }
+  });
+
+  it("Sumi's sleeve cord stays with every outfit, in the look's contrast colour", () => {
+    const sumi = wornBy(puppet, 'sumi');
+    for (const pick of ALL.filter((p) => p.sword === 'katana')) {
+      const look = lookOf(pick, 'x');
+      for (const side of ['L', 'R']) {
+        const cords = prints(sumi, look, side).filter((s) => s.obj.startsWith('sumi_') && s.role === 'kimono' && s.color === '#F2E3C0');
+        expect(cords.length, `${encodePick(pick)} ${side}`).toBeGreaterThan(0);
+        expect(look.colors.kimono).not.toBe(look.colors.robe);
+      }
+    }
+  });
+
+  it('plain and stripes drop the sleeve crest and waves on both fighters; stripes reach Sumi sleeves', () => {
+    for (const v of ['kami', 'sumi'] as const) {
+      const p = wornBy(puppet, v);
+      const n = (outfit: (typeof OUTFITS)[number]['id']) => prints(p, lookOf({ ...DEFAULT_PICK, outfit }, 'x'), 'L').length;
+      expect(n('plain'), v).toBeLessThan(n('waves'));
+      expect(n('plain'), v).toBe(1); // Kami's cuff band, or Sumi's cord
+      expect(n('stripes'), v).toBeGreaterThan(n('plain'));
+    }
+  });
+
+  it('each fighter wears only their own pieces', () => {
+    const objs = (v: 'kami' | 'sumi') => new Set(PIECE_NAMES.flatMap((n) => wornBy(puppet, v)[n].shapes.map((s) => s.obj)));
+    expect([...objs('sumi')].filter((o) => o.startsWith('kami_'))).toEqual([]);
+    expect([...objs('kami')].filter((o) => o.startsWith('sumi_'))).toEqual([]);
+    expect(objs('sumi')).toContain('sumi_hat');
+    expect(objs('kami')).toContain('kami_hair');
   });
 });
 

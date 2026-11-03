@@ -12,7 +12,7 @@ import type { Fighter } from '../sim/sim';
 import { C, D, clamp, easeIn, lerp, type Look } from './common';
 import { ccw, clipConvex, clipHalf, offset, slashLens, type Line, type Pt } from './paper2d';
 import { dressPiece } from './looks';
-import { PIECE_NAMES, SCALE, loadPuppet, type Piece, type PieceName, type Puppet } from './puppet';
+import { PIECE_NAMES, SCALE, loadPuppet, wornBy, type Piece, type Variant, type PieceName, type Puppet } from './puppet';
 import type { PaperPhysics } from './physics';
 import { spawnNudge } from './page';
 
@@ -227,6 +227,7 @@ const PUPPET = loadPuppet();
 export class FighterView {
   rig: Rig | null = null;
   private puppet: Puppet | null = null;
+  private full: Puppet | null = null;
   private dims: Dims | null = null;
   pose: Pose;
   private ibFrom: Pose; private ib = 0; private sig = '';
@@ -248,8 +249,12 @@ export class FighterView {
     PUPPET.then((p) => this.build(p)).catch((e) => console.error('Could not load the fighters:', e));
   }
 
+  /** Which fighter's own pieces to wear: the look's choice, else by seat (player 1 Kami, player 2 Sumi), so the two
+   *  fighters always differ in outline whatever colours, outfit and sword they picked (#37, #38). */
+  get variant(): Variant { return this.look.variant ?? (this.seat === 1 ? 'sumi' : 'kami'); }
+
   private build(p: Puppet) {
-    this.puppet = p; this.dims = dimsOf(p);
+    this.full = p; this.puppet = wornBy(p, this.variant); this.dims = dimsOf(p);
     const root = new THREE.Group(), parts = {} as Record<PieceName, THREE.Group>;
     for (const name of PIECE_NAMES) { const g = new THREE.Group(); root.add(g); parts[name] = g; }
     this.rig = { root, parts };
@@ -269,6 +274,7 @@ export class FighterView {
   setLook(look: Look) {
     if ((look.key ?? look.name) === (this.look.key ?? this.look.name)) return;
     this.look = look;
+    if (this.full) this.puppet = wornBy(this.full, this.variant);
     if (this.rig) for (const name of PIECE_NAMES) this.rebuild(name);
   }
 
