@@ -26,7 +26,7 @@ import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from '
 import { Dummy } from './sim/dummy';
 import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
 import { TuningPanel } from './tuning-panel';
-import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
+import { hashState, newMatch, step, type State } from './sim/sim';
 import { Tally } from './sim/tally';
 import { RunInputs, botInput, botLevel, endlessBot } from './sim/endless';
 import { HINT_AFTER, STEPS, TUTORIAL_CFG, Tutorial, freshFight } from './tutorial/tutorial';
@@ -78,7 +78,6 @@ let tourney: {
   bracket: BracketMsg | null;
   /** The bracket spot of the fight on screen; when a bracket arrives without it, that fight is over. */
   fight: [number, number] | null;
-  reported: boolean;
   /** When to go back to the bracket after the fight on screen ended (0 = not yet). */
   backAt: number;
 } | null = null;
@@ -654,7 +653,7 @@ net.onMessage = (m: ToClient) => {
       else if (mode.kind === 'watch') mode.spec.receive(m);
       break;
     case 'lobby':
-      if (!tourney) tourney = { code: m.code, bracket: null, fight: null, reported: false, backAt: 0 };
+      if (!tourney) tourney = { code: m.code, bracket: null, fight: null, backAt: 0 };
       if (new URLSearchParams(location.search).has('room')) history.replaceState(null, '', location.pathname);
       if (screen !== 'tlobby') showMenu('tlobby');
       renderLobby(m);
@@ -671,7 +670,7 @@ net.onMessage = (m: ToClient) => {
       break;
     case 'match':
       if (!tourney) break;
-      tourney.fight = tourney.bracket?.current ?? null; tourney.reported = false; tourney.backAt = 0;
+      tourney.fight = tourney.bracket?.current ?? null; tourney.backAt = 0;
       if (m.seat === -1) startWatching(m.delay, m.code, cleanCfg(m.cfg), m.names, m.looks);
       else startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.names, m.looks);
       break;
@@ -748,11 +747,6 @@ function frame(now: number) {
       if (!ev) { acc = Math.min(acc, STEP); break; }
       view.onStep(lock.state, ev);
       acc -= STEP; n++;
-    }
-    // A tournament fight: once the match is over, tell the server who won.
-    if (tourney && !tourney.reported && lock.state.phase === 'over') {
-      tourney.reported = true;
-      net.send({ t: 'result', winner: matchWinner(lock.state) });
     }
   } else if (m.kind === 'watch') {
     const spec = m.spec;

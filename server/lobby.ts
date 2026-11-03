@@ -38,6 +38,8 @@ export class Lobby {
   private tourneys = new Map<string, Tourney>();
   private tourneyOf = new Map<Peer, Tourney>();
   private gone = new WeakSet<Peer>();
+  /** The server is stopping (a deploy): players dropping out of ranked matches don't lose. */
+  private stopping = false;
 
   /**
    * @param fight the server's fight version. When set, only players on that version can make or join rooms,
@@ -55,7 +57,7 @@ export class Lobby {
 
   /** Pair whoever is waiting for a ranked match (the server calls this every second). */
   tick() {
-    if (!this.ranked) return;
+    if (!this.ranked || this.stopping) return;
     for (const [a, b] of this.ranked.match()) {
       if (this.gone.has(a as Peer) || this.gone.has(b as Peer)) continue;
       const r = this.open(a as Peer, true, DEFAULT_CFG);
@@ -107,7 +109,7 @@ export class Lobby {
       case 'name': t?.rename(p, m.name); return;
       case 'begin': t?.begin(p); return;
       case 'restart': t?.restart(p); return;
-      case 'result': t?.report(p, m.winner); return;
+      case 'result': return; // older games still say who won; the server's own re-play decides
       case 'host': {
         this.leave(p, false);
         const r = this.open(p, false, cleanCfg(m.cfg));
@@ -156,10 +158,12 @@ export class Lobby {
         if (t) { t.relay(p, m); return; }
         const r = this.roomOf.get(p);
         const o = r && (r.host === p ? r.guest : r.host);
-        if (!o || typeof m.f !== 'number') return;
+        if (!o || !r.ref) return;
         const seat = r.host === p ? 0 : 1;
-        if (m.t === 'in') { o.send({ t: 'in', f: m.f, b: m.b | 0 }); r.ref?.input(seat, m.f, m.b | 0); }
-        else { o.send({ t: 'hash', f: m.f, h: m.h >>> 0 }); r.ref?.hash(seat, m.f, m.h >>> 0); }
+        // Only what the server's referee accepted reaches the rival, so both always step the same inputs.
+        // The input goes out before the referee steps it, so a result it decides never arrives ahead of it.
+        if (m.t === 'in') { const b = m.b | 0; if (r.ref.accepts(seat, m.f)) { o.send({ t: 'in', f: m.f, b }); r.ref.input(seat, m.f, b); } }
+        else { const h = m.h >>> 0; if (r.ref.hash(seat, m.f, h)) o.send({ t: 'hash', f: m.f, h }); }
         return;
       }
     }
@@ -167,6 +171,9 @@ export class Lobby {
 
   /** A player disconnected. */
   close(p: Peer) { this.gone.add(p); this.leave(p, true); }
+
+  /** The server is about to stop: unfinished ranked matches end without a result, and no new ones start. */
+  shutdown() { this.stopping = true; }
 
   private newCode() {
     let code = '';
@@ -226,8 +233,8 @@ export class Lobby {
     const r = this.roomOf.get(p);
     if (!r) return;
     const o = r.host === p ? r.guest : r.host;
-    // Leaving a ranked match before it's decided is a loss.
-    if (r.ranked && r.guest && !r.ranked.settled) this.settle(r, r.host === p ? 1 : 0, 'left');
+    // Leaving a ranked match before it's decided is a loss, unless the server itself is stopping.
+    if (r.ranked && r.guest && !r.ranked.settled && !this.stopping) this.settle(r, r.host === p ? 1 : 0, 'left');
     r.ref?.close();
     this.roomOf.delete(p);
     if (o) this.roomOf.delete(o);

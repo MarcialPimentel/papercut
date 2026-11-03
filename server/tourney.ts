@@ -1,6 +1,6 @@
 // A tournament room: 3 to 8 players, a single-elimination bracket, one fight at a time.
 // The two fighters play an ordinary online match; everyone else in the room gets both players'
-// inputs and watches it live. The fighters report the winner; when they agree, the bracket moves on.
+// inputs and watches it live. The server's own re-play of each fight decides who goes through.
 
 import { BYE_SLOT, delayFor, type BracketMatch, type ToClient } from '../src/net/protocol';
 import type { MatchCfg } from '../src/sim/config';
@@ -14,7 +14,7 @@ export interface TPeer {
 }
 
 interface Player { peer: TPeer; name: string; gone: boolean }
-interface Match extends BracketMatch { reports: [number | null, number | null] }
+type Match = BracketMatch;
 
 export const TOURNEY_MIN = 3;
 export const TOURNEY_MAX = 8;
@@ -98,17 +98,16 @@ export class Tourney {
     this.begin(peer);
   }
 
-  /** A fighter in the current fight says who won. */
-  report(peer: TPeer, winner: unknown) {
-    if (!this.current || (winner !== 0 && winner !== 1)) return;
+  /**
+   * The server's own re-play of the fight on stage has ended: its winner goes through. A game whose
+   * fingerprints disagreed with the server's (a modified game) loses, as in ranked.
+   */
+  private decided(ref: Referee, rec: MatchRecord) {
+    if (ref !== this.ref || !this.current || (rec.winner !== 0 && rec.winner !== 1)) return;
     const m = this.match(this.current);
-    const seat: number = m.a !== null && this.players[m.a].peer === peer ? 0 : m.b !== null && m.b >= 0 && this.players[m.b].peer === peer ? 1 : -1;
-    if (seat !== 0 && seat !== 1) return;
-    m.reports[seat] = winner;
-    const [x, y] = m.reports;
-    if (x === null || y === null) return;
-    if (x === y) this.finish(x === 0 ? m.a! : m.b!, false);
-    else { m.reports = [null, null]; this.startMatch(); } // the two games disagree: fight it again
+    const [b0, b1] = ref.bad;
+    const seat = b0 !== b1 ? (b0 ? 1 : 0) : rec.winner;
+    this.finish(seat === 0 ? m.a! : m.b!, false);
   }
 
   /** The two fighters of the current fight, as [seat 0 player, seat 1 player]. */
@@ -124,12 +123,20 @@ export class Tourney {
     if (!fs) return;
     const seat = fs[0].peer === peer ? 0 : fs[1].peer === peer ? 1 : -1;
     if (seat === -1) return;
-    const rival = fs[1 - seat];
-    if (msg.t === 'hash') { if (!rival.gone) rival.peer.send({ t: 'hash', f: msg.f, h: (msg.h ?? 0) >>> 0 }); return; }
+    const rival = fs[1 - seat], ref = this.ref;
+    if (!ref) return;
+    // Only what the server's referee accepted is passed on (see Referee.input).
+    if (msg.t === 'hash') {
+      const h = (msg.h ?? 0) >>> 0;
+      if (ref.hash(seat, msg.f, h) && !rival.gone) rival.peer.send({ t: 'hash', f: msg.f, h });
+      return;
+    }
     const b = (msg.b ?? 0) | 0;
+    // Send it on before the referee steps it: the input that ends the fight still reaches everyone.
+    if (!ref.accepts(seat, msg.f)) return;
     if (!rival.gone) rival.peer.send({ t: 'in', f: msg.f, b });
-    this.ref?.input(seat, msg.f, b);
     for (const p of this.live) if (p !== fs[0] && p !== fs[1]) p.peer.send({ t: 'in', f: msg.f, b, s: seat });
+    ref.input(seat, msg.f, b);
   }
 
   /** A player left (or lost their connection). Returns true when the room is empty and can be deleted. */
@@ -205,7 +212,11 @@ export class Tourney {
     const delay = delayFor(fs[0].peer.rtt ?? 80, fs[1].peer.rtt ?? 80);
     const names: [string, string] = [fs[0].name, fs[1].name];
     this.ref?.close();
-    this.ref = new Referee('tourney', this.cfg, delay, [fs[0].peer.guard ?? '', fs[1].peer.guard ?? ''], this.record);
+    const ref: Referee = new Referee('tourney', this.cfg, delay, [fs[0].peer.guard ?? '', fs[1].peer.guard ?? ''], (rec) => {
+      this.record(rec);
+      this.decided(ref, rec);
+    });
+    this.ref = ref;
     const looks: [string, string] = [fs[0].peer.look ?? '', fs[1].peer.look ?? ''];
     this.sendBracket();
     for (const p of this.live) {
@@ -229,5 +240,5 @@ export class Tourney {
 }
 
 function newMatch(a: number | null, b: number | null): Match {
-  return { a, b, winner: null, forfeit: false, reports: [null, null] };
+  return { a, b, winner: null, forfeit: false };
 }
