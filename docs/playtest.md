@@ -46,7 +46,7 @@ On the main menu, **Your fighter** opens the look picker: 6 colour sets, dark or
 
 ## What to try
 
-- **Tutorial (2026-11-02):** play it from start to finish without reading How to play. Does every step make sense from its one line? Where did you get stuck, and did the hint (after 3 tries) help? At the end, could you say what a counter cut is? Then switch Guard to Cursor in Settings and replay the first step: the prompt should talk about the crosshair instead of flicks.
+- **Tutorial (2026-11-02):** play it from start to finish without reading How to play. Does every step make sense from its one line? Where did you get stuck, and did the hint (after 3 tries) help? At the end, could you say what a counter cut is? Then switch Guard to Cursor in Settings and replay the first step: the prompt should talk about the crosshair instead of flicks. With a controller: start the tutorial with A, check every prompt names pad buttons (left stick, RB, RT, B, A), and that LT skips a step.
 - **Guard:** block a light, then a heavy (a heavy chips a sliver of strip through a block).
 - **Parry into riposte:** keep the wrong guard, flick the mouse to the right height just before their slash lands ("Parry"), then click at once: your slash is a riposte (fast, heavy damage, can't be parried).
 - **Feint bait:** start a heavy (right click) and cancel it with a left click. Does your rival swing into it?
