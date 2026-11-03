@@ -37,8 +37,8 @@ async function pairUp(store = new MemoryStore()) {
   const ranked = new Ranked(store);
   const lobby = new Lobby(Math.random, setTimeout, null, () => {}, ranked);
   const a = new FakePeer(), b = new FakePeer();
-  lobby.message(a, { t: 'hello', guard: 'line', id: TOKEN_A });
-  lobby.message(b, { t: 'hello', guard: 'line', id: TOKEN_B });
+  lobby.message(a, { t: 'hello', guard: 'flick', id: TOKEN_A });
+  lobby.message(b, { t: 'hello', guard: 'flick', id: TOKEN_B });
   await flush();
   lobby.message(a, { t: 'ranked', name: 'Ann' });
   lobby.message(b, { t: 'ranked', name: 'Bo' });

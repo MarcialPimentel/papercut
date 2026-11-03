@@ -8,7 +8,7 @@ import { hashState, newMatch, step, type State } from '../src/sim/sim';
 import { Tally, type MatchTally } from '../src/sim/tally';
 
 export type MatchMode = 'quick' | 'room' | 'tourney' | 'ranked';
-export type GuardStyle = 'line' | 'cursor' | '';
+export type GuardStyle = 'flick' | 'cursor' | '';
 
 /** Inputs as changes: [frame, seat 0 buttons, seat 1 buttons] whenever either changes. */
 export type InputLog = [number, number, number][];

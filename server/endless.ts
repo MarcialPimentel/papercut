@@ -10,7 +10,7 @@ const SLICE = 5000;
 /** Most numbers an input list may have: two per change. */
 const MAX_INPUTS = 400000;
 
-export interface RunClaim { seed: number; inputs: number[]; bots: number; guard: 'line' | 'cursor' | ''; token: unknown; name: unknown }
+export interface RunClaim { seed: number; inputs: number[]; bots: number; guard: 'flick' | 'cursor' | ''; token: unknown; name: unknown }
 
 /** The run's shape from an untrusted body, or a reason it's refused. */
 export function readClaim(x: unknown): RunClaim | string {
@@ -25,7 +25,7 @@ export function readClaim(x: unknown): RunClaim | string {
     if (!Number.isInteger(f) || f <= last || f >= MAX_RUN_FRAMES || !Number.isInteger(b) || b < 0 || b > 1023) return 'bad inputs';
     last = f;
   }
-  const guard = o.guard === 'line' || o.guard === 'cursor' ? o.guard : '';
+  const guard = o.guard === 'flick' || o.guard === 'cursor' ? o.guard : '';
   return { seed: seed as number, inputs: inputs as number[], bots: bots as number, guard, token: o.id, name: o.name };
 }
 

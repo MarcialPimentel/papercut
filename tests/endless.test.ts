@@ -46,12 +46,12 @@ describe('re-playing Endless runs', () => {
 
   it('accepts a real run and rejects an edited score', async () => {
     const run = playRun(777);
-    const claim = readClaim(JSON.parse(JSON.stringify({ ...run, guard: 'line', id: 'f'.repeat(32), name: 'Ann' })));
+    const claim = readClaim(JSON.parse(JSON.stringify({ ...run, guard: 'flick', id: 'f'.repeat(32), name: 'Ann' })));
     if (typeof claim === 'string') throw new Error(claim);
     const ok = await verifyRun(claim);
     if (typeof ok === 'string') throw new Error(ok);
     expect(ok.run.bots).toBe(run.bots);
-    expect(ok.run.guard).toBe('line');
+    expect(ok.run.guard).toBe('flick');
     expect(ok.frames).toBe(run.frames);
     expect(await verifyRun({ ...claim, bots: run.bots + 3 })).toBe('the score does not match the re-play');
     // A different seed is a different bot: the same inputs don't reach the same run.
@@ -76,7 +76,7 @@ describe('re-playing Endless runs', () => {
 });
 
 describe('the leaderboard', () => {
-  const run = (player: string, bots: number, frames: number) => ({ guard: 'line' as const, bots, how: 'K.O.', why: '' as const, tally: emptyTally(), frames, player });
+  const run = (player: string, bots: number, frames: number) => ({ guard: 'flick' as const, bots, how: 'K.O.', why: '' as const, tally: emptyTally(), frames, player });
 
   it('ranks each player by their best run: most bots, then fastest', async () => {
     const st = new MemoryStore();
