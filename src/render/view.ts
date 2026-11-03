@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { PAGES, RULES } from '../sim/rules';
 import type { FightEvent, State } from '../sim/sim';
-import { C, LOOKS, clamp, lerp, reduceMotion } from './common';
+import { C, LOOKS, clamp, lerp, reduceMotion, type Look } from './common';
 import { FighterView } from './fighter';
 import { PaperPhysics } from './physics';
 import { Fx } from './fx';
@@ -24,6 +24,8 @@ export class View {
   /** The hitbox view (H): what the fight checks, drawn over the art. */
   readonly hitboxes: Hitboxes;
   private sceneryPage = -1;
+  /** Endless: the look for each fresh bot (null = keep the current one). */
+  spawnLook: (() => Look) | null = null;
   /** Called when a fighter loses part of the strip (for the HUD's falling sliver). */
   onStrip: (seat: number, hp: number, lost: number) => void = () => {};
   private shake = 0;
@@ -68,6 +70,9 @@ export class View {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
   }
+
+  /** Dress both fighters (seat 0, seat 1) for the match. */
+  setLooks(looks: [Look, Look]) { this.fighters.forEach((f, i) => f.setLook(looks[i])); }
 
   /** Start drawing a new match from this state. */
   reset(s: State) {
@@ -161,6 +166,7 @@ export class View {
       case 'spawn':
         // Endless: a fresh bot stands in; the cut bots' halves stay on the page (the last 5). Your own cuts stay too.
         this.fx.clearFlecks();
+        if (this.spawnLook) this.fighters[e.p].setLook(this.spawnLook());
         this.fighters[e.p].reset(s.f[e.p], true);
         this.killCam = 0; this.koSeat = -1;
         break;
