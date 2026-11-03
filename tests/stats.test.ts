@@ -30,7 +30,7 @@ function brawler(seed: number, seat: 0 | 1) {
 /** Two practice dummies fight a whole match through a referee; returns what it recorded and the frame it ended on. */
 function dummyMatch(cfg: MatchCfg = DEFAULT_CFG, seed = 1) {
   const recs: { r: MatchRecord; frame: number; hash: number }[] = [];
-  const ref = new Referee('quick', cfg, 3, ['line', 'cursor'], (r) => recs.push({ r, frame: ref.state.frame, hash: hashState(ref.state) }));
+  const ref = new Referee('quick', cfg, 3, ['flick', 'cursor'], (r) => recs.push({ r, frame: ref.state.frame, hash: hashState(ref.state) }));
   const shadow = newMatch(cfg); // the dummies' own view of the fight, to decide their buttons
   const a = brawler(seed, 0), b = brawler(seed + 1, 1);
   for (let f = 0; f < 3; f++) step(shadow, [0, 0]);
@@ -47,7 +47,7 @@ describe('the referee', () => {
     const [{ r, frame, hash }] = dummyMatch();
     expect(r.mode).toBe('quick');
     expect(r.standard).toBe(true);
-    expect(r.guard).toEqual(['line', 'cursor']);
+    expect(r.guard).toEqual(['flick', 'cursor']);
     expect(r.winner === 0 || r.winner === 1).toBe(true);
     const wins = r.tally.rounds.filter((x) => x.winner === r.winner).length;
     expect(wins).toBe(DEFAULT_CFG.wins);
@@ -96,7 +96,7 @@ describe('the lobby records matches', () => {
     const lobby = new Lobby(Math.random, setTimeout, null, (r) => recs.push(r));
     const a = new FakePeer(), b = new FakePeer();
     lobby.message(a, { t: 'hello', guard: 'cursor' });
-    lobby.message(b, { t: 'hello', guard: 'line' });
+    lobby.message(b, { t: 'hello', guard: 'flick' });
     lobby.message(a, { t: 'quick' });
     lobby.message(b, { t: 'quick' });
     const start = a.inbox.find((m) => m.t === 'start');
@@ -111,7 +111,7 @@ describe('the lobby records matches', () => {
       step(shadow, [ia, ib]);
     }
     expect(recs).toHaveLength(1);
-    expect(recs[0]).toMatchObject({ mode: 'quick', guard: ['cursor', 'line'], winner: shadow.f[0].wins > shadow.f[1].wins ? 0 : 1 });
+    expect(recs[0]).toMatchObject({ mode: 'quick', guard: ['cursor', 'flick'], winner: shadow.f[0].wins > shadow.f[1].wins ? 0 : 1 });
   });
 });
 
@@ -138,7 +138,7 @@ describe('the tally', () => {
 });
 
 describe('the stats', () => {
-  const rec = (winner: 0 | 1, how: string, why: '' | 'wind' | 'miss' = '', guard: ['line' | 'cursor', 'line' | 'cursor'] = ['line', 'cursor']) => {
+  const rec = (winner: 0 | 1, how: string, why: '' | 'wind' | 'miss' = '', guard: ['flick' | 'cursor', 'flick' | 'cursor'] = ['flick', 'cursor']) => {
     const tally = emptyTally();
     tally.rounds.push({ winner, how, why, frames: 600, hp: [10, 0] });
     tally.sides[0].heavy = { n: 4, land: 1, block: 2, parried: 0, whiff: 1, clash: 0, feint: 1 };
@@ -154,7 +154,7 @@ describe('the stats', () => {
     expect(st.ends).toEqual({ ko: 1, counterWind: 1, counterMiss: 1, time: 1, double: 0 });
     expect(st.kamiWins).toBe(3);
     expect(st.guardMixed).toBe(4);
-    expect(st.lineWins).toBe(3); // Kami was on Line in all four
+    expect(st.flickWins).toBe(3); // Kami was on Line in all four
     expect(st.slashes.heavy.thrown).toBe(16);
     expect(st.staggerFollow / st.staggers).toBe(0.5);
     expect(st.avgRoundSecs).toBe(10);
@@ -164,7 +164,7 @@ describe('the stats', () => {
   });
 
   it('reads filters safely', () => {
-    expect(readFilter(new URL('http://x/stats?build=<x>&rules=all&guard=line'))).toEqual({ build: '', rules: 'all', guard: 'line' });
+    expect(readFilter(new URL('http://x/stats?build=<x>&rules=all&guard=flick'))).toEqual({ build: '', rules: 'all', guard: 'flick' });
     expect(readFilter(new URL('http://x/stats'))).toEqual({ build: '', rules: 'standard', guard: 'any' });
   });
 });
@@ -182,10 +182,10 @@ describe('Endless reports', () => {
 
   it('accepts a real run and rejects one whose numbers do not add up', () => {
     const run = endlessRun();
-    const ok = cleanEndless(JSON.parse(JSON.stringify({ ...run, guard: 'line' })));
+    const ok = cleanEndless(JSON.parse(JSON.stringify({ ...run, guard: 'flick' })));
     expect(ok).toBeTruthy();
     expect(ok!.bots).toBe(run.bots);
-    expect(ok!.guard).toBe('line');
+    expect(ok!.guard).toBe('flick');
     expect(cleanEndless({ ...run, bots: run.bots + 5 })).toBeNull();
     expect(cleanEndless({ bots: -1, tally: run.tally })).toBeNull();
     expect(cleanEndless('nonsense')).toBeNull();
@@ -198,9 +198,9 @@ describe('the store', () => {
     const st = new MemoryStore(() => now);
     const base = dummyMatch()[0].r;
     await st.addMatch('aaa', base);
-    await st.addMatch('bbb', { ...base, standard: false, guard: ['line', 'line'] });
+    await st.addMatch('bbb', { ...base, standard: false, guard: ['flick', 'flick'] });
     expect(await st.matches({ build: '', rules: 'standard', guard: 'any' })).toHaveLength(1);
-    expect(await st.matches({ build: '', rules: 'all', guard: 'line' })).toHaveLength(1);
+    expect(await st.matches({ build: '', rules: 'all', guard: 'flick' })).toHaveLength(1);
     expect(await st.matches({ build: 'bbb', rules: 'all', guard: 'any' })).toHaveLength(1);
     expect(await st.builds()).toEqual(['bbb', 'aaa']);
     now = (KEEP_INPUTS_DAYS + 1) * 86400e3;

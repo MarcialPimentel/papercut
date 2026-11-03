@@ -48,6 +48,6 @@ export function cleanEndless(x: unknown): EndlessRecord | null {
   // Each bot cut is one round won; the run ends on the one round lost.
   if (rounds.filter((r) => r!.winner === 0).length !== bots) return null;
   const tally: MatchTally = { rounds: rounds as RoundTally[], sides: sides as [SideTally, SideTally], winner: 1, clashes };
-  const guard = o.guard === 'line' || o.guard === 'cursor' ? o.guard : '';
+  const guard = o.guard === 'flick' || o.guard === 'cursor' ? o.guard : '';
   return { guard, bots, how: last.how, why: last.why, tally };
 }
