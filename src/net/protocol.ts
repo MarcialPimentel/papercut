@@ -11,6 +11,7 @@ export type ToServer =
   | { t: 'tourney'; cfg?: MatchCfg; name?: string; look?: string } // make a tournament room (3-8 players)
   | { t: 'name'; name: string } // rename yourself in a tournament lobby
   | { t: 'begin' } // the tournament's host starts the bracket
+  | { t: 'restart' } // the host deals a new, reshuffled bracket with the same players (between fights only)
   | { t: 'result'; winner: number } // a tournament fighter: who won the match that just ended
   | { t: 'quick'; look?: string } // pair with whoever is waiting
   | { t: 'cancel' } // leave the room or the queue
@@ -24,7 +25,7 @@ export type ToClient =
   | { t: 'in'; f: number; b: number; s?: 0 | 1 } // s: whose buttons, for players watching a tournament fight
   | { t: 'hash'; f: number; h: number }
   | { t: 'lobby'; code: string; names: string[]; you: number; host: boolean; cfg: MatchCfg } // a tournament waiting to start
-  | { t: 'bracket'; names: string[]; rounds: BracketMatch[][]; current: [number, number] | null; champion: number | null; you: number }
+  | { t: 'bracket'; names: string[]; rounds: BracketMatch[][]; current: [number, number] | null; champion: number | null; you: number; restart: boolean } // restart: you're the host and can deal a new bracket now
   | { t: 'match'; seat: 0 | 1 | -1; delay: number; cfg: MatchCfg; names: [string, string]; code: string; looks?: [string, string] } // a tournament fight starts (-1: you watch)
   | { t: 'gone' } // your opponent left
   | { t: 'err'; msg: string };

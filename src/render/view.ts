@@ -10,13 +10,15 @@ import { Fx } from './fx';
 import { Hitboxes } from './hitboxes';
 import { Notebook } from './notebook';
 import { sfx } from '../audio/sounds';
+import { FEEL } from '../feel';
 
 /** Stereo position of a spot on the lane: left of the page plays left. */
 const pan = (x: number) => clamp(x / RULES.edge, -1, 1) * 0.6;
 
 export class View {
   readonly renderer: THREE.WebGLRenderer;
-  readonly camera = new THREE.PerspectiveCamera(30, 1, 0.1, 160);
+  // Near plane 0.5 (the camera never comes closer than ~6 units): depth precision for the thin paper layers.
+  readonly camera = new THREE.PerspectiveCamera(30, 1, 0.5, 160);
   readonly book: Notebook;
   readonly fighters: FighterView[];
   readonly fx: Fx;
@@ -62,6 +64,12 @@ export class View {
   private setPage(p: number) {
     this.book.setPage(p);
     if (this.sceneryPage !== p) { this.sceneryPage = p; this.physics.setScenery(this.book.popupHulls()); }
+  }
+
+  /** Resolution scale from the Settings screen (0.5-1): draw fewer pixels on weaker machines. */
+  setScale(scale: number) {
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2) * scale);
+    this.resize();
   }
 
   resize() {
@@ -150,7 +158,7 @@ export class View {
         const def = 1 - e.p, dir = s.f[e.p].facing;
         fx.label(e.counter ? 'Counter cut' : 'K.O.', e.x, e.y + 0.9, 'cut');
         fx.razor(e.x, e.y, e.ang, C.red, 4.6); fx.burst(e.x, e.y, [C.red, C.redDeep, C.paper, C.red], 30, dir); sfx.ko(e.counter, pan(e.x));
-        this.shake = 0.2; this.slowmo = 1.0; this.killCam = 1.6; this.koSeat = def;
+        this.shake = 0.2; this.slowmo = FEEL.slowmo; this.killCam = 1.6; this.koSeat = def;
         this.fighters[def].split([e.x, e.y], e.ang, dir);
         this.onStrip(def, 0, e.dmg);
         break;
@@ -182,7 +190,7 @@ export class View {
   draw(s: State, real: number, glint?: { seat: number; k: number }) {
     this.clock += real;
     let scale = 1;
-    if (this.slowmo > 0) { this.slowmo -= real; scale = this.slowmo > 0.25 ? 0.22 : lerp(1, 0.22, this.slowmo / 0.25); }
+    if (this.slowmo > 0) { this.slowmo -= real; scale = this.slowmo > 0.25 ? FEEL.slowSpeed : lerp(1, FEEL.slowSpeed, this.slowmo / 0.25); }
     this.killCam = Math.max(0, this.killCam - real);
     this.shake = Math.max(0, this.shake - real * 0.9);
     if (s.phase === 'turn') this.book.turn(s.phaseT / 60, this.turnFrom, s.turnTo);
@@ -225,7 +233,7 @@ export class View {
     if (!Number.isFinite(dist)) return;
     c.x = lerp(c.x, cx, k); c.y = lerp(c.y, cy, k); c.dist = lerp(c.dist, dist, k); c.yaw = lerp(c.yaw, yaw, k); c.pitch = lerp(c.pitch, pitch, k);
     const P = clamp(c.pitch, -0.05, 1.1);
-    const sh = this.shake * (reduceMotion ? 0.3 : 1), sx = (Math.random() - 0.5) * sh, sy = (Math.random() - 0.5) * sh;
+    const sh = this.shake * FEEL.shake * (reduceMotion ? 0.3 : 1), sx = (Math.random() - 0.5) * sh, sy = (Math.random() - 0.5) * sh;
     this.camera.position.set(c.x + Math.sin(c.yaw) * Math.cos(P) * c.dist + sx, c.y + Math.sin(P) * c.dist + sy, Math.cos(c.yaw) * Math.cos(P) * c.dist);
     this.camera.lookAt(c.x + sx * 0.5, c.y, 0);
   }

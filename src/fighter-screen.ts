@@ -7,11 +7,12 @@ import { FighterView } from './render/fighter';
 import { COLOUR_SETS, DEFAULT_PICK, OUTFITS, SWORDS, decodePick, encodePick, lookOf, type Pick } from './render/looks';
 import type { PaperPhysics } from './render/physics';
 import { newMatch } from './sim/sim';
+import { store } from './store';
 
 const KEY = 'papercut.look';
 /** Your saved look (the default Kami look if none, or if storage is blocked). */
-export function myPick(): Pick { try { return decodePick(localStorage.getItem(KEY)); } catch { return DEFAULT_PICK; } }
-function savePick(p: Pick) { try { localStorage.setItem(KEY, encodePick(p)); } catch { /* not remembered */ } }
+export function myPick(): Pick { return decodePick(store.get(KEY), DEFAULT_PICK); }
+function savePick(p: Pick) { store.set(KEY, encodePick(p)); }
 
 /** Pages to check the look against (the CSS draws them behind the preview). */
 const PAPERS = [['graph', 'Graph'], ['ruled', 'Ruled'], ['legal', 'Legal pad'], ['marble', 'Back cover']] as const;

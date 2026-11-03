@@ -79,6 +79,20 @@ export class Tourney {
     this.next();
   }
 
+  /** The host can deal a new bracket: once started, between fights, with enough players still here. */
+  canRestart(peer: TPeer) {
+    return this.started && !this.current && this.host?.peer === peer && this.live.length >= TOURNEY_MIN;
+  }
+
+  /** A new bracket with the same players (anyone who left is dropped), seats shuffled again. */
+  restart(peer: TPeer) {
+    if (!this.canRestart(peer)) return;
+    this.stop(); // the break timer would start a fight from the old bracket
+    this.players = this.live;
+    this.rounds = []; this.champion = null; this.started = false;
+    this.begin(peer);
+  }
+
   /** A fighter in the current fight says who won. */
   report(peer: TPeer, winner: unknown) {
     if (!this.current || (winner !== 0 && winner !== 1)) return;
@@ -198,7 +212,7 @@ export class Tourney {
     const names = this.players.map((p) => p.name + (p.gone ? ' (left)' : ''));
     const rounds = this.rounds.map((r) => r.map(({ a, b, winner, forfeit }) => ({ a, b, winner, forfeit })));
     for (const p of this.live) {
-      p.peer.send({ t: 'bracket', names, rounds, current: this.current, champion: this.champion, you: this.players.indexOf(p) });
+      p.peer.send({ t: 'bracket', names, rounds, current: this.current, champion: this.champion, you: this.players.indexOf(p), restart: this.canRestart(p.peer) });
     }
   }
 }

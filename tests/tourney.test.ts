@@ -100,6 +100,47 @@ describe('tournament', () => {
     expect(a && b).toBeTruthy();
   });
 
+  it('the host can deal a new, reshuffled bracket between fights, without anyone who left', () => {
+    const { lobby, ps, flush } = setup(5);
+    lobby.message(ps[0], { t: 'begin' });
+    const firstSeeds = ps[0].last('bracket')!.rounds[0].map((m) => `${m.a},${m.b}`).join(' ');
+    // Not during a fight, and never by a guest.
+    expect(ps[0].last('bracket')!.restart).toBe(false);
+    lobby.message(ps[0], { t: 'restart' });
+    expect(ps[0].last('bracket')!.rounds[0].map((m) => `${m.a},${m.b}`).join(' ')).toBe(firstSeeds);
+    // Play the tournament out; one non-host player leaves along the way.
+    for (let guard = 0; guard < 10 && ps[0].last('bracket')!.champion === null; guard++) {
+      const [a, b] = fighters(guard === 0 ? ps : ps.slice(0, 4));
+      lobby.message(a, { t: 'result', winner: 0 });
+      lobby.message(b, { t: 'result', winner: 0 });
+      if (guard === 0) lobby.close(ps[4]); // during the first break
+      flush();
+    }
+    expect(ps[0].last('bracket')!.champion).not.toBeNull();
+    expect(ps[0].last('bracket')!.restart).toBe(true);
+    expect(ps[1].last('bracket')!.restart).toBe(false);
+    lobby.message(ps[1], { t: 'restart' }); // a guest can't
+    expect(ps[1].last('bracket')!.champion).not.toBeNull();
+
+    // New brackets: 4 players left, no byes, a fight starts at once; across a few deals the seats change.
+    const deals = new Set<string>();
+    for (let i = 0; i < 6; i++) {
+      lobby.message(ps[0], { t: 'restart' });
+      const br = ps[0].last('bracket')!;
+      expect(br.champion).toBeNull();
+      expect(br.names).toHaveLength(4);
+      expect(br.rounds.map((r) => r.length)).toEqual([2, 1]);
+      expect(br.rounds[0].every((m) => m.b !== BYE && m.winner === null)).toBe(true);
+      deals.add(br.rounds[0].map((m) => [m.a, m.b].sort().join(',')).sort().join(' '));
+      const [a, b] = fighters(ps.slice(0, 4));
+      expect(a && b).toBeTruthy();
+      // Finish this fight so the host can deal again during the break.
+      lobby.message(a, { t: 'result', winner: 0 });
+      lobby.message(b, { t: 'result', winner: 0 });
+    }
+    expect(deals.size).toBeGreaterThan(1);
+  });
+
   it("can't be joined once it has started", () => {
     const { lobby, ps, code } = setup(3);
     lobby.message(ps[0], { t: 'begin' });

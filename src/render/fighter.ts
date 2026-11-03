@@ -14,6 +14,7 @@ import { ccw, clipConvex, clipHalf, offset, slashLens, type Line, type Pt } from
 import { dressPiece } from './looks';
 import { PIECE_NAMES, SCALE, loadPuppet, type Piece, type PieceName, type Puppet } from './puppet';
 import type { PaperPhysics } from './physics';
+import { spawnNudge } from './page';
 
 const T = 0.005; // paper thickness
 const RIM = '#F4EAD2'; // the thin off-white rim round the whole figure
@@ -45,12 +46,12 @@ function slab(p: Pt[], depth: number, color: THREE.Color, z = 0): THREE.BufferGe
   return g;
 }
 
-interface PieceGeo { lit: THREE.BufferGeometry[]; flat: THREE.BufferGeometry[]; outline: { pts: Pt[]; z: number }[] }
+interface PieceGeo { lit: THREE.BufferGeometry[]; flat: THREE.BufferGeometry[] }
 /** One piece as geometry: its share of the figure's rim and ink line (behind everything), an ink line and the
  *  paper for every paper shape, the prints, red slash marks. With `cut`, only the kept side of the line: the
  *  paper stops GAP short, so a thin red edge shows. */
 function pieceGeo(piece: Piece, look: Look, marks: Pt[][], cut: Line | null): PieceGeo {
-  const out: PieceGeo = { lit: [], flat: [], outline: [] };
+  const out: PieceGeo = { lit: [], flat: [] };
   const sword = piece.name === SWORD;
   const keep = (p: Pt[], gap: number) => (cut ? clipHalf(p, cut, gap) : p);
   const add = (list: THREE.BufferGeometry[], p: Pt[], depth: number, col: THREE.Color, z: number) => { if (p.length >= 3) list.push(slab(p, depth, col, z)); };
@@ -62,17 +63,15 @@ function pieceGeo(piece: Piece, look: Look, marks: Pt[][], cut: Line | null): Pi
     for (const [c, w, z] of sword ? SWORD_EDGE : BODY_EDGE) add(out.flat, keep(offset(s.pts, w), GAP), 0.003, new THREE.Color(c), sword ? back + z : z);
     add(out.flat, keep(offset(s.pts, SEAM), GAP), T * 0.6, ink, s.z);
     if (cut) add(out.flat, clipHalf(s.pts, cut), T * 0.8, red, s.z);
-    const card = keep(s.pts, GAP);
-    add(out.lit, card, T, col, s.z);
-    if (card.length >= 3) out.outline.push({ pts: card, z: s.z });
+    add(out.lit, keep(s.pts, GAP), T, col, s.z);
     if (!sword) for (const lens of marks) add(out.flat, keep(clipConvex(s.pts, lens), GAP), T * 1.3, red, s.z);
   }
   return out;
 }
 /** Merge a piece (or a whole half) into two meshes: lit paper and unlit edges, so draw calls stay low. */
-function meshes(lit: THREE.BufferGeometry[], flat: THREE.BufferGeometry[]) {
+function meshes(lit: THREE.BufferGeometry[], flat: THREE.BufferGeometry[], mats: [THREE.Material, THREE.Material] = [LIT, FLAT]) {
   const out: THREE.Mesh[] = [];
-  for (const [list, mat] of [[lit, LIT], [flat, FLAT]] as const) {
+  for (const [list, mat] of [[lit, mats[0]], [flat, mats[1]]] as const) {
     if (!list.length) continue;
     const g = mergeGeometries(list); list.forEach((x) => x.dispose());
     if (!g) continue;
@@ -80,7 +79,26 @@ function meshes(lit: THREE.BufferGeometry[], flat: THREE.BufferGeometry[]) {
   }
   return out;
 }
-const disposeTree = (o: THREE.Object3D) => o.traverse((c) => { const m = c as THREE.Mesh; if (m.isMesh) m.geometry.dispose(); });
+const disposeTree = (o: THREE.Object3D) => o.traverse((c) => {
+  const m = c as THREE.Mesh;
+  if (!m.isMesh) return;
+  m.geometry.dispose();
+  if (m.material !== LIT && m.material !== FLAT) (m.material as THREE.Material).dispose();
+});
+/** A fallen half lies flat, so where halves overlap each other or touch the page, they'd share a plane and
+ *  flicker. Each half is drawn a little in front of the page, and each newer half a little in front of older
+ *  ones (polygon offset only changes the depth test, not where the half is). */
+let halfSeq = 0;
+const HALF_ORDERS = 8;
+function halfMats(seq: number): [THREE.Material, THREE.Material] {
+  const k = 1 + (seq % HALF_ORDERS);
+  const offset = (m: THREE.Material) => {
+    const c = m.clone();
+    c.polygonOffset = true; c.polygonOffsetFactor = -1; c.polygonOffsetUnits = -4 * k;
+    return c;
+  };
+  return [offset(LIT), offset(FLAT)];
+}
 
 // ---------- the rig, read from the Blender rest pose ----------
 const v2 = (p: THREE.Vector2): Pt => [p.x, p.y];
@@ -314,9 +332,19 @@ export class FighterView {
         const m = new THREE.Matrix4().makeScale(1, 1, HALF_Z).multiply(hinv).multiply(M);
         for (const g of [...pg.lit, ...pg.flat]) g.applyMatrix4(m);
         lit.push(...pg.lit); flat.push(...pg.flat);
-        for (const o of pg.outline) for (const q of o.pts) for (const z of [o.z - T, o.z + T]) { v.set(q[0], q[1], z).applyMatrix4(m); hull.push(v.x, v.y, v.z); }
       }
-      holder.add(...meshes(lit, flat));
+      // The physics shape wraps everything drawn, rims and outlines included, so nothing pokes through the page.
+      const box = new THREE.Box3();
+      for (const g of [...lit, ...flat]) {
+        const p = g.attributes.position;
+        for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); hull.push(v.x, v.y, v.z); box.expandByPoint(v); }
+      }
+      // Start fully above the page and inside the side walls (near the page edge, or a foot on the paper).
+      if (!box.isEmpty()) {
+        const { dx, dy } = spawnNudge(P[0] + box.min.x, P[0] + box.max.x, P[1] + box.min.y);
+        holder.position.x += dx; holder.position.y += dy; holder.updateMatrixWorld(true);
+      }
+      holder.add(...meshes(lit, flat, halfMats(halfSeq++)));
       // The top flies off along the blade; the legs keel over (a card can't stand on its own).
       const up = side > 0;
       const vel = new THREE.Vector3(dirAway * (up ? 1.8 : 0.8), up ? 1.6 : 0.4, (Math.random() - 0.5) * 0.5);
