@@ -56,6 +56,7 @@ export class Lobby {
       }
       case 'name': t?.rename(p, m.name); return;
       case 'begin': t?.begin(p); return;
+      case 'restart': t?.restart(p); return;
       case 'result': t?.report(p, m.winner); return;
       case 'host': {
         this.leave(p, false);
