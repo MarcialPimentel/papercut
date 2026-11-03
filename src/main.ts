@@ -15,6 +15,7 @@ import { View } from './render/view';
 import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
 import { Dummy } from './sim/dummy';
 import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
+import { Tally, type MatchTally } from './sim/tally';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const stage = $('#stage'), canvas = $<HTMLCanvasElement>('#scene');
@@ -35,7 +36,7 @@ $('#build').textContent = `build ${__BUILD__}`;
 
 type Mode =
   | { kind: 'menu'; s: State }
-  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean }
+  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; tally: Tally }
   | { kind: 'online'; lock: Lockstep; code: string }
   | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] }; // watching a tournament fight
 let mode: Mode = { kind: 'menu', s: newMatch() };
@@ -96,11 +97,16 @@ function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
 const BEST_KEY = 'papercut.endlessBest';
 function loadBest() { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } }
 function saveBest(n: number) { try { if (n > loadBest()) localStorage.setItem(BEST_KEY, String(n)); } catch { /* storage blocked: the run just isn't remembered */ } }
+/** Send a finished Endless run to the server's balance stats (no personal data; failures are ignored). */
+function reportRun(bots: number, tally: MatchTally) {
+  const body = JSON.stringify({ bots, guard: controls.guardStyle, tally });
+  fetch('/api/endless', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+}
 
 function startPractice(endless = false) {
   wakeAudio();
   const cfg = endless ? ENDLESS_CFG : DEFAULT_CFG;
-  mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless };
+  mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless, tally: new Tally() };
   hud.setRules(cfg); hud.best = loadBest();
   begin();
   hud.you = null; hud.online = false; hud.setNames(); view.you = 0;
@@ -202,7 +208,9 @@ function showGuardStyle() {
   $('#bGuard').textContent = controls.guardStyle === 'line' ? 'Guard: Line' : 'Guard: Cursor';
   $('#howGuard').innerHTML = GUARD_HOW[controls.guardStyle];
 }
-$('#bGuard').addEventListener('click', () => { controls.setGuardStyle(controls.guardStyle === 'line' ? 'cursor' : 'line'); showGuardStyle(); });
+$('#bGuard').addEventListener('click', () => { controls.setGuardStyle(controls.guardStyle === 'line' ? 'cursor' : 'line'); showGuardStyle(); sayHello(); });
+/** Tell the server this browser's guard style, so the stats can compare Line and Cursor. */
+function sayHello() { net.send({ t: 'hello', guard: controls.guardStyle }); }
 showGuardStyle();
 let setupFor: 'room' | 'tourney' = 'room';
 function openSetup(kind: 'room' | 'tourney') {
@@ -279,13 +287,14 @@ function command(c: 'restart' | 'menu' | 'rematch' | 'hitboxes') {
   if (c === 'hitboxes') { view.hitboxes.toggle(); return; }
   if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto') showMenu('main'); return; }
   if (mode.kind === 'practice') {
-    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); hud.best = loadBest(); view.reset(mode.s); controls.lockWanted = true; controls.lock(); }
+    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); mode.tally = new Tally(); hud.best = loadBest(); view.reset(mode.s); controls.lockWanted = true; controls.lock(); }
   } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
 }
 controls.onCommand = command;
 controls.onAnyInput = wakeAudio;
 
 net.onStatus = (open) => {
+  if (open) sayHello();
   if (open && pendingSend) { const f = pendingSend; pendingSend = null; f(); }
   if (open) return;
   if (mode.kind === 'online' || mode.kind === 'watch' || tourney) toMenu('error', { msg: 'Lost the connection to the server. Check your internet and try again.' });
@@ -353,7 +362,8 @@ function frame(now: number) {
       const s = m.s;
       if (m.endless) m.dummy.level = botLevel(s.f[0].wins);
       const ev = step(s, [controls.sample(view.waistY(s, 0)), m.dummy.think(s)]);
-      if (m.endless && ev.some((e) => e.k === 'over')) saveBest(s.f[0].wins);
+      const done = m.tally.feed(s, ev);
+      if (m.endless && done) { saveBest(s.f[0].wins); reportRun(s.f[0].wins, done); }
       view.onStep(s, ev);
       acc -= STEP;
     }

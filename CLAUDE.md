@@ -21,4 +21,5 @@ Papercut is a simple 3D sword-duel game in a papercraft style, where hits cut an
 
 - `npm install`, then `npm run dev` (game on http://localhost:5173 plus the rooms server on 8790), `npm test`, `npm run typecheck`, `npm run build`, `npm start` (serves `dist/` and the rooms on 8790).
 - The fight lives in `src/sim/` and must stay deterministic: only + - * / and comparisons, no `Math.random`, no trig, no wall-clock time. Online play depends on both browsers computing the same fight from the same inputs (`tests/sim.test.ts` and `tests/online.test.ts` check it).
+- The rooms server re-plays every online fight from the inputs it relays (`server/referee.ts`) and records the stats shown at `/stats`: in Papercut's database on the hub's Postgres when `DATABASE_URL` is set, otherwise in memory.
 - Live at https://papercut.marz.gg (hub server shared with Hormigas). Merges to `main` deploy automatically; see `docs/deploy.md`. `/api/health` reports the live build.

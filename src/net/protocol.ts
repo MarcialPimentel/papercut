@@ -1,9 +1,11 @@
 // Messages between the game and the rooms server (JSON over one WebSocket).
-// The server never runs the fight: it pairs two players and passes their inputs along.
+// The server pairs two players and passes their inputs along; it also steps its own copy of the
+// fight from those same inputs to read the result (server/referee.ts).
 
 import type { MatchCfg } from '../sim/config';
 
 export type ToServer =
+  | { t: 'hello'; guard: 'line' | 'cursor' } // which guard style this browser uses (for the stats)
   | { t: 'host'; cfg?: MatchCfg } // make a private room for an invite link, with its rules
   | { t: 'join'; code: string; name?: string } // a 1v1 room or a tournament
   | { t: 'tourney'; cfg?: MatchCfg; name?: string } // make a tournament room (3-8 players)

@@ -1,12 +1,16 @@
-// Papercut's server: serves the built game and runs the rooms that pair players online.
-// One process, no database. Health check: GET /api/health.
+// Papercut's server: serves the built game, runs the rooms that pair players online, and keeps
+// the balance stats (/stats). Stats go to Papercut's database when DATABASE_URL is set (the hub),
+// otherwise to memory. Health check: GET /api/health.
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { cleanEndless } from './endless';
 import { Lobby, type Peer } from './lobby';
+import { page, readFilter, summarize } from './stats';
+import { openStore } from './store';
 import type { ToServer } from '../src/net/protocol';
 
 const PORT = Number(process.env.PORT || 8790);
@@ -21,8 +25,54 @@ const TYPES: Record<string, string> = {
   '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.glb': 'model/gltf-binary',
 };
 
-const lobby = new Lobby();
+const store = await openStore();
+const saveError = (what: string) => (e: Error) => console.error(`Could not save ${what}:`, e.message);
+const lobby = new Lobby(Math.random, setTimeout, (r) => { store.addMatch(BUILD, r).catch(saveError('a match')); });
 const started = Date.now();
+// Inputs older than 90 days are dropped once a day (and once at start).
+const prune = () => store.prune().catch(saveError('the input clean-up'));
+prune();
+setInterval(prune, 86400e3).unref();
+
+/** Endless reports per address per minute, so nobody can flood the stats. */
+const REPORTS_PER_MIN = 20;
+const reports = new Map<string, number>();
+setInterval(() => reports.clear(), 60e3).unref();
+
+function readBody(req: IncomingMessage, limit: number): Promise<string | null> {
+  return new Promise((done) => {
+    let size = 0; const parts: Buffer[] = [];
+    req.on('data', (c: Buffer) => { size += c.length; if (size > limit) { done(null); req.destroy(); } else parts.push(c); });
+    req.on('end', () => done(Buffer.concat(parts).toString('utf8')));
+    req.on('error', () => done(null));
+  });
+}
+
+async function endlessReport(req: IncomingMessage, res: ServerResponse) {
+  const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim();
+  const n = (reports.get(ip) ?? 0) + 1;
+  reports.set(ip, n);
+  if (n > REPORTS_PER_MIN) { res.writeHead(429).end(); return; }
+  const body = await readBody(req, 64 * 1024);
+  let run = null;
+  try { run = body && cleanEndless(JSON.parse(body)); } catch { /* not JSON */ }
+  if (!run) { res.writeHead(400).end(); return; }
+  await store.addEndless(BUILD, run).catch(saveError('an Endless run'));
+  res.writeHead(204).end();
+}
+
+async function statsPage(req: IncomingMessage, res: ServerResponse, json: boolean) {
+  const f = readFilter(new URL(req.url || '/', 'http://x'));
+  try {
+    const [m, e, builds] = await Promise.all([store.matches(f), store.endless(f), store.builds()]);
+    const st = summarize(m, e);
+    res.writeHead(200, { 'Content-Type': json ? 'application/json' : 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(json ? JSON.stringify({ filter: f, build: BUILD, ...st }) : page(st, f, builds, BUILD));
+  } catch (err) {
+    console.error('Stats page failed:', (err as Error).message);
+    res.writeHead(503, { 'Content-Type': 'text/plain' }).end('The stats are not available right now.');
+  }
+}
 
 async function serveFile(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url || '/', 'http://x');
@@ -48,9 +98,12 @@ async function serveFile(req: IncomingMessage, res: ServerResponse) {
 const server = createServer((req, res) => {
   if (req.url?.startsWith('/api/health')) {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    res.end(JSON.stringify({ ok: true, build: BUILD, uptime: Math.round((Date.now() - started) / 1000), ...lobby.stats }));
+    res.end(JSON.stringify({ ok: true, build: BUILD, uptime: Math.round((Date.now() - started) / 1000), stats: store.kind, ...lobby.stats }));
     return;
   }
+  const path = (req.url || '/').split('?')[0];
+  if (path === '/api/endless' && req.method === 'POST') { endlessReport(req, res).catch(() => res.writeHead(500).end()); return; }
+  if ((path === '/stats' || path === '/api/stats') && req.method === 'GET') { statsPage(req, res, path === '/api/stats').catch(() => res.writeHead(500).end()); return; }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405).end(); return; }
   serveFile(req, res).catch(() => res.writeHead(500).end());
 });

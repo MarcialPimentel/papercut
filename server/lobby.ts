@@ -1,16 +1,20 @@
-// Pairs players into rooms (1v1 or tournament) and relays their inputs. No fight logic lives here.
+// Pairs players into rooms (1v1 or tournament) and relays their inputs. The server's referee steps
+// the same fight alongside the players to read the result and count what happened (see referee.ts).
 
 import { CODE_LENGTH, CODE_LETTERS, delayFor, normalizeCode, type ToClient, type ToServer } from '../src/net/protocol';
 import { DEFAULT_CFG, cleanCfg, type MatchCfg } from '../src/sim/config';
+import { Referee, type GuardStyle, type MatchRecord } from './referee';
 import { TOURNEY_MAX, Tourney } from './tourney';
 
 export interface Peer {
   send(msg: ToClient): void;
   /** Latest measured round trip to this player, in ms (undefined until measured). */
   rtt?: number;
+  /** The guard style this player's browser uses (it says so in a 'hello'). */
+  guard?: GuardStyle;
 }
 
-interface Room { code: string; host: Peer; guest?: Peer; quick: boolean; cfg: MatchCfg }
+interface Room { code: string; host: Peer; guest?: Peer; quick: boolean; cfg: MatchCfg; ref?: Referee }
 
 export class Lobby {
   private rooms = new Map<string, Room>();
@@ -19,7 +23,12 @@ export class Lobby {
   private tourneys = new Map<string, Tourney>();
   private tourneyOf = new Map<Peer, Tourney>();
 
-  constructor(private rand: () => number = Math.random, private later: (fn: () => void, ms: number) => unknown = setTimeout) {}
+  constructor(
+    private rand: () => number = Math.random,
+    private later: (fn: () => void, ms: number) => unknown = setTimeout,
+    /** Called with every finished match, for the stats. */
+    private record: (r: MatchRecord) => void = () => {},
+  ) {}
 
   get stats() {
     return {
@@ -37,12 +46,15 @@ export class Lobby {
         // Every bracket match must end, so endless rounds aren't allowed in a tournament.
         const cfg = cleanCfg(m.cfg);
         if (cfg.wins === 0) cfg.wins = DEFAULT_CFG.wins;
-        const tn = new Tourney(this.newCode(), cfg, this.rand, this.later);
+        const tn = new Tourney(this.newCode(), cfg, this.rand, this.later, this.record);
         this.tourneys.set(tn.code, tn);
         this.tourneyOf.set(p, tn);
         tn.add(p, m.name);
         return;
       }
+      case 'hello':
+        p.guard = m.guard === 'line' || m.guard === 'cursor' ? m.guard : '';
+        return;
       case 'name': t?.rename(p, m.name); return;
       case 'begin': t?.begin(p); return;
       case 'result': t?.report(p, m.winner); return;
@@ -95,7 +107,7 @@ export class Lobby {
         const r = this.roomOf.get(p);
         const o = r && (r.host === p ? r.guest : r.host);
         if (!o || typeof m.f !== 'number') return;
-        if (m.t === 'in') o.send({ t: 'in', f: m.f, b: m.b | 0 });
+        if (m.t === 'in') { o.send({ t: 'in', f: m.f, b: m.b | 0 }); r.ref?.input(r.host === p ? 0 : 1, m.f, m.b | 0); }
         else o.send({ t: 'hash', f: m.f, h: m.h >>> 0 });
         return;
       }
@@ -126,6 +138,7 @@ export class Lobby {
     r.guest = guest;
     this.roomOf.set(guest, r);
     const delay = delayFor(r.host.rtt ?? 80, guest.rtt ?? 80);
+    r.ref = new Referee(r.quick ? 'quick' : 'room', r.cfg, delay, [r.host.guard ?? '', guest.guard ?? ''], this.record);
     r.host.send({ t: 'start', seat: 0, delay, code: r.code, cfg: r.cfg });
     guest.send({ t: 'start', seat: 1, delay, code: r.code, cfg: r.cfg });
   }
@@ -134,11 +147,12 @@ export class Lobby {
     const t = this.tourneyOf.get(p);
     if (t) {
       this.tourneyOf.delete(p);
-      if (t.leave(p)) { t.stop(); this.tourneys.delete(t.code); }
+      if (t.leave(p)) { t.close(); this.tourneys.delete(t.code); }
     }
     const r = this.roomOf.get(p);
     if (!r) return;
     const o = r.host === p ? r.guest : r.host;
+    r.ref?.close();
     this.roomOf.delete(p);
     if (o) this.roomOf.delete(o);
     this.rooms.delete(r.code);

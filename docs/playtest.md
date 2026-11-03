@@ -51,6 +51,15 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 - **Spacing:** fighters start further apart and walk and dash further, so the spacing should feel as before with honest swords. Too roomy or too cramped?
 - **Endless:** how far do you get? The cut bots' halves pile up on the page (the last 5 stay). From level 2 (bot 6) the bots block heavies they see coming, punish your misses and swat jumpers.
 
+## Match stats
+
+https://papercut.marz.gg/stats shows the numbers from every finished online match and Endless run (on your PC: http://localhost:5173/stats, kept until the server restarts). Pick a build, the rules and a guard style at the top. Useful questions for tuning:
+
+- **How rounds end:** if counter cuts end most rounds, heavies are too risky; if time ends many, fights are too passive.
+- **What each slash does:** how often heavies land, get blocked, parried or feinted, and how often a blocked heavy's stagger is followed by a cut.
+- **Kami vs Sumi:** should stay near 50%. If not, one side has an edge.
+- **Line vs Cursor:** who wins when one player uses each guard style.
+
 ## What to report
 
 - **Feel:** do the slashes, blocks and parries feel crisp? Is anything too fast or too slow to react to?

@@ -4,10 +4,12 @@
 
 import { BYE_SLOT, delayFor, type BracketMatch, type ToClient } from '../src/net/protocol';
 import type { MatchCfg } from '../src/sim/config';
+import { Referee, type GuardStyle, type MatchRecord } from './referee';
 
 export interface TPeer {
   send(msg: ToClient): void;
   rtt?: number;
+  guard?: GuardStyle;
 }
 
 interface Player { peer: TPeer; name: string; gone: boolean }
@@ -34,12 +36,15 @@ export class Tourney {
   current: [number, number] | null = null;
   champion: number | null = null;
   private timer: unknown = null;
+  /** The server's copy of the fight on stage, for the stats. */
+  private ref: Referee | null = null;
 
   constructor(
     readonly code: string,
     readonly cfg: MatchCfg,
     private rand: () => number,
     private later: (fn: () => void, ms: number) => unknown = setTimeout,
+    private record: (r: MatchRecord) => void = () => {},
   ) {}
 
   get host() { return this.players.find((p) => !p.gone); }
@@ -108,6 +113,7 @@ export class Tourney {
     if (msg.t === 'hash') { if (!rival.gone) rival.peer.send({ t: 'hash', f: msg.f, h: (msg.h ?? 0) >>> 0 }); return; }
     const b = (msg.b ?? 0) | 0;
     if (!rival.gone) rival.peer.send({ t: 'in', f: msg.f, b });
+    this.ref?.input(seat, msg.f, b);
     for (const p of this.live) if (p !== fs[0] && p !== fs[1]) p.peer.send({ t: 'in', f: msg.f, b, s: seat });
   }
 
@@ -131,6 +137,8 @@ export class Tourney {
   }
 
   stop() { if (this.timer !== null) clearTimeout(this.timer as ReturnType<typeof setTimeout>); this.timer = null; }
+  /** The room is closing: drop the fight on stage. */
+  close() { this.stop(); this.ref?.close(); this.ref = null; }
 
   private match([r, i]: [number, number]) { return this.rounds[r][i]; }
 
@@ -139,6 +147,7 @@ export class Tourney {
     const m = this.rounds[r][i];
     m.winner = winner; m.forfeit = forfeit;
     this.current = null;
+    this.ref?.close(); this.ref = null;
     this.advance(r, i);
     this.sendBracket();
     this.stop();
@@ -180,6 +189,8 @@ export class Tourney {
     const fs = this.fighters()!;
     const delay = delayFor(fs[0].peer.rtt ?? 80, fs[1].peer.rtt ?? 80);
     const names: [string, string] = [fs[0].name, fs[1].name];
+    this.ref?.close();
+    this.ref = new Referee('tourney', this.cfg, delay, [fs[0].peer.guard ?? '', fs[1].peer.guard ?? ''], this.record);
     this.sendBracket();
     for (const p of this.live) {
       const seat = p === fs[0] ? 0 : p === fs[1] ? 1 : -1;
