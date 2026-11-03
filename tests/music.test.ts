@@ -1,5 +1,6 @@
+import { existsSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { arrangement, endlessLayers, ENDLESS_TOP, PAGE_TRACKS, TRACKS, type TrackKey } from '../src/audio/music';
+import { arrangement, endlessLayers, ENDLESS_TOP, PAGE_TRACKS, SONGS, songFor, songPos, TRACKS, type TrackKey } from '../src/audio/music';
 import { FINAL_PAGE, PAGES } from '../src/sim/rules';
 
 const keys = Object.keys(TRACKS) as TrackKey[];
@@ -61,5 +62,28 @@ describe('music tracks', () => {
     }
     expect(endlessLayers(ENDLESS_TOP + 5, 0)).toEqual(endlessLayers(ENDLESS_TOP, 0));
     expect(arrangement('endless', 'fight', 0, 3).bpm).toBe(endlessLayers(3, 0).bpm);
+  });
+
+  it('plays the recorded songs on the title screen and in regular fights only', () => {
+    expect(songFor('menu', 'menu')).toBe('title');
+    for (const k of ['dojo', 'courtyard', 'grove'] as const) expect(songFor(k, 'fight')).toBe('fight');
+    for (const k of keys) expect(songFor(k, 'intro')).toBe(null); // "Round N" keeps its drums
+    expect(songFor('endless', 'fight')).toBe(null);
+    expect(songFor('tourney', 'fight')).toBe(null);
+    expect(songFor('tourney', 'menu')).toBe(null);
+    expect(songFor('cover', 'menu')).toBe(null);
+  });
+
+  it('ships each song file and folds playback into its loop', () => {
+    for (const s of Object.values(SONGS)) {
+      const file = `public${s.url}`;
+      expect(existsSync(file)).toBe(true);
+      expect(statSync(file).size).toBeGreaterThan(100_000);
+      expect(s.loopStart).toBeGreaterThan(0);
+      expect(s.loopEnd - s.loopStart).toBeGreaterThan(30);
+      expect(songPos(s, 0, 10)).toBeCloseTo(10);
+      expect(songPos(s, 0, s.loopEnd)).toBeCloseTo(s.loopStart);
+      expect(songPos(s, s.loopEnd - 1, 3)).toBeCloseTo(s.loopStart + 2);
+    }
   });
 });

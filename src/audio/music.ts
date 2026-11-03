@@ -1,3 +1,4 @@
+// The title screen and regular fights play recorded songs (SONGS, below); everything else is the code-made band.
 // Music made in code: taiko drums, a small high drum, wooden clappers, a temple bell, and koto-like plucks
 // or a bamboo flute on Japanese scales. Every page, the menu, Endless, tournaments and the back cover has its
 // own track (tempo, scale, drums and lead), so a session never loops one tune.
@@ -171,8 +172,42 @@ function makePhrase(density: number): Phrase {
   return out;
 }
 
+// ---------- recorded songs ----------
+// Two songs Marz made with Suno replace the code-made music on the title screen and in regular fights.
+// Each file is baked as a seamless loop: it plays from the start once, then loops loopStart..loopEnd
+// (the file's last beats already crossfade into the audio just before loopStart). Sources: docs/sound.md.
+
+export type SongKey = 'title' | 'fight';
+export interface Song { url: string; loopStart: number; loopEnd: number; gain: number }
+export const SONGS: Record<SongKey, Song> = {
+  title: { url: '/music/title.ogg', loopStart: 66.8297, loopEnd: 136.394, gain: 0.7 }, // 刀の合戦, 141 bpm
+  fight: { url: '/music/fight.ogg', loopStart: 57.0057, loopEnd: 154.204, gain: 0.8 }, // 祭りの合図, 131 bpm
+};
+E.want(Object.fromEntries(Object.entries(SONGS).map(([k, s]) => [`song:${k}`, [s.url]])));
+
+/** Which recorded song (if any) replaces the code-made track. "Round N" keeps its drums, Endless keeps its
+ *  build-up, tournaments keep their festival theme, and the bracket and back cover stay calm. */
+export function songFor(track: TrackKey, mode: MusicMode): SongKey | null {
+  if (mode === 'menu') return track === 'menu' ? 'title' : null;
+  if (mode === 'fight') return track === 'dojo' || track === 'courtyard' || track === 'grove' ? 'fight' : null;
+  return null;
+}
+
+/** Where a song that started at `offset` is after `elapsed` seconds, folding into its loop. */
+export function songPos(s: Song, offset: number, elapsed: number): number {
+  const p = offset + elapsed;
+  return p < s.loopEnd ? p : s.loopStart + ((p - s.loopStart) % (s.loopEnd - s.loopStart));
+}
+
 export class Music {
   private mode: MusicMode = 'off';
+  /** The recorded song playing now (null = the code-made track), its source, and where it started. */
+  private song: SongKey | null = null;
+  private src: AudioBufferSourceNode | null = null;
+  private srcStart = 0;
+  private srcOffset = 0;
+  /** The fight song carries on from round to round within a match, instead of restarting. */
+  private resume: Partial<Record<SongKey, number>> = {};
   private tension: Tension = 0;
   private track: TrackKey = 'menu';
   private level = 1;
@@ -188,20 +223,45 @@ export class Music {
   /** Call every frame; only acts when something changes. A new track or mode starts a new song;
    *  tension and the Endless level change the song in place. */
   set(mode: MusicMode, tension: Tension = 0, track: TrackKey = 'dojo', level = 1) {
-    if (mode === this.mode && tension === this.tension && track === this.track && level === this.level) return;
+    const want = songFor(track, mode);
+    const song = want && E.has(`song:${want}`) ? want : null; // the code-made track plays until the file loads
+    if (mode === this.mode && tension === this.tension && track === this.track && level === this.level && song === this.song) return;
     const a = E.live;
     if (!a) return; // audio not started yet: pick it up on a later frame
     const wasOff = this.mode === 'off';
-    const newSong = mode !== 'off' && (track !== this.track || (mode !== this.mode && !(this.mode === 'intro' && mode === 'fight')));
-    this.mode = mode; this.tension = tension; this.track = track; this.level = level;
+    const newSong = mode !== 'off' && (track !== this.track || song !== this.song || (mode !== this.mode && !(this.mode === 'intro' && mode === 'fight')));
+    if (mode === 'off' || newSong) this.stopSong(a);
+    if (mode === 'menu') this.resume = {}; // a new match starts the fight song from the top
+    this.mode = mode; this.tension = tension; this.track = track; this.level = level; this.song = mode === 'off' ? null : song;
     this.arr = arrangement(track, mode, tension, level);
     if (mode === 'off') { this.fade(0, 0.5); return; }
     if (newSong || wasOff) this.start(a);
   }
 
+  /** Stop the recorded song (after the fade-out) and remember where it got to. */
+  private stopSong(a: AudioContext) {
+    if (!this.src || !this.song) return;
+    this.resume[this.song] = songPos(SONGS[this.song], this.srcOffset, a.currentTime - this.srcStart);
+    this.src.stop(a.currentTime + 1.5);
+    this.src = null;
+  }
+
   private start(a: AudioContext) {
     if (this.gain) { const old = this.gain; old.gain.setTargetAtTime(0, a.currentTime, 0.15); setTimeout(() => old.disconnect(), 1500); }
     this.gain = a.createGain(); this.gain.gain.value = 0.0001; this.gain.connect(E.musicBus);
+    const song = this.song ? SONGS[this.song] : null, buf = this.song ? E.buffer(`song:${this.song}`) : null;
+    if (song && buf && this.song) {
+      this.fade(song.gain, 0.4);
+      const src = a.createBufferSource();
+      src.buffer = buf; src.loop = true;
+      src.loopStart = song.loopStart; src.loopEnd = Math.min(song.loopEnd, buf.duration);
+      src.connect(this.gain);
+      const at = a.currentTime + 0.02, offset = Math.min(this.resume[this.song] ?? 0, song.loopEnd);
+      src.start(at, offset);
+      this.src = src; this.srcStart = at; this.srcOffset = offset;
+      if (this.timer) { clearInterval(this.timer); this.timer = 0; } // no code-made notes under a song
+      return;
+    }
     this.fade(TRACKS[this.track].level ?? 1, 0.4);
     this.next = a.currentTime + 0.06; this.step = 0; this.bar = 0;
     this.phrases = [makePhrase(this.arr.density), makePhrase(this.arr.density)];

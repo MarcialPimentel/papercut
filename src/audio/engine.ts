@@ -88,6 +88,8 @@ export class Engine {
     if (bufs.length) this.samples.set(name, bufs);
   }
   has(name: string) { return this.samples.has(name); }
+  /** A loaded recording's first file (for the recorded songs, which play as long loops). */
+  buffer(name: string): AudioBuffer | null { return this.samples.get(name)?.[0] ?? null; }
 
   /** Where a sound goes: the effects bus, panned left/right (-1..1). */
   out(pan = 0, bus: AudioNode = this.sfxBus): AudioNode {
