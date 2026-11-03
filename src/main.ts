@@ -13,6 +13,7 @@ import { Net } from './net/client';
 import { Lockstep } from './net/lockstep';
 import { BYE_SLOT, cleanName, normalizeCode, type RankInfo, type ToClient } from './net/protocol';
 import { Spectator } from './net/spectator';
+import { ReplayPlayer, type ReplayInputs } from './net/replay';
 import { engine } from './audio/engine';
 import { music, PAGE_TRACKS, type MusicMode, type Tension, type TrackKey } from './audio/music';
 import { sfx } from './audio/sounds';
@@ -67,9 +68,10 @@ type Mode =
   | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; tally: Tally; seed: number; inputs: RunInputs }
   | { kind: 'tutorial'; s: State; tut: Tutorial }
   | { kind: 'online'; lock: Lockstep; code: string }
-  | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] }; // watching a tournament fight
+  | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] } // watching a tournament fight
+  | { kind: 'replay'; rp: ReplayPlayer; names: [string, string]; paused: boolean; speed: number }; // a saved online fight
 let mode: Mode = { kind: 'menu', s: newMatch() };
-const stateOf = (m: Mode) => (m.kind === 'online' ? m.lock.state : m.kind === 'watch' ? m.spec.state : m.s);
+const stateOf = (m: Mode) => (m.kind === 'online' ? m.lock.state : m.kind === 'watch' ? m.spec.state : m.kind === 'replay' ? m.rp.state : m.s);
 const seatOf = (m: Mode) => (m.kind === 'online' ? m.lock.seat : 0);
 
 // ---------- tournaments ----------
@@ -98,7 +100,7 @@ const dressOnline = (looks?: [string, string]) => dress(decodePick(looks?.[0], D
 const myLook = () => encodePick(myPick());
 
 // ---------- menus ----------
-type Screen = 'main' | 'fighter' | 'howto' | 'board' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
+type Screen = 'main' | 'fighter' | 'howto' | 'board' | 'replays' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (screen === 'controls' && to !== 'controls') bindScreen.cancel();
@@ -129,13 +131,14 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
     if (loadBest() > 0) fetchBoard('all').then((b) => { myPlace = b?.you?.place ?? null; if (screen === 'main') showBest(); });
   }
   if (to === 'board') showBoard('all');
+  if (to === 'replays') showReplays();
 }
 function hideMenu() { showSound(false); if (screen === 'fighter') fighterScreen.close(); screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
 
 function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
   tuner.toggle(false); resetTuning();
   if (mode.kind === 'online' || tourney) net.send({ t: 'cancel' });
-  tourney = null; hud.tourney = false; hud.names = null; hud.ranks = null; hud.rankNote = ''; hud.tutorial = false; showTut(null);
+  tourney = null; hud.tourney = false; hud.replay = false; $('#replayBar').hidden = true; hud.names = null; hud.ranks = null; hud.rankNote = ''; hud.tutorial = false; showTut(null);
   controls.active = false; controls.clear();
   controls.lockWanted = false; controls.unlock();
   mode = { kind: 'menu', s: newMatch() };
@@ -288,6 +291,95 @@ function startPractice(endless = false) {
 
 // ---------- the tutorial ----------
 // Offered once on the first visit; always on the title screen. Remembered with the other settings (store.ts).
+// ---------- replays ----------
+interface ReplayRow { n: number; at: number; mode: string; seat: 0 | 1; names: [string, string]; winner: number | null; fight: string }
+interface ReplayData { n: number; mode: string; cfg: MatchCfg; start: number; inputs: ReplayInputs; frames: number | null; names: [string, string]; looks: [string, string]; fight: string }
+const MODE_NAMES: Record<string, string> = { quick: 'Quick match', room: 'Friend room', tourney: 'Tournament', ranked: 'Ranked' };
+const SPEEDS = [0.25, 0.5, 1, 2];
+let replayAsk = 0;
+/** The Replays screen: your last online fights, newest first, from the server. */
+async function showReplays() {
+  const ask = ++replayAsk, list = $('#replayList');
+  list.innerHTML = '<p class="muted">Loading your fights…</p>';
+  let rows: ReplayRow[] | null = null;
+  try {
+    const r = await fetch(`${SITE}/api/replays`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: myId() }) });
+    if (r.ok) rows = (await r.json()).list;
+  } catch { /* offline */ }
+  if (ask !== replayAsk || screen !== 'replays') return;
+  if (!rows) { list.innerHTML = '<p class="muted">Replays are not available right now.</p>'; return; }
+  if (!rows.length) { list.innerHTML = '<p class="muted">No replays yet. Your online fights show up here once they end.</p>'; return; }
+  list.innerHTML = rows.map((r) => {
+    const rival = esc(r.names[1 - r.seat] || 'Ronin');
+    const result = r.winner === null ? 'Unfinished' : r.winner === r.seat ? 'Won' : 'Lost';
+    const when = new Date(r.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const old = r.fight !== __FIGHT__;
+    return `<button class="mbtn" type="button" data-replay="${r.n}" data-seat="${r.seat}"${old ? ' disabled' : ''}>`
+      + `${result} vs ${rival}<small>${MODE_NAMES[r.mode] ?? esc(r.mode)} · ${when}${old ? ' · older rules, can&#39;t play back' : ''}</small></button>`;
+  }).join('');
+}
+$('#replayList').addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-replay]');
+  if (b && !b.disabled) openReplay(Number(b.dataset.replay), Number(b.dataset.seat) === 1 ? 1 : 0, b);
+});
+async function openReplay(n: number, seat: 0 | 1, btn: HTMLButtonElement) {
+  btn.disabled = true;
+  let d: ReplayData | null = null;
+  try {
+    const r = await fetch(`${SITE}/api/replay?n=${n}`);
+    d = r.ok ? ((await r.json()) as ReplayData) : null;
+  } catch { /* offline */ }
+  if (screen !== 'replays') return;
+  if (!d || d.fight !== __FIGHT__) { btn.querySelector('small')!.textContent = d ? 'Older rules, can\'t play back.' : 'Could not load this replay.'; return; }
+  startReplay(d, seat);
+}
+/** Play a saved fight back, seen from your side. */
+function startReplay(d: ReplayData, seat: 0 | 1) {
+  tuner.toggle(false); resetTuning(); // replays run the game's own numbers, like every online fight
+  view.spawnLook = null; dressOnline(d.looks);
+  const cfg = cleanCfg(d.cfg);
+  mode = { kind: 'replay', rp: new ReplayPlayer(cfg, d.start, d.inputs, d.frames), names: d.names, paused: false, speed: 1 };
+  hud.setRules(cfg);
+  view.reset(mode.rp.state);
+  controls.clear(); controls.active = false; controls.lockWanted = false; controls.unlock();
+  acc = 0;
+  hideMenu();
+  hud.you = seat; hud.online = true; hud.replay = true; hud.names = d.names; hud.setNames(); view.you = seat;
+  $('#replayBar').hidden = false;
+  showReplayBar();
+}
+function showReplayBar() {
+  if (mode.kind !== 'replay') return;
+  $('#rpPause').textContent = mode.paused ? 'Play' : 'Pause';
+  $('#rpSpeed').textContent = `Speed ${mode.speed}x`;
+}
+/** Replay controls: pause, one frame on, back 5 seconds, speed, from the start. */
+function replayCmd(c: 'pause' | 'step' | 'back' | 'slower' | 'faster' | 'speed' | 'restart') {
+  if (mode.kind !== 'replay') return;
+  const m = mode, i = SPEEDS.indexOf(m.speed);
+  if (c === 'pause') m.paused = !m.paused;
+  else if (c === 'step') { m.paused = true; const ev = m.rp.tick(); if (ev) view.onStep(m.rp.state, ev); }
+  else if (c === 'back' || c === 'restart') { m.rp.seek(c === 'restart' ? 0 : m.rp.at - 5 * 60); view.reset(m.rp.state); acc = 0; }
+  else if (c === 'slower') m.speed = SPEEDS[Math.max(0, i - 1)];
+  else if (c === 'faster') m.speed = SPEEDS[Math.min(SPEEDS.length - 1, i + 1)];
+  else m.speed = SPEEDS[(i + 1) % SPEEDS.length];
+  showReplayBar();
+}
+for (const [id, c] of [['rpPause', 'pause'], ['rpStep', 'step'], ['rpBack', 'back'], ['rpSpeed', 'speed'], ['rpRestart', 'restart']] as const) {
+  $(`#${id}`).addEventListener('click', () => replayCmd(c));
+}
+$('#rpList').addEventListener('click', () => toMenu('replays'));
+addEventListener('keydown', (e) => {
+  if (mode.kind !== 'replay' || screen || e.ctrlKey || e.metaKey || e.altKey) return;
+  const c = e.code === 'Space' ? 'pause' : e.code === 'ArrowRight' || e.code === 'Period' ? 'step' : e.code === 'ArrowLeft' || e.code === 'Comma' ? 'back'
+    : e.code === 'ArrowUp' ? 'faster' : e.code === 'ArrowDown' ? 'slower' : null;
+  if (!c) return;
+  e.preventDefault();
+  if (!e.repeat || c === 'step') replayCmd(c);
+});
+$('#bReplays').addEventListener('click', () => showMenu('replays'));
+$('#bReplaysBack').addEventListener('click', () => showMenu('main'));
+
 const TUT_KEY = 'papercut.tutorial';
 function tutorialSeen() { return store.get(TUT_KEY) !== null; }
 function markTutorial(v: 'offered' | 'done') { if (store.get(TUT_KEY) !== 'done') store.set(TUT_KEY, v); }
@@ -456,12 +548,14 @@ controls.onNav = (n) => {
     navigate(n, $('#menu'), () => {
       // B on the bracket never leaves the tournament: it goes back to the fight being watched, or does nothing.
       if (screen === 'bracket') { if (mode.kind === 'watch') hideMenu(); return; }
-      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
+      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #bReplaysBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
       back?.click();
     });
     return;
   }
   if (n === 'menu') { command('menu'); return; }
+  // A replay: the stick moves along its controls, A presses one, B goes back to the list.
+  if (mode.kind === 'replay') { navigate(n, $('#replayBar'), () => toMenu('replays')); return; }
   // In a fight, the menu buttons only matter once the match is over (Rematch, Leave). A is jump until then.
   if (mode.kind !== 'menu' && stateOf(mode).phase === 'over') {
     const re = $('#rematch');
@@ -617,7 +711,9 @@ function command(c: Command) {
   if (c === 'menu' && tuner.open) { tuner.toggle(false); return; }
   // Watching a tournament fight: Esc shows the bracket over it (and back), never leaves the tournament.
   if (c === 'menu' && mode.kind === 'watch') { if (screen === 'bracket') hideMenu(); else { showMenu('bracket'); renderBracket(); } return; }
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone' || screen === 'board') showMenu('main'); return; }
+  if (c === 'menu' && mode.kind === 'replay') { toMenu('replays'); return; }
+  if (mode.kind === 'replay') { if (c === 'restart') replayCmd('restart'); return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'replays' || screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone' || screen === 'board') showMenu('main'); return; }
   if (mode.kind === 'tutorial') {
     if (c === 'skip') mode.tut.skip();
     if (c === 'restart') { mode.s = freshFight(); view.reset(mode.s); }
@@ -723,6 +819,7 @@ function showPresence(m: Mode, s: State) {
     : m.kind === 'tutorial' ? ['#Tutorial', {}]
     : m.kind === 'practice' ? (m.endless ? ['#Endless', { level: String(botLevel(s.f[0].wins)) }] : ['#Practice', {}])
     : m.kind === 'watch' ? ['#Watching', {}]
+    : m.kind === 'replay' ? ['#Menu', {}]
     : tourney ? ['#Tournament', {}]
     : hud.ranks ? ['#Ranked', { division: myRank?.placed ? myRank.division : 'Placement' }]
     : ['#Online', {}];
@@ -794,6 +891,16 @@ function frame(now: number) {
       view.onStep(spec.state, ev);
       acc -= STEP; n++;
     }
+  } else if (m.kind === 'replay') {
+    if (m.paused) acc = 0;
+    else acc += real * m.speed;
+    let n = 0;
+    while (acc >= STEP && n < 8) {
+      const ev = m.rp.tick();
+      if (!ev) { acc = 0; break; }
+      view.onStep(m.rp.state, ev);
+      acc -= STEP; n++;
+    }
   }
   // Back to the bracket a moment after a tournament fight ends.
   if (tourney && tourney.fight && m.kind !== 'menu') {
@@ -809,9 +916,9 @@ function frame(now: number) {
   showTut(m.kind === 'tutorial' ? m.tut : null);
   const s = stateOf(m);
   if (m.kind !== 'menu') {
-    hud.update(s, m.kind === 'online' ? seat : m.kind === 'watch' ? null : 0);
+    hud.update(s, m.kind === 'online' ? seat : m.kind === 'watch' || m.kind === 'replay' ? null : 0);
     // Hold the mouse while fighting; let it go when the match is over so Rematch and Leave can be clicked.
-    controls.lockWanted = m.kind !== 'watch' && s.phase !== 'over' && !tuner.open;
+    controls.lockWanted = m.kind !== 'watch' && m.kind !== 'replay' && s.phase !== 'over' && !tuner.open;
     if (!controls.lockWanted) controls.unlock();
   }
   music.set(...musicFor(m, s));
@@ -834,6 +941,10 @@ function frame(now: number) {
       : `${tourney ? 'Tournament' : 'Online'} · room ${m.code} · ${rulesLabel(l.state.cfg)} · ${l.delay}-frame delay`;
   } else if (m.kind === 'watch') {
     status = `Watching ${m.names[0]} vs ${m.names[1]} · tournament ${m.code} · ${controls.device === 'pad' ? 'Menu' : 'Esc'} for the bracket`;
+  } else if (m.kind === 'replay') {
+    const t = (f: number) => clock(Math.floor(f / 60));
+    status = `Replay · ${m.names[0]} vs ${m.names[1]} · ${t(m.rp.at)}${m.rp.frames !== null ? ' / ' + t(m.rp.frames) : ''}${m.paused ? ' · paused' : ''}`
+      + (controls.device === 'pad' ? ' · B for your replays' : ' · Space pause · → one frame · ← back 5s · ↑↓ speed · Esc for your replays');
   }
   if (m.kind !== 'menu' && controls.lockWanted && !controls.locked && controls.device !== 'pad' && matchMedia('(hover: hover) and (pointer: fine)').matches && !status.startsWith('Out')) {
     status = 'Click the fight to hold the mouse · ' + status;

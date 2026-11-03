@@ -11,6 +11,8 @@ export interface TPeer {
   rtt?: number;
   guard?: GuardStyle;
   look?: string;
+  /** The player's id (a hash of their token), once they said hello: their replays are listed under it. */
+  pid?: string;
 }
 
 interface Player { peer: TPeer; name: string; gone: boolean }
@@ -208,12 +210,13 @@ export class Tourney {
     const delay = delayFor(fs[0].peer.rtt ?? 80, fs[1].peer.rtt ?? 80);
     const names: [string, string] = [fs[0].name, fs[1].name];
     this.ref?.close();
+    const looks: [string, string] = [fs[0].peer.look ?? '', fs[1].peer.look ?? ''];
     const ref: Referee = new Referee('tourney', this.cfg, delay, [fs[0].peer.guard ?? '', fs[1].peer.guard ?? ''], (rec) => {
+      rec.players = [fs[0].peer.pid ?? '', fs[1].peer.pid ?? '']; rec.names = names; rec.looks = looks;
       this.record(rec);
       this.decided(ref, rec);
     });
     this.ref = ref;
-    const looks: [string, string] = [fs[0].peer.look ?? '', fs[1].peer.look ?? ''];
     this.sendBracket();
     for (const p of this.live) {
       const seat = p === fs[0] ? 0 : p === fs[1] ? 1 : -1;
