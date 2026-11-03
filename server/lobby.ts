@@ -1,7 +1,7 @@
 // Pairs players into rooms (1v1 or tournament) and relays their inputs. The server's referee steps
 // the same fight alongside the players to read the result and count what happened (see referee.ts).
 
-import { CODE_LENGTH, CODE_LETTERS, cleanLook, delayFor, normalizeCode, type RankInfo, type ToClient, type ToServer } from '../src/net/protocol';
+import { CODE_LENGTH, CODE_LETTERS, cleanLook, cleanName, delayFor, normalizeCode, type RankInfo, type ToClient, type ToServer } from '../src/net/protocol';
 import { DEFAULT_CFG, cleanCfg, type MatchCfg } from '../src/sim/config';
 import { Referee, cleanGuard, type GuardStyle, type MatchRecord } from './referee';
 import type { Ranked } from './ranked';
@@ -15,6 +15,8 @@ export interface Peer {
   guard?: GuardStyle;
   /** The player's look code (drawn only, never part of the fight). */
   look?: string;
+  /** The name the player picked ('' if none), shown to their rival. */
+  name?: string;
   /** The fight version this player's game runs (server/fightVersion.ts). */
   v?: string;
   /** Ranked: this player's id (a hash of their token), once they said hello. */
@@ -23,12 +25,18 @@ export interface Peer {
 
 /** Told to a player whose game runs different fight rules from the server's. */
 export const MISMATCH_MSG = "This copy of Papercut doesn't match the online version. Update it (or reload the page) to fight online. Practice and Endless still work.";
+/** Told to a ranked player who stopped sending inputs (tab hidden, game frozen) while their rival kept playing. */
+export const STALL_MSG = 'You were away from the ranked fight for too long, so it counts as a loss.';
+/** How long a ranked fight may wait on one player while the other keeps playing before it's their loss. */
+export const STALL_MS = 10_000;
 const PAIRING = new Set(['host', 'join', 'quick', 'tourney', 'ranked']);
 
 interface Room {
   code: string; host: Peer; guest?: Peer; quick: boolean; cfg: MatchCfg; ref?: Referee;
   /** A ranked match: both players' ids, and whether its result has been counted. */
   ranked?: { ids: [string, string]; settled: boolean };
+  /** Ranked: the frame the fight was last seen waiting on one seat, and since when (ms). */
+  stall?: { seat: 0 | 1 | null; frame: number; since: number };
 }
 
 export class Lobby {
@@ -53,16 +61,37 @@ export class Lobby {
     private record: (r: MatchRecord) => void = () => {},
     /** Ranked play (needs the stats database for ratings). */
     private ranked: Ranked | null = null,
+    private now: () => number = Date.now,
   ) {}
 
-  /** Pair whoever is waiting for a ranked match (the server calls this every second). */
+  /** Pair whoever is waiting for a ranked match, and end stalled ones (the server calls this every second). */
   tick() {
     if (!this.ranked || this.stopping) return;
+    this.stalls();
     for (const [a, b] of this.ranked.match()) {
       if (this.gone.has(a as Peer) || this.gone.has(b as Peer)) continue;
       const r = this.open(a as Peer, true, DEFAULT_CFG);
       r.ranked = { ids: [a.pid!, b.pid!], settled: false };
       this.begin(r, b as Peer);
+    }
+  }
+
+  /**
+   * A ranked fight stuck waiting on one player for STALL_MS while the other has kept playing: the
+   * silent one loses as if they had left. (Otherwise a losing player could hide the tab and freeze the
+   * fight until their rival gave up and took the loss.) A fight waiting on both players isn't judged.
+   */
+  private stalls() {
+    const t = this.now();
+    for (const r of [...this.rooms.values()]) {
+      if (!r.ranked || r.ranked.settled || !r.guest || !r.ref) continue;
+      const seat = r.ref.waitingOn, frame = r.ref.state.frame;
+      if (!r.stall || r.stall.seat !== seat || r.stall.frame !== frame) { r.stall = { seat, frame, since: t }; continue; }
+      if (seat === null || t - r.stall.since < STALL_MS) continue;
+      const silent = seat === 0 ? r.host : r.guest;
+      this.settle(r, seat === 0 ? 1 : 0, 'left');
+      silent.send({ t: 'err', msg: STALL_MSG });
+      this.leave(silent, true);
     }
   }
 
@@ -78,6 +107,7 @@ export class Lobby {
     const t = this.tourneyOf.get(p);
     if (this.fight && PAIRING.has(m.t) && p.v !== this.fight) { p.send({ t: 'err', msg: MISMATCH_MSG }); return; }
     if (PAIRING.has(m.t) && 'look' in m && m.look !== undefined) p.look = cleanLook(m.look);
+    if (PAIRING.has(m.t) && 'name' in m && m.name !== undefined) p.name = cleanName(m.name, '');
     switch (m.t) {
       case 'tourney': {
         this.leave(p, false);
@@ -206,8 +236,10 @@ export class Lobby {
     const a = r.ranked && this.ranked?.info(r.host), b = r.ranked && this.ranked?.info(guest);
     const extra = a && b ? { ranks: [a, b] as [RankInfo, RankInfo] } : {};
     const looks: [string, string] = [r.host.look ?? '', guest.look ?? ''];
-    r.host.send({ t: 'start', seat: 0, delay, code: r.code, cfg: r.cfg, looks, ...extra });
-    guest.send({ t: 'start', seat: 1, delay, code: r.code, cfg: r.cfg, looks, ...extra });
+    // Ranked names come from the ranked record (it fills in a Ronin name); otherwise the names the players sent.
+    const names: [string, string] = a && b ? [a.name, b.name] : [r.host.name || 'Kami', guest.name || 'Sumi'];
+    r.host.send({ t: 'start', seat: 0, delay, code: r.code, cfg: r.cfg, looks, names, ...extra });
+    guest.send({ t: 'start', seat: 1, delay, code: r.code, cfg: r.cfg, looks, names, ...extra });
   }
 
   /**
