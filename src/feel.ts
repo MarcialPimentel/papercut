@@ -3,9 +3,11 @@
 // The tuning panel (T in Practice) changes these live.
 
 export const GUARD = {
-  /** Line style: how far (pixels) the hidden mouse can go above or below the line. Small, so a short flick switches. */
-  band: 60,
-  /** Ignore tiny wobbles across the line (pixels). */
+  /** Flick style: how far (pixels) the mouse must move up or down in one go to switch the guard. */
+  flick: 12,
+  /** Flick style: a pause this long (seconds) in vertical movement starts the count again, so slow drift never switches. */
+  flickReset: 0.15,
+  /** Cursor style: ignore tiny wobbles across the waist line (pixels). */
   deadZone: 4,
 };
 
