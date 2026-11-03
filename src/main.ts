@@ -220,9 +220,9 @@ $('#bPractice').addEventListener('click', () => startPractice());
 $('#bEndless').addEventListener('click', () => startPractice(true));
 $('#bHowTo').addEventListener('click', () => showMenu('howto'));
 $('#bHowToBack').addEventListener('click', () => showMenu('main'));
-// Guard style (playtest A/B): Line (mouse up / down, no cursor) or Cursor (crosshair against your waist).
+// Guard style (playtest A/B): Flick (mouse up / down, no cursor) or Cursor (crosshair against your waist).
 const GUARD_HOW = {
-  line: 'Move the mouse <b>up</b> to guard high, <b>down</b> to guard low. No cursor: just flick.',
+  flick: 'Flick the mouse <b>up</b> to guard high, <b>down</b> to guard low. Only the direction counts, not where the mouse is.',
   cursor: "Move the crosshair <b>above</b> your fighter's waist to guard high, <b>below</b> to guard low.",
 };
 function showGuardStyle() { $('#howGuard').innerHTML = GUARD_HOW[controls.guardStyle]; }
@@ -259,7 +259,7 @@ function readSettings() {
 }
 $('#setWindow').addEventListener('change', () => { readSettings(); setFullscreen(display.fullscreen); });
 for (const id of ['#setScale', '#setFps', '#setVsync']) $(id).addEventListener('change', readSettings);
-$('#setGuard').addEventListener('change', () => { controls.setGuardStyle($<HTMLSelectElement>('#setGuard').value === 'cursor' ? 'cursor' : 'line'); showGuardStyle(); });
+$('#setGuard').addEventListener('change', () => { controls.setGuardStyle($<HTMLSelectElement>('#setGuard').value === 'cursor' ? 'cursor' : 'flick'); showGuardStyle(); });
 $('#settingsForm').addEventListener('submit', (e) => { e.preventDefault(); showMenu('main'); });
 $('#bSettings').addEventListener('click', () => showMenu('settings'));
 for (const el of document.querySelectorAll<HTMLElement>('[data-desktop-only]')) el.hidden = !desktop;
