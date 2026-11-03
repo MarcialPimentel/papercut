@@ -48,8 +48,11 @@ export class Controls {
   private flick = new Flick();
   mouseY: number | null = null;
   private mouseX = 0;
-  /** Hold the mouse while fighting. Main turns it off when the match is over, so the buttons can be clicked. */
-  lockWanted = false;
+  /** Hold the mouse while fighting. Main turns it off when the match is over, so the buttons can be clicked.
+   *  It also hides the pointer in Flick style, so menus and the Rematch screen keep a visible pointer. */
+  private wantLock = false;
+  get lockWanted() { return this.wantLock; }
+  set lockWanted(v: boolean) { this.wantLock = v; this.showPointer(); }
   private aim: HTMLElement;
   private canvas: HTMLCanvasElement;
   /** Set by the on-screen High / Low buttons on touch screens. */
@@ -132,9 +135,12 @@ export class Controls {
   setGuardStyle(g: GuardStyle) {
     this.guardStyle = g;
     store.set(GUARD_KEY, g);
-    this.canvas.classList.toggle('no-cursor', g === 'flick');
+    this.showPointer();
     this.showAim();
   }
+
+  /** Flick style draws no pointer during a fight; everywhere else (menus, match over, tuning) the normal one shows. */
+  private showPointer() { this.canvas.classList.toggle('no-cursor', this.guardStyle === 'flick' && this.wantLock); }
 
   private showAim() { this.aim.hidden = !this.locked || this.guardStyle === 'flick'; }
 
