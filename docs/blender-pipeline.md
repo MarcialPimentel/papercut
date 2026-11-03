@@ -61,7 +61,7 @@ Rules: straight edges only (no curves, bevels or Subdivision Surface), no holes,
 1. Click a piece, then the **Material** tab in the Properties panel (the red-and-grey sphere near the bottom of the tab column).
 2. Pick the material (`pc_robe`, `pc_kimono`, `pc_hakama`...), change **Base Color**. Every piece using it changes.
 
-Sumi uses the same model and swaps `robe` and `kimono` in code: a cream robe over an indigo kimono, indigo prints.
+Sumi uses the same model and swaps `robe` and `kimono` in code: a cream robe over an indigo kimono, indigo prints. Sumi's own pieces (straw hat, tied-back sleeves) are in step 7.
 
 ## 4. Add a print (a pattern, a crest)
 Prints are flat shapes laid just in front of their paper piece, in the same object. The game draws them without an ink line.
@@ -89,8 +89,92 @@ The game reads every pivot from this file (the empties' positions): waist, neck,
 
 The guide suggests a PNG sequence or texture atlas as the export; Papercut draws the fighters live in its 3D book instead, so it uses the `.glb`.
 
+## 7. Kami's and Sumi's own pieces (#37: Sumi's straw hat and tied-back sleeves)
+Both fighters share one rig and one set of pieces. A paper piece whose name starts with **`kami_`** is worn by Kami only, and one starting with **`sumi_`** by Sumi only. Pieces with any other name are worn by both. Sumi's colour swap (cream robe, indigo kimono) still applies to Sumi's own pieces.
+
+**Already in the file** (built by Claude from these steps on 2026-11-02, at Marz's request; the cord is a little thicker than in 7d: corners (0.64, 2.34), (0.915, 2.375), (0.935, 2.48), (0.605, 2.45), and the forearms a little wider). The steps stay here so you can see how each piece is made and change any corner. Marz's picks:
+- **Kami** keeps the topknot and the wide hanging sleeves.
+- **Sumi** gets a wide straw hat over short hair, and sleeves tied back above the elbow with a cord, with bare forearms.
+
+**Stay inside the H box:** the game hits a box 0.9 m wide and 2.15 m tall. In Blender units that's X −0.86 to +0.86 and Z up to 4.10. The hat below peaks at Z 4.00 and is 1.24 wide.
+
+**Typing an exact corner:** in Edit Mode (**Tab**, then **1**), click one corner and press **N**. In the **Item** tab, click **Global**, then type the **X**, **Y** and **Z** under **Vertex**. Every corner below is given as (X, Z), with the Y to type.
+
+Work in your usual `papercut` folder (`art/fighters/samurai.blend`), not in Claude's worktree. Save first (**Ctrl+S**).
+
+### 7a. Tag Kami's pieces
+1. In the Outliner, double-click **hair** and rename it `kami_hair`.
+2. Rename **sleeve_L** to `kami_sleeve_L` and **sleeve_R** to `kami_sleeve_R`.
+
+### 7b. Sumi's short hair (under the hat)
+1. Click `kami_hair`. With the mouse over the 3D view, press **Shift+D**, then **right-click**: the copy stays in place.
+2. Rename the copy `sumi_hair`.
+3. **Tab**, then **1**. Hover the topknot, press **L** (it selects the whole topknot). Hover the gold tie and press **L** again.
+4. **X → Vertices**, then **Tab**. The short hair stays.
+
+### 7c. Sumi's straw hat
+1. Click `hand_L_paper` (the left mitten; it has 6 corners). **Shift+D**, **right-click**. Rename the copy `sumi_hat`.
+2. Move it to the head: keep `sumi_hat` selected, **Ctrl+click** the empty **head** in the Outliner, hover the 3D view, **Ctrl+P → Object (Keep Transform)**.
+3. Colour: open the **Material** tab. Next to `pc_skin`, click the **new material** button (two sheets), rename the copy `pc_straw` and set **Base Color** to hex `C9A86A`. If the piece has a second material slot, select it, pick `pc_straw` there too, **Tab**, **A**, **Assign**, **Tab**.
+4. **Tab**, **1**, and type the 6 corners, all with **Y −0.12**. Go round the outline in order:
+
+| corner | X | Z |
+|---|---|---|
+| brim, back tip | −0.62 | 3.60 |
+| brim, front tip | 0.62 | 3.60 |
+| front shoulder | 0.58 | 3.67 |
+| top, front | 0.10 | 4.00 |
+| top, back | −0.10 | 4.00 |
+| back shoulder | −0.58 | 3.67 |
+
+5. **Tab**. The hat sits over the head with its brim at the eyebrows.
+
+### 7d. Sumi's tied-back sleeves (left first)
+1. Click `kami_sleeve_L`, **Shift+D**, **right-click**, rename the copy `sumi_sleeve_L`.
+2. **Tab**, then **3** (pick faces). Click the big robe face, then **Shift+click** the cream cuff band at its bottom.
+3. **Ctrl+I** (selects every other print), then **X → Faces**: the waves and crest go.
+4. Press **1** and move the robe's 6 corners. Keep each corner's **Y** as it is:
+
+| corner (was) | X | Z |
+|---|---|---|
+| shoulder top, inner (0.40, 3.08) | 0.40 | 3.08 |
+| shoulder top, outer (0.86, 3.06) | 0.82 | 3.04 |
+| outer tip (1.46, 1.92) | 0.98 | 2.62 |
+| bottom, outer (1.36, 1.78) | 0.92 | 2.34 |
+| bottom, inner (0.64, 1.78) | 0.64 | 2.30 |
+| armpit (0.52, 2.50) | 0.52 | 2.62 |
+
+5. The cuff band becomes the cord. Move its 4 corners to (0.66, 2.36), (0.93, 2.40), (0.94, 2.46), (0.66, 2.42). Then, with those 4 still selected, open the Material tab and make a new material `pc_cord` with hex `C8102E` (any colour works: the game prints the cord in the fighter's contrast colour, never red, since red is for cuts). **Assign** it to the band only.
+6. **Tab**.
+
+### 7e. Sumi's bare forearms (left first)
+1. Click `hand_L_paper`, **Shift+D**, **right-click**, rename the copy `sumi_forearm_L`.
+2. Parent it to the arm, not the hand: keep it selected, **Ctrl+click** the empty **arm_L**, **Ctrl+P → Object (Keep Transform)**.
+3. **Tab**, **1**, and type the 6 corners, all with **Y 0.06** (just behind the sleeve):
+
+| corner | X | Z |
+|---|---|---|
+| elbow, inner | 0.76 | 2.40 |
+| elbow, outer | 0.96 | 2.44 |
+| outer | 1.00 | 2.10 |
+| wrist, outer | 0.99 | 1.90 |
+| wrist, inner | 0.85 | 1.90 |
+| inner | 0.80 | 2.10 |
+
+4. **Tab**. The forearm runs from under the cord to the mitten.
+
+### 7f. The right arm
+Repeat 7d and 7e for the right, starting from `kami_sleeve_R` and `hand_R_paper`. Name the pieces `sumi_sleeve_R` and `sumi_forearm_R`, parent the forearm to **arm_R**, and type every **X with a minus sign** (0.82 becomes −0.82). Z and Y stay the same.
+
+### 7g. Look, export, tell Claude
+1. To see Sumi alone in Blender, type `kami_` in the Outliner's search box, select what it finds, and press **H** (hide). To see Kami alone, do the same with `sumi_`. **Alt+H** shows everything again.
+2. **Ctrl+S**, then export as in step 6.
+3. Tell Claude "I made Sumi's pieces". Claude copies the file into the build, checks the H boxes, and sends a side-by-side screenshot for your sign-off.
+
+**Short on time?** Say "Claude, make Sumi's pieces" and Claude builds them from these numbers over the Blender connection. You then tweak any corner you like.
+
 ## What the game does with it
-- Reads every paper piece under each rig empty: its outline, prints, colours and layer.
+- Reads every paper piece under each rig empty: its outline, prints, colours and layer. Pieces named `kami_...` or `sumi_...` are worn by that fighter only.
 - Draws a thick ink line round every paper piece and a thin cream rim round the whole figure; the sword gets its own.
 - Poses the rig with rigid rotations (key poses in code for now): the sleeves turn at the shoulders, the hands reach the sword's handle, the hakama halves swing at the hips, the torso leans, the head tilts. Poses snap like stop-motion.
 - Cuts red slashes into the paper on hits, and on a K.O. cuts every piece in two for the paper-physics halves.

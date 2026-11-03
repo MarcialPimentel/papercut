@@ -47,7 +47,7 @@ _Since 2026-11-02, from Marz's art-direction brief ("Stylized 2D Papercraft"), h
 
 **The look:** a cream inner kimono with a crossed collar, a cream obi with a knot and tails, an indigo outer robe with wide cream lapels and cream waves at the hem, big flared sleeves with a blossom crest and cream waves, two-tone indigo hakama, black feet, a big profile head (cream face, wedge nose, slash eye) under a black hair block with a tall topknot and gold tie, and a long katana with a gold-wrapped hilt and black guard.
 
-**Kami and Sumi:** the same robes inverted. Kami wears indigo over cream; Sumi wears cream over indigo (indigo prints). Hakama, hair and gold stay the same.
+**Kami and Sumi:** the same robes inverted, and different outlines (#37, Marz's picks 2026-11-02). Kami wears indigo over cream, with the topknot and wide hanging sleeves. Sumi wears cream over indigo (indigo prints), a wide straw hat over short hair, and sleeves tied back above the elbow with a cord in the kimono colour (never red: red is for cuts), with bare forearms. With player looks (#38), player 1 always wears Kami's pieces and player 2 Sumi's, whatever colours they pick. One rig and piece list: pieces named `kami_...` / `sumi_...` in the Blender file are worn by that fighter only ([blender-pipeline.md](blender-pipeline.md), step 7). Hakama and gold stay the same.
 
 **Player looks (since 2026-11-02, #38):** on the "Your fighter" screen each player picks a colour set worn as a dark or light robe, an outfit print and a sword style; the data is in `src/render/looks.ts`.
 

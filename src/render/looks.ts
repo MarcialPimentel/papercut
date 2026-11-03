@@ -85,6 +85,12 @@ export function lookOf(p: Pick, name: string): Look {
 // ---------- dressing the pieces ----------
 /** The paper objects that carry the robe's prints. */
 const ROBE_OBJS = new Set(['robe_L', 'robe_R', 'sleeve_L', 'sleeve_R']);
+/** Kami's and Sumi's own sleeves ("kami_sleeve_L", "sumi_sleeve_R") count as the sleeves (#37). */
+const isRobe = (obj: string) => ROBE_OBJS.has(obj.replace(/^(kami|sumi)_/i, ''));
+/** Sumi's sleeve cord (#37) ties the sleeve back: part of the outline, kept with every outfit, and it is that
+ *  sleeve's band. It is printed in the look's contrast colour (the kimono's), never red: red is for cuts. */
+const CORD = 'cord';
+const KIMONO = '#F2E3C0';
 const SCALE = 2.1 / 4; // as in puppet.ts (the model is 4 units tall)
 const PRINT = 0.004 * SCALE; // a print sits this far in front of its paper, like the Blender model's prints
 const rect = (x0: number, y0: number, x1: number, y1: number): Pt[] => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
@@ -97,18 +103,20 @@ function bbox(p: Pt[]) {
 /** The robe prints that stay with every outfit: each robe object's first print, the straight hem band. */
 function hemBands(shapes: Shape[]) {
   const first = new Map<string, Shape>();
-  for (const s of shapes) if (!s.paper && ROBE_OBJS.has(s.obj)) { const f = first.get(s.obj); if (!f || s.z < f.z) first.set(s.obj, s); }
+  const corded = new Set(shapes.filter((s) => s.role === CORD).map((s) => s.obj));
+  for (const s of shapes) if (!s.paper && isRobe(s.obj) && !corded.has(s.obj)) { const f = first.get(s.obj); if (!f || s.z < f.z) first.set(s.obj, s); }
   return new Set(first.values());
 }
 
 /** Outfit prints: the model's waves and crests, or stripes, or just the hem band. */
-function dressOutfit(shapes: Shape[], outfit: string): Shape[] {
+function dressOutfit(input: Shape[], outfit: string): Shape[] {
+  const shapes = input.map((s) => (s.role === CORD ? { ...s, role: 'kimono', color: KIMONO } : s));
   if (outfit === 'waves') return shapes;
-  const keep = hemBands(shapes), out: Shape[] = [];
-  for (const s of shapes) {
-    if (!s.paper && ROBE_OBJS.has(s.obj) && !keep.has(s)) continue;
+  const keep = hemBands(input), out: Shape[] = [];
+  for (const [i, s] of shapes.entries()) {
+    if (!s.paper && isRobe(s.obj) && input[i].role !== CORD && !keep.has(input[i])) continue;
     out.push(s);
-    if (outfit === 'stripes' && s.paper && s.role === 'robe' && ROBE_OBJS.has(s.obj)) {
+    if (outfit === 'stripes' && s.paper && s.role === 'robe' && isRobe(s.obj)) {
       const b = bbox(s.pts), step = 0.22 * SCALE, w = 0.09 * SCALE;
       // Just behind the hem band, so the band runs over the stripes.
       for (let x = b.x0 + 0.06 * SCALE; x < b.x1; x += step) {
