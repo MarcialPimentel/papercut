@@ -244,8 +244,8 @@ export class Music {
 
     if (st === 0) {
       const barLen = this.stepLen * STEPS;
-      if (arr.bell && this.bar % arr.bell === 0 && !E.sample('bell', { gain: 0.22, rate: 1, at: t, pan: 0.35, bus })) {
-        E.ring({ base: tr.bass * 4, dur: 2.5, gain: 0.06, at: t, pan: 0.35, bus });
+      if (arr.bell && this.bar % arr.bell === 0 && !E.sample('bell', { gain: 0.35, rate: 1, at: t, pan: 0.35, bus })) {
+        E.ring({ base: tr.bass * 4, dur: 2.5, gain: 0.09, at: t, pan: 0.35, bus });
       }
       if (this.mode !== 'intro' && this.bar % 2 === 0) {
         if (tr.wind) E.hiss({ dur: barLen * 2, type: 'bandpass', freq: 450, sweep: 1100, q: 0.7, gain: 0.06, attack: barLen * 0.8, at: t, pan: -0.4, bus });
