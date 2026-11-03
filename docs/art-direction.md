@@ -130,6 +130,11 @@ Icons in `art/icons/` (katana, high, low, jump, clean cut, dodge): flat paper sh
 
 **Budgets:** about 2 MB to the first fight, Rapier (about 2 MB, 760 KB compressed) loading in the background; a fighter is 11 pieces drawn in 22 draw calls, a half in 2; scene under 30,000 triangles and 500 draw calls with halves on the page; 60 fps on integrated laptop graphics with one 2048 shadow map. The puppet file is 16 KB.
 
+## Logo and store art (since 2026-11-02, #41)
+- **Logo:** "PAPERCUT" in the display stencil, on a cream sticker with an ink edge, cut in two along an 8-degree slant. The top half has slipped along the cut and the red inside of the paper shows in the gap (the red rule holds). Made in code (`tools/store/logo.js`), used for the menu title (`public/logo.png`), the Steam capsules and the transparent library logo.
+- **Key art:** Kami's light slash counter-cutting Sumi mid-heavy on the Legal Pad Grove, 0.9 s after the cut, as Sumi comes apart. Rendered from the game itself with the HUD hidden; no paint-over, so it always matches the game.
+- **Store assets:** every Steam capsule, library image, screenshot and both trailers are in `art/store/`, rendered by `tools/store` (`npm run store:art`, `store:shots`, `store:trailer`, `store:highlights`). The highlights trailer replays scripted inputs for both fighters from `art/store/trailer/highlights.json`, wearing the customization looks. Re-run after any model or look change (#37). Uploading them: [steam-store.md](steam-store.md).
+
 ## Making the art
 - **Now:** the puppet is drawn in Blender as flat pieces: `art/fighters/puppet.blend`, exported to `public/models/puppet.glb`. Straight edges only, one flat colour per shape (a Blender material named `pc_<role>`), printed details laid just in front of the paper, each piece's origin on its pin. Kami is painted in Blender; Sumi recolours a few roles (hakama, pleats, sash, grip) in code. Click-by-click guide: [blender-pipeline.md](blender-pipeline.md).
 - **Next:** key poses as Blender poses (they're in code today), then new fighters and blades on the same piece list, so each one is a drawing job, not a coding job.

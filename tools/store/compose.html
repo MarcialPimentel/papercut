@@ -1,0 +1,40 @@
+<!doctype html><meta charset="utf-8">
+<!-- Lays out one store image: a background render, the logo and optional lines of text. Driven by the URL (see art.mjs). -->
+<style>
+@font-face { font-family: BSS; src: url(fonts/BigShouldersStencil.ttf); font-variation-settings: 'opsz' 72; }
+html, body { margin: 0; overflow: hidden; background: transparent; }
+#c { position: relative; overflow: hidden; }
+#c img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+#veil { position: absolute; inset: 0; }
+#logo { position: absolute; }
+#logo svg { display: block; }
+#lines { position: absolute; left: 0; right: 0; display: grid; justify-items: center; gap: .35em; font: 800 1px BSS; text-transform: uppercase; letter-spacing: .04em; }
+#lines span { color: #18171C; background: #FBFAF6; border: .09em solid #18171C; padding: .08em .45em .14em; box-shadow: .12em .12em 0 #18171C; }
+#lines span.red { color: #FBFAF6; background: #D7262E; }
+</style>
+<div id="c"><img class="bg" id="bg" alt=""><div id="veil"></div><div id="logo"></div><div id="lines"></div></div>
+<script type="module">
+import { logo } from './logo.js';
+const q = new URLSearchParams(location.search);
+const W = +q.get('w'), H = +q.get('h');
+const c = document.getElementById('c'); c.style.width = W + 'px'; c.style.height = H + 'px';
+const bg = document.getElementById('bg');
+if (q.get('bg')) { bg.src = q.get('bg'); bg.style.objectPosition = q.get('op') || '50% 50%'; if (q.get('filter')) bg.style.filter = q.get('filter'); await bg.decode(); } else bg.remove();
+if (q.get('veil')) document.getElementById('veil').style.background = q.get('veil');
+await document.fonts.load('800 200px BSS');
+const box = document.getElementById('logo');
+if (q.get('lw')) {
+  box.innerHTML = logo({ size: 200, text: q.get('text') || 'PAPERCUT', shadow: q.get('shadow') !== '0' });
+  const svg = box.firstElementChild; const lw = +svg.getAttribute('width'), lh = +svg.getAttribute('height');
+  const k = (+q.get('lw') * W) / lw;
+  svg.setAttribute('width', lw * k); svg.setAttribute('height', lh * k);
+  const [ax, ay] = (q.get('at') || '0.5,0.5').split(',').map(Number); // the logo's centre, as a share of the image
+  box.style.left = (ax * W - (lw * k) / 2) + 'px'; box.style.top = (ay * H - (lh * k) / 2) + 'px';
+}
+if (q.get('lines')) { // "text|text*" (* = red), size as a share of H, top as a share of H
+  const el = document.getElementById('lines');
+  el.style.fontSize = (+q.get('ls') * H) + 'px'; el.style.top = (+q.get('lt') * H) + 'px';
+  for (const t of q.get('lines').split('|')) { const s = document.createElement('span'); s.textContent = t.replace(/\*$/, ''); if (t.endsWith('*')) s.className = 'red'; el.appendChild(s); }
+}
+document.title = 'ok';
+</script>
