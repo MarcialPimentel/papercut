@@ -1,9 +1,11 @@
 // Where finished matches and Endless runs are kept. On the hub: Papercut's database on the shared
 // Postgres (DATABASE_URL). Without one (your own PC, tests): in memory, gone on restart.
 // No personal data: rules, results, counts, guard styles, and each match's inputs (deleted after 90 days).
+// Online matches also keep both players' ids (hashes of a random token) and shown names, for each player's replays.
 
 import type { MatchTally } from '../src/sim/tally';
-import type { GuardStyle, MatchMode, MatchRecord } from './referee';
+import type { MatchCfg } from '../src/sim/config';
+import type { GuardStyle, InputLog, MatchMode, MatchRecord } from './referee';
 import { PLACEMENT, type Rating } from './rating';
 
 export interface EndlessRecord {
@@ -41,6 +43,16 @@ export interface Filter { build: string; rules: RulesFilter; guard: GuardFilter 
 export interface MatchRow { build: string; mode: MatchMode; standard: boolean; guard: [GuardStyle, GuardStyle]; winner: number | null; tally: MatchTally }
 export interface EndlessRow { build: string; guard: GuardStyle; bots: number; how: string; why: string; tally: MatchTally }
 
+/** One of a player's recent fights, for their Replays list. */
+export interface ReplayRow { n: number; at: number; mode: MatchMode; seat: 0 | 1; names: [string, string]; winner: number | null; fight: string }
+/** Everything needed to play a fight back. */
+export interface ReplayData {
+  n: number; at: number; mode: MatchMode; cfg: MatchCfg; start: number; inputs: InputLog; frames: number | null;
+  names: [string, string]; looks: [string, string]; winner: number | null; fight: string;
+}
+/** How many replays a player's list shows. */
+export const REPLAYS = 20;
+
 /** Inputs are kept this long, then dropped (the match summary stays). */
 export const KEEP_INPUTS_DAYS = 90;
 /** The stats page reads at most this many of the latest matches (and runs). */
@@ -57,6 +69,10 @@ export interface Store {
   matches(f: Filter): Promise<MatchRow[]>;
   endless(f: Filter): Promise<EndlessRow[]>;
   builds(): Promise<string[]>;
+  /** A player's latest fights that can still be played back (newest first). */
+  replaysOf(player: string, limit: number): Promise<ReplayRow[]>;
+  /** One fight to play back (null: unknown, or its inputs were dropped). */
+  replay(n: number): Promise<ReplayData | null>;
   /** Drop inputs older than KEEP_INPUTS_DAYS. */
   prune(): Promise<void>;
   /** Each player's best run in the window, best first. */
@@ -75,7 +91,7 @@ const guardOk = (f: GuardFilter, g: GuardStyle[]) => f === 'any' || g.every((x) 
 
 export class MemoryStore implements Store {
   readonly kind = 'memory';
-  readonly rows: (MatchRow & { at: number; inputs: MatchRecord['inputs'] | null; players?: [string, string] })[] = [];
+  readonly rows: (MatchRow & Omit<MatchRecord, 'inputs'> & { n: number; at: number; inputs: InputLog | null })[] = [];
   readonly runs: (EndlessRow & { at: number; frames: number; player?: string })[] = [];
   readonly players = new Map<string, Player>();
   constructor(private now: () => number = Date.now) {}
@@ -84,7 +100,21 @@ export class MemoryStore implements Store {
   async ping() { return true; }
 
   async addMatch(build: string, r: MatchRecord) {
-    this.rows.push({ build, mode: r.mode, standard: r.standard, guard: r.guard, winner: r.winner, tally: r.tally, at: this.now(), inputs: r.inputs, players: r.players });
+    this.rows.push({ ...r, build, n: this.rows.length + 1, at: this.now() });
+  }
+  async replaysOf(player: string, limit: number) {
+    const out: ReplayRow[] = [];
+    for (let i = this.rows.length - 1; i >= 0 && out.length < limit; i--) {
+      const r = this.rows[i], seat = r.players?.indexOf(player) ?? -1;
+      if (!player || seat < 0 || !r.inputs || !r.fight) continue;
+      out.push({ n: r.n, at: r.at, mode: r.mode, seat: seat as 0 | 1, names: r.names ?? ['Kami', 'Sumi'], winner: r.winner, fight: r.fight });
+    }
+    return out;
+  }
+  async replay(n: number): Promise<ReplayData | null> {
+    const r = this.rows.find((x) => x.n === n);
+    if (!r?.inputs || !r.fight) return null;
+    return { n, at: r.at, mode: r.mode, cfg: r.cfg, start: r.start, inputs: r.inputs, frames: r.frames, names: r.names ?? ['Kami', 'Sumi'], looks: r.looks ?? ['', ''], winner: r.winner, fight: r.fight };
   }
   async addEndless(build: string, r: EndlessRecord) { this.runs.push({ build, ...r, at: this.now() }); }
   private best(period: Period): BoardRow[] {
@@ -153,6 +183,12 @@ ALTER TABLE matches ADD COLUMN IF NOT EXISTS player1 text;
 ALTER TABLE endless_runs ADD COLUMN IF NOT EXISTS frames integer;
 ALTER TABLE endless_runs ADD COLUMN IF NOT EXISTS player text;
 CREATE INDEX IF NOT EXISTS endless_player ON endless_runs (player, bots DESC, frames) WHERE player IS NOT NULL;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS frames integer;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS names jsonb;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS looks jsonb;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS fight text;
+CREATE INDEX IF NOT EXISTS matches_player0 ON matches (player0, id DESC) WHERE player0 IS NOT NULL;
+CREATE INDEX IF NOT EXISTS matches_player1 ON matches (player1, id DESC) WHERE player1 IS NOT NULL;
 CREATE TABLE IF NOT EXISTS players (
   id text PRIMARY KEY,
   name text NOT NULL,
@@ -191,10 +227,39 @@ export class PgStore implements Store {
   async addMatch(build: string, r: MatchRecord) {
     await this.init();
     await this.pool.query(
-      'INSERT INTO matches (build, mode, standard, cfg, guard0, guard1, winner, tally, start, inputs, player0, player1) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
+      `INSERT INTO matches (build, mode, standard, cfg, guard0, guard1, winner, tally, start, inputs, player0, player1, frames, names, looks, fight)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [build, r.mode, r.standard, JSON.stringify(r.cfg), r.guard[0], r.guard[1], r.winner, JSON.stringify(r.tally), r.start, JSON.stringify(r.inputs),
-        r.players?.[0] ?? null, r.players?.[1] ?? null],
+        r.players?.[0] || null, r.players?.[1] || null, r.frames, r.names ? JSON.stringify(r.names) : null, r.looks ? JSON.stringify(r.looks) : null, r.fight ?? null],
     );
+  }
+
+  async replaysOf(player: string, limit: number): Promise<ReplayRow[]> {
+    await this.init();
+    // Two indexed halves (as player 0, as player 1), merged: faster than one OR over both columns.
+    const { rows } = await this.pool.query(
+      `SELECT * FROM (
+         (SELECT id, at, mode, 0 AS seat, names, winner, fight FROM matches WHERE player0 = $1 AND inputs IS NOT NULL AND fight IS NOT NULL ORDER BY id DESC LIMIT $2)
+         UNION ALL
+         (SELECT id, at, mode, 1 AS seat, names, winner, fight FROM matches WHERE player1 = $1 AND inputs IS NOT NULL AND fight IS NOT NULL ORDER BY id DESC LIMIT $2)
+       ) m ORDER BY id DESC LIMIT $2`, [player, limit]);
+    return rows.map((r) => ({
+      n: Number(r.id), at: new Date(r.at as string).getTime(), mode: r.mode as MatchMode, seat: Number(r.seat) as 0 | 1,
+      names: (r.names as [string, string] | null) ?? ['Kami', 'Sumi'], winner: r.winner as number | null, fight: r.fight as string,
+    }));
+  }
+
+  async replay(n: number): Promise<ReplayData | null> {
+    await this.init();
+    const { rows } = await this.pool.query(
+      'SELECT id, at, mode, cfg, start, inputs, frames, names, looks, winner, fight FROM matches WHERE id = $1 AND inputs IS NOT NULL AND fight IS NOT NULL', [n]);
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      n: Number(r.id), at: new Date(r.at as string).getTime(), mode: r.mode as MatchMode, cfg: r.cfg as MatchCfg, start: r.start as number,
+      inputs: r.inputs as InputLog, frames: (r.frames as number | null) ?? null, names: (r.names as [string, string] | null) ?? ['Kami', 'Sumi'],
+      looks: (r.looks as [string, string] | null) ?? ['', ''], winner: r.winner as number | null, fight: r.fight as string,
+    };
   }
 
   async addEndless(build: string, r: EndlessRecord) {

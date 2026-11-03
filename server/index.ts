@@ -14,7 +14,7 @@ import { Lobby, type Peer } from './lobby';
 import { page, readFilter, summarize } from './stats';
 import { Ranked, playerId, rankInfo, tokenOk } from './ranked';
 import { cleanName } from './tourney';
-import { BOARD_SIZE, PERIODS, openStore, type Period } from './store';
+import { BOARD_SIZE, PERIODS, REPLAYS, openStore, type Period } from './store';
 import type { ToServer } from '../src/net/protocol';
 
 const PORT = Number(process.env.PORT || 8790);
@@ -37,7 +37,7 @@ await prepare(store);
 const saveError = (what: string) => (e: Error) => console.error(`Could not save ${what}:`, e.message);
 // Ranked ratings need the database to last; on your own PC they're kept in memory like the stats.
 const ranked = new Ranked(store);
-const lobby = new Lobby(Math.random, setTimeout, FIGHT, (r) => { store.addMatch(BUILD, r).catch(saveError('a match')); }, ranked);
+const lobby = new Lobby(Math.random, setTimeout, FIGHT, (r) => { store.addMatch(BUILD, { ...r, fight: FIGHT }).catch(saveError('a match')); }, ranked);
 setInterval(() => lobby.tick(), 1000).unref();
 const started = Date.now();
 // Inputs older than 90 days are dropped once a day (and once at start).
@@ -134,6 +134,21 @@ async function rankedBoard(req: IncomingMessage, res: ServerResponse) {
   });
 }
 
+/** A player's last fights (POST with their token): the Replays list. */
+async function replayList(req: IncomingMessage, res: ServerResponse) {
+  const body = (await readJson(req, 4096)) as Record<string, unknown> | null;
+  if (!body || !tokenOk(body.id)) return json(res, 400, { error: 'no player' });
+  json(res, 200, { fight: FIGHT, list: await store.replaysOf(playerId(body.id), REPLAYS) });
+}
+
+/** One fight to play back: /api/replay?n=123. */
+async function replayOne(req: IncomingMessage, res: ServerResponse) {
+  const n = Number(new URL(req.url || '/', 'http://x').searchParams.get('n'));
+  const r = Number.isSafeInteger(n) && n > 0 ? await store.replay(n) : null;
+  if (!r) return json(res, 404, { error: 'That replay is gone.' });
+  json(res, 200, r);
+}
+
 async function statsPage(req: IncomingMessage, res: ServerResponse, json: boolean) {
   const f = readFilter(new URL(req.url || '/', 'http://x'));
   try {
@@ -188,6 +203,8 @@ const server = createServer((req, res) => {
   if (path === '/api/endless' && req.method === 'POST') { endlessReport(req, res).catch(() => json(res, 500, { error: 'server error' })); return; }
   if (path === '/api/ranked-board' && (req.method === 'GET' || req.method === 'POST')) { rankedBoard(req, res).catch(() => json(res, 503, { error: 'not available' })); return; }
   if (path === '/api/leaderboard' && (req.method === 'GET' || req.method === 'POST')) { leaderboard(req, res).catch(() => json(res, 503, { error: 'not available' })); return; }
+  if (path === '/api/replays' && req.method === 'POST') { replayList(req, res).catch(() => json(res, 503, { error: 'not available' })); return; }
+  if (path === '/api/replay' && req.method === 'GET') { replayOne(req, res).catch(() => json(res, 503, { error: 'not available' })); return; }
   if ((path === '/stats' || path === '/api/stats') && req.method === 'GET') { statsPage(req, res, path === '/api/stats').catch(() => res.writeHead(500).end()); return; }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405).end(); return; }
   serveFile(req, res).catch(() => res.writeHead(500).end());
