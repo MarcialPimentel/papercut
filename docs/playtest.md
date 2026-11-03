@@ -7,7 +7,7 @@ _For the first online build (2026-11-01)._
 - **Live:** https://papercut.marz.gg. The build number is in the bottom-right corner.
 - **On your PC:** `npm install`, then `npm run dev`, then open http://localhost:5173.
 
-Use a desktop browser with a mouse. Phones get on-screen buttons, but the game is made for the mouse.
+Use a desktop browser with a mouse, or plug in a controller (Xbox-style, PlayStation or Steam Deck). Phones get on-screen buttons, but the game is made for the mouse or a controller.
 
 ## Controls
 
@@ -23,6 +23,10 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 | Rematch (when the match ends) | R or the Rematch button |
 | Hitbox view on / off | H |
 | Free the mouse / back to the menu | Esc frees the mouse (held during a fight), Esc again or Leave for the menu |
+
+**Controller:** left stick (or d-pad) left / right walks, up / down guards high / low (the guard stays where you last pushed it). RB or X light, RT or Y heavy, B feint, A jump, LB dash (backdash with the stick at rest), View restarts, Menu for the menu. In menus: stick or d-pad moves, A picks, B goes back.
+
+**Change any key or button** on the **Controls** screen (main menu): pick a box, press the new key, click or button. It is saved in this browser.
 
 ## Ways to play
 

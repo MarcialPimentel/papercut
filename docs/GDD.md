@@ -57,21 +57,23 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 - **Tournament:** a room for 3 to 8 players with a knockout bracket (lose once and you're out; empty spots in a 4- or 8-player bracket are byes). The creator picks the rules (as for a custom room, but no endless rounds) and starts it when everyone is in. One fight at a time: everyone else watches it live, and everyone sees the bracket between fights. A player who leaves loses their current or next fight. Players type their name in the lobby.
 - **Endless mode (solo):** one round per bot, one bot after another, all on one page: no page turns. When a bot is cut, the next one steps in a few paces away on your left or right (unpredictable), and you stay where you stood. Your strip carries over from bot to bot and refills by half every 5 bots; each bot starts with a full strip. Every 5 bots the bots level up: they read your wind-ups and block them (late enough to parry at high levels), counter-cut your misses, knock you out of the air, punish your landings and attack more often. One lost round ends the run. Score: bots cut; the best run is remembered in the browser and shown on the title screen.
 - **Camera:** side-on with a slight angle to show volume, framing both fighters. On a K.O. it swings to a three-quarter view with slow motion; on a page turn it pulls up to show the whole book.
-- **Controls (the mouse fights, the keyboard moves):**
+- **Controls (the mouse fights, the keyboard moves; or a controller does both):**
 
-  | Action | Input |
-  |---|---|
-  | Guard high / low | Mouse up / down past the screen's middle (Line style), or the crosshair above / below your fighter's waist (Cursor style) |
-  | Light slash | Left click |
-  | Heavy slash | Right click |
-  | Feint (during a heavy's wind-up) | Left click or Q |
-  | Move | A / D |
-  | Dash / backdash | Double-tap D / A |
-  | Jump | Space or W |
-  | Restart match | R |
-  | Hitbox view on / off | H |
+  | Action | Mouse and keyboard | Controller (Xbox names; Steam Deck the same) |
+  |---|---|---|
+  | Guard high / low | Mouse up / down past the screen's middle (Line style), or the crosshair above / below your fighter's waist (Cursor style) | Left stick (or d-pad) up / down. The guard stays where it was last pushed |
+  | Light slash | Left click | RB or X |
+  | Heavy slash | Right click | RT or Y |
+  | Feint (during a heavy's wind-up) | Left click or Q | Light again, or B |
+  | Move | A / D | Left stick (or d-pad) left / right |
+  | Dash / backdash | Double-tap D / A | LB (the way the stick points; backdash when it's at rest), or double-tap the stick |
+  | Jump | Space or W | A |
+  | Guard low while held | (none; set one in Controls) | (none) |
+  | Restart match | R | View |
+  | Hitbox view on / off | H | (none) |
+  | Menu | Esc | Menu |
 
-  Touch screens get on-screen buttons (shown only when there's no mouse). Gamepads are out of scope for now.
+  Every key, mouse button and controller button above can be changed on the **Controls** screen (main menu), saved in the browser; Esc, the controller's Menu button, the left stick and the d-pad stay fixed. Menus work with the controller too: stick or d-pad to move, A to pick, B to go back. Prompts (How to play, "Press R") show the buttons of whichever device was used last. Touch screens get on-screen buttons (shown only when there's no mouse).
 
 - **Opponents:** another person, online only (since the first build). No two players on one PC. Sumi works as a practice dummy that switches guard (a glint is the tell), swings back now and then and sometimes feints a heavy. A computer fighter comes in Milestone 4.
 - **Roster:** Kami and Sumi share one move set in Milestone 1 (different looks), so the core feel is tuned once. Later each gets their own speed, reach and one or two specials done as direction + button (no motion inputs).
@@ -83,10 +85,11 @@ A sharp duelist in a real fighting game: poke fast, read the rival, and punish t
 - **Physics:** the halves are Rapier physics bodies (since 2026-11-02, #7): they tumble, bounce off pop-ups and lie flat on the page. Physics is cosmetic only: it never decides who wins, so online play only has to sync inputs. Halves and flecks clear when the page turns; in Endless the halves of the last 5 cut bots stay on the page and older ones fold flat into it.
 
 ## Platform and tech
-- **Platform:** desktop, played in a desktop browser with the mouse and keyboard. Can be wrapped as a desktop app later if Steam ever makes sense.
+- **Platform:** desktop, played in a desktop browser with the mouse and keyboard or a controller (Steam Deck included). Being wrapped as a desktop app for Steam (milestone M-Steam).
 - **Stack:** TypeScript, Vite, Three.js. Flat card pieces whose borders, slashes and K.O. cuts are worked out as 2D shapes (no custom shaders needed). Rapier (`@dimforge/rapier3d-compat`) for the cut halves and flecks, loaded in the background so the first fight isn't delayed.
 - **Mouse lock:** during a fight the browser holds the mouse (Pointer Lock) so it can't drift out of the window; the game draws its own crosshair. Esc frees it (the browser's rule), and it is released when the match ends so Rematch and Leave can be clicked.
 - **Mouse input:** each frame the mouse is compared with the guard line (the screen's middle, or the fighter's waist in Cursor style); only the resulting guard height and the clicks enter the rules, so the inputs stay tiny and identical for online play.
+- **Controller input:** the browser's Gamepad API, read once a frame (`src/pad.ts`). Like the mouse, it only produces the guard height and the same buttons, so a controller player and a mouse player can fight online and nothing in the fight knows the difference. Whichever of the mouse and the stick moved last sets the guard. The mouse isn't held (Pointer Lock) while playing on a controller.
 - **Fighting-game foundations:** the fight runs on a fixed 60-frames-per-second clock and is decided only by the players' inputs, in plain code with tests, separate from drawing. Every move is data (wind-up, active and recovery frames, reach, step-in, damage, hit stun). Hits are checked with simple hit areas measured from the drawn fighter: each fighter's body is a box (0.9 m wide, feet to head), and a slash lands when its blade tip passes the front of that box and its cut line (chest or knee height) crosses it. Press H in any fight to see them. Inputs are buffered for a few frames so a press slightly early still counts. Effects (camera, flecks, physics halves) are cosmetic and never affect the result.
 - **Online (since the first build):** only inputs travel. A small rooms server pairs players (invite link, room code or quick match) and passes each frame's buttons to the other player; both browsers run the same fight and compare a fingerprint every second. Input delay of 2–8 frames, picked from each player's measured ping; the fight waits if the rival's input is late. Later: rollback to hide lag, and direct browser-to-browser links (WebRTC) to cut the server hop.
 - **Art pipeline:** Blender → glTF (`.glb`): flat pieces, one colour per shape, one pin per piece (`art/fighters/puppet.blend` → `public/models/puppet.glb`). The game adds thickness, the border, the red inside and the cut marks. Click-by-click: [blender-pipeline.md](blender-pipeline.md).
@@ -207,3 +210,4 @@ The one question it answers: **does mouse-driven paper swordplay feel good?** Si
 | 2026-11-02 | Trial: guard by an invisible line across the middle of the screen (mouse above = high, below = low), no cursor drawn, mouse travel kept to a short band around the line. It is the default; the cursor-vs-waist guard stays as "Guard: Cursor" in the menu until the playtest decides | Marz's request: simpler, nothing to look at, so eyes stay on the fighters (pillar 3). The short band is my addition so a flick always switches (parries) and the hidden mouse never drifts far. Keep or revert after the playtest. |
 | 2026-11-02 | Counter cut after a miss: open for the first 6 frames of recovery (was 12). The heavy's wind-up stays fully open | Marz's call after playtesting. A light lands 5 frames after the click, so a miss can now only be counter-cut by a swing already on its way (a read), not by reacting; a reaction punish is a normal hit. Watch whether whiffing becomes too safe. |
 | 2026-11-02 | Every heavy's wind-up plays the paper fold that used to play only on a feint; the feint's cancel is now silent (the gold "Feint" label stays). Replaces the quiet wind-up creak | Marz's playtest: the fold only ever sounded on feints, so hearing it meant "feint" and killed the mind game. Now the sound says "a heavy is coming, or is it?" (pillar 3: the wind-up is still heard and seen). |
+| 2026-11-02 | Controller and Steam Deck support, and remappable controls (#32). Left stick: left / right moves, up / down sets the guard (latched: it stays after the stick springs back, like the mouse staying put). RB or X light, RT or Y heavy, B feint, A jump, LB dash (the way the stick points, backdash at rest) plus double-tap, View restart, Menu for the menu. A Controls screen remaps every key, mouse button and controller button (two of each per action), saved in the browser. A "guard low while held" action, unbound by default. Replaces "no gamepads for now" | Steam players, and Steam Deck players above all, expect a controller, and remapping is a basic accessibility item (Steam scorecard caps). Marz's picks: one stick for moving and guarding (it echoes the old W/S stance and leaves the right thumb free for the face buttons); shoulders and face buttons both slash, so you can slash without leaving the stick; a dash button since double-tapping a stick is clumsy; the guard-low key helps trackpad players. Only the guard height and buttons reach the fight, so online stays deterministic. |
