@@ -11,7 +11,7 @@ import { readClaim, verifyRun } from './endless';
 import { fightVersion } from './fightVersion';
 import { Lobby, type Peer } from './lobby';
 import { page, readFilter, summarize } from './stats';
-import { Ranked, playerId, tokenOk } from './ranked';
+import { Ranked, playerId, rankInfo, tokenOk } from './ranked';
 import { cleanName } from './tourney';
 import { BOARD_SIZE, PERIODS, openStore, type Period } from './store';
 import type { ToServer } from '../src/net/protocol';
@@ -116,6 +116,18 @@ async function leaderboard(req: IncomingMessage, res: ServerResponse) {
   });
 }
 
+/** The ranked list: placed players by rating. POST with the player's token also gives their place. */
+async function rankedBoard(req: IncomingMessage, res: ServerResponse) {
+  const body = (req.method === 'POST' ? await readJson(req, 4096) : null) as Record<string, unknown> | null;
+  const pid = body && tokenOk(body.id) ? playerId(body.id) : undefined;
+  const top = await store.rankedTop(BOARD_SIZE);
+  const me = pid ? await store.player(pid) : null;
+  json(res, 200, {
+    top: top.map((p) => ({ ...rankInfo(p), you: p.id === pid })),
+    you: me ? { ...rankInfo(me), place: await store.rankedPlace(me.id) } : null,
+  });
+}
+
 async function statsPage(req: IncomingMessage, res: ServerResponse, json: boolean) {
   const f = readFilter(new URL(req.url || '/', 'http://x'));
   try {
@@ -166,6 +178,7 @@ const server = createServer((req, res) => {
     }
   }
   if (path === '/api/endless' && req.method === 'POST') { endlessReport(req, res).catch(() => json(res, 500, { error: 'server error' })); return; }
+  if (path === '/api/ranked-board' && (req.method === 'GET' || req.method === 'POST')) { rankedBoard(req, res).catch(() => json(res, 503, { error: 'not available' })); return; }
   if (path === '/api/leaderboard' && (req.method === 'GET' || req.method === 'POST')) { leaderboard(req, res).catch(() => json(res, 503, { error: 'not available' })); return; }
   if ((path === '/stats' || path === '/api/stats') && req.method === 'GET') { statsPage(req, res, path === '/api/stats').catch(() => res.writeHead(500).end()); return; }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405).end(); return; }

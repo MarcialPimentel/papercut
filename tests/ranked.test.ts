@@ -169,3 +169,16 @@ describe('ranked matches', () => {
     expect(b.last().t).toBe('gone');
   });
 });
+
+describe('the ranked list', () => {
+  it('shows only placed players, highest rating first, with your place', async () => {
+    const st = new MemoryStore();
+    const p = (id: string, rating: number, games: number) => st.savePlayer({ id, name: id.toUpperCase(), rating, rd: 80, vol: 0.06, games, wins: 0 });
+    await p('a', 1500, 12); await p('b', 1720, 9); await p('c', 1900, 3); await p('d', 1610, 5);
+    expect((await st.rankedTop(100)).map((x) => x.id)).toEqual(['b', 'd', 'a']); // c is still in placement
+    expect(await st.rankedPlace('a')).toBe(3);
+    expect(await st.rankedPlace('c')).toBeNull();
+    expect(await st.rankedPlace('nobody')).toBeNull();
+    expect((await st.rankedTop(2)).length).toBe(2);
+  });
+});

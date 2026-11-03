@@ -217,6 +217,17 @@
           <button class="mbtn" id="bHowToBack" type="button">Got it</button>
         </div>
       </div>
+
+      <aside class="card side" id="sideBoard" aria-label="Leaderboard" hidden>
+        <p class="big">Leaderboard</p>
+        <div class="tabs" role="group" aria-label="Which leaderboard">
+          <button class="hbtn" data-side="ranked" type="button" aria-pressed="false">Ranked</button>
+          <button class="hbtn" data-side="endless" type="button" aria-pressed="false">Endless</button>
+        </div>
+        <ol id="sideList"></ol>
+        <p class="muted" id="sideYou"></p>
+        <button class="hbtn" id="sideMore" type="button">All Endless runs</button>
+      </aside>
     </div>
     <div class="hud soundbox" id="soundBox" hidden>
       <label>Music <input type="range" id="volMusic" min="0" max="100" step="5"></label>
