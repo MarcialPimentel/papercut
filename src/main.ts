@@ -1,5 +1,5 @@
-// Papercut: menus, practice against the dummy, Endless runs against bots, online fights, tournaments,
-// and the 60-frames-a-second loop.
+// Papercut: menus, the tutorial, practice against the dummy, Endless runs against bots, online fights,
+// tournaments, and the 60-frames-a-second loop.
 
 import '@fontsource/big-shoulders-stencil-display/600';
 import '@fontsource/big-shoulders-stencil-display/800';
@@ -28,6 +28,8 @@ import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
 import { TuningPanel } from './tuning-panel';
 import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
 import { Tally, type MatchTally } from './sim/tally';
+import { HINT_AFTER, STEPS, TUTORIAL_CFG, Tutorial, freshFight } from './tutorial/tutorial';
+import { STEP_TEXT, TUTORIAL_TEXT, fill, namesFor } from './tutorial/text';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const stage = $('#stage'), canvas = $<HTMLCanvasElement>('#scene');
@@ -60,6 +62,7 @@ tuner.onClose = () => { controls.clear(); if (mode.kind === 'practice') { contro
 type Mode =
   | { kind: 'menu'; s: State }
   | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; tally: Tally }
+  | { kind: 'tutorial'; s: State; tut: Tutorial }
   | { kind: 'online'; lock: Lockstep; code: string }
   | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] }; // watching a tournament fight
 let mode: Mode = { kind: 'menu', s: newMatch() };
@@ -96,7 +99,7 @@ const dressOnline = (looks?: [string, string]) => dress(decodePick(looks?.[0], D
 const myLook = () => encodePick(myPick());
 
 // ---------- menus ----------
-type Screen = 'main' | 'fighter' | 'howto' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error';
+type Screen = 'main' | 'fighter' | 'howto' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (screen === 'controls' && to !== 'controls') bindScreen.cancel();
@@ -127,7 +130,7 @@ function hideMenu() { showSound(false); if (screen === 'fighter') fighterScreen.
 function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
   tuner.toggle(false); resetTuning();
   if (mode.kind === 'online' || tourney) net.send({ t: 'cancel' });
-  tourney = null; hud.tourney = false; hud.names = null;
+  tourney = null; hud.tourney = false; hud.names = null; hud.tutorial = false; showTut(null);
   controls.active = false; controls.clear();
   controls.lockWanted = false; controls.unlock();
   mode = { kind: 'menu', s: newMatch() };
@@ -162,6 +165,51 @@ function startPractice(endless = false) {
   begin();
   hud.you = null; hud.online = false; hud.setNames(); view.you = 0;
 }
+
+// ---------- the tutorial ----------
+// Offered once on the first visit; always on the title screen. Remembered with the other settings (store.ts).
+const TUT_KEY = 'papercut.tutorial';
+function tutorialSeen() { return store.get(TUT_KEY) !== null; }
+function markTutorial(v: 'offered' | 'done') { if (store.get(TUT_KEY) !== 'done') store.set(TUT_KEY, v); }
+
+function startTutorial() {
+  wakeAudio();
+  markTutorial('offered');
+  tuner.toggle(false); resetTuning(); // the tutorial always teaches the real numbers
+  mode = { kind: 'tutorial', s: freshFight(), tut: new Tutorial() };
+  view.spawnLook = null; dress(myPick(), SUMI_PICK); // your own look against the real Sumi
+  hud.setRules(TUTORIAL_CFG);
+  begin();
+  hud.you = 0; hud.online = false; hud.tutorial = true; hud.setNames(); view.you = 0;
+}
+
+/** The paper prompt: which step, what to do, and progress or a hint. Cheap to call every frame. */
+const tutEl = $('#tut');
+let tutKey = '';
+function showTut(t: Tutorial | null) {
+  const id = t?.step ?? null;
+  if (!t || !id) { if (tutKey) { tutEl.hidden = true; tutKey = ''; } return; }
+  const text: { title: string; line: string; then?: string; hint: string; cheer: string } = STEP_TEXT[id];
+  const nice = t.cheer > 0;
+  const line = nice ? text.cheer : t.part === 1 && text.then ? text.then : text.line;
+  const sub = nice ? '' : t.fails >= HINT_AFTER ? text.hint : t.need ? TUTORIAL_TEXT.progress(t.got, t.need) : '';
+  const hint = !nice && t.fails >= HINT_AFTER;
+  // The words follow the device in use (controller or mouse), the guard style in Settings, and the player's own bindings.
+  const bound = Object.fromEntries((['light', 'heavy', 'feint', 'jump', 'skip', 'left', 'right'] as const).map((a) => [a, keysFor(controls, a)]));
+  const names = namesFor(controls.device, controls.guardStyle, bound);
+  const key = [id, line, sub, nice, JSON.stringify(names)].join('|');
+  if (key === tutKey) return;
+  tutKey = key;
+  tutEl.hidden = false;
+  tutEl.classList.toggle('nice', nice);
+  $('#tutStep').textContent = nice ? TUTORIAL_TEXT.nice : `${TUTORIAL_TEXT.stepOf(t.i + 1, STEPS.length)} · ${text.title}`;
+  $('#tutLine').innerHTML = fill(line, names);
+  const subEl = $('#tutSub');
+  subEl.innerHTML = fill(sub, names);
+  subEl.classList.toggle('hint', hint);
+  $('#tutSkip').innerHTML = names.skip ? fill(TUTORIAL_TEXT.skip, names) : TUTORIAL_TEXT.skipPlain;
+}
+$('#tutSkip').addEventListener('click', () => command('skip'));
 
 function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, names: [string, string] | null = null, looks?: [string, string]) {
   wakeAudio();
@@ -252,6 +300,12 @@ function ensureNet(then: () => void) {
 let pendingSend: (() => void) | null = null;
 
 $('#bPractice').addEventListener('click', () => startPractice());
+$('#bTutorial').addEventListener('click', () => startTutorial());
+$('#bWelcomeGo').addEventListener('click', () => startTutorial());
+$('#bWelcomeSkip').addEventListener('click', () => showMenu('main'));
+$('#bTutPractice').addEventListener('click', () => startPractice());
+$('#bTutEndless').addEventListener('click', () => startPractice(true));
+$('#bTutMenu').addEventListener('click', () => showMenu('main'));
 $('#bEndless').addEventListener('click', () => startPractice(true));
 $('#bHowTo').addEventListener('click', () => showMenu('howto'));
 const fighterScreen = new FighterScreen($<HTMLCanvasElement>('#fCanvas'), $('#fPicks'), view.physics, (p) => { if (mode.kind === 'menu') dress(p, SUMI_PICK); });
@@ -274,7 +328,7 @@ controls.onNav = (n) => {
   if (screen) {
     if (n === 'menu') { if (screen !== 'main') command('menu'); return; }
     navigate(n, $('#menu .card'), () => {
-      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #settingsForm [type=submit]')].find((b) => !b.closest('[hidden]'));
+      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
       back?.click();
     });
     return;
@@ -423,7 +477,13 @@ function command(c: Command) {
     return;
   }
   if (c === 'menu' && tuner.open) { tuner.toggle(false); return; }
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter') showMenu('main'); return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone') showMenu('main'); return; }
+  if (mode.kind === 'tutorial') {
+    if (c === 'skip') mode.tut.skip();
+    if (c === 'restart') { mode.s = freshFight(); view.reset(mode.s); }
+    return;
+  }
+  if (c === 'skip') return;
   if (mode.kind === 'practice') {
     if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); mode.tally = new Tally(); hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
   } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
@@ -514,6 +574,15 @@ function frame(now: number) {
       view.onStep(s, ev);
       acc -= STEP;
     }
+  } else if (m.kind === 'tutorial') {
+    acc += real;
+    while (acc >= STEP) {
+      const ev = step(m.s, [controls.sample(view.waistY(m.s, 0)), m.tut.think(m.s)]);
+      m.tut.after(m.s, ev);
+      view.onStep(m.s, ev);
+      if (m.tut.resetDue(m.s)) { m.s = freshFight(); view.reset(m.s); }
+      acc -= STEP;
+    }
   } else if (m.kind === 'online') {
     const lock = m.lock;
     acc += real;
@@ -549,6 +618,12 @@ function frame(now: number) {
     if (stateOf(m).phase === 'over' && !tourney.backAt) tourney.backAt = performance.now() + 2500;
     if (tourney.backAt && performance.now() > tourney.backAt) toBracket();
   }
+  if (m.kind === 'tutorial' && m.tut.finished) {
+    markTutorial('done');
+    toMenu('tutdone');
+    return;
+  }
+  showTut(m.kind === 'tutorial' ? m.tut : null);
   const s = stateOf(m);
   if (m.kind !== 'menu') {
     hud.update(s, m.kind === 'online' ? seat : m.kind === 'watch' ? null : 0);
@@ -557,11 +632,13 @@ function frame(now: number) {
     if (!controls.lockWanted) controls.unlock();
   }
   music.set(...musicFor(m, s));
-  view.draw(s, real, m.kind === 'practice' ? { seat: 1, k: m.dummy.tell / m.dummy.tellFrames } : undefined);
+  const glint = m.kind === 'practice' ? m.dummy.tell / m.dummy.tellFrames : m.kind === 'tutorial' ? m.tut.tell / m.tut.tellFrames : -1;
+  view.draw(s, real, glint >= 0 ? { seat: 1, k: glint } : undefined);
   stage.style.background = view.sky;
 
   let status = '';
-  if (m.kind === 'practice') {
+  if (m.kind === 'tutorial') status = `Tutorial · ${menuHint()}`;
+  else if (m.kind === 'practice') {
     const tune = keysFor(controls, 'tune')[0];
     status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · ${menuHint()}`
       : `Practice: Sumi is a dummy · ${tune ? `${tune} to tune${isTuned() ? ' (tuned numbers)' : ''} · ` : ''}${menuHint()}`;
@@ -590,7 +667,9 @@ if (roomParam) {
   showMenu('join', { code });
   ensureNet(() => net.send({ t: 'join', code, name: myName(), look: myLook() }));
 } else {
-  showMenu('main');
+  // First visit: offer the tutorial once.
+  if (tutorialSeen()) showMenu('main');
+  else { markTutorial('offered'); showMenu('welcome'); }
   net.connect(); // connect early so the server can measure the connection before a fight
 }
 requestAnimationFrame((t) => { last = t; frame(t); });
