@@ -28,7 +28,7 @@ import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
 import { TuningPanel } from './tuning-panel';
 import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
 import { HINT_AFTER, STEPS, TUTORIAL_CFG, Tutorial, freshFight } from './tutorial/tutorial';
-import { STEP_TEXT, TUTORIAL_TEXT, fill } from './tutorial/text';
+import { STEP_TEXT, TUTORIAL_TEXT, fill, mouseNames } from './tutorial/text';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const stage = $('#stage'), canvas = $<HTMLCanvasElement>('#scene');
@@ -161,10 +161,10 @@ function startPractice(endless = false) {
 }
 
 // ---------- the tutorial ----------
-// Offered once on the first visit; always on the title screen. Remembered in this browser only.
+// Offered once on the first visit; always on the title screen. Remembered with the other settings (store.ts).
 const TUT_KEY = 'papercut.tutorial';
-function tutorialSeen() { try { return localStorage.getItem(TUT_KEY) !== null; } catch { return true; } }
-function markTutorial(v: 'offered' | 'done') { try { if (localStorage.getItem(TUT_KEY) !== 'done') localStorage.setItem(TUT_KEY, v); } catch { /* not remembered */ } }
+function tutorialSeen() { return store.get(TUT_KEY) !== null; }
+function markTutorial(v: 'offered' | 'done') { if (store.get(TUT_KEY) !== 'done') store.set(TUT_KEY, v); }
 
 function startTutorial() {
   wakeAudio();
@@ -187,17 +187,18 @@ function showTut(t: Tutorial | null) {
   const line = nice ? text.cheer : t.part === 1 && text.then ? text.then : text.line;
   const sub = nice ? '' : t.fails >= HINT_AFTER ? text.hint : t.need ? TUTORIAL_TEXT.progress(t.got, t.need) : '';
   const hint = !nice && t.fails >= HINT_AFTER;
-  const key = [id, line, sub, nice].join('|');
+  const names = mouseNames(controls.guardStyle); // the words follow the guard style picked in Settings
+  const key = [id, line, sub, nice, controls.guardStyle].join('|');
   if (key === tutKey) return;
   tutKey = key;
   tutEl.hidden = false;
   tutEl.classList.toggle('nice', nice);
   $('#tutStep').textContent = nice ? TUTORIAL_TEXT.nice : `${TUTORIAL_TEXT.stepOf(t.i + 1, STEPS.length)} · ${text.title}`;
-  $('#tutLine').innerHTML = fill(line);
+  $('#tutLine').innerHTML = fill(line, names);
   const subEl = $('#tutSub');
-  subEl.innerHTML = fill(sub);
+  subEl.innerHTML = fill(sub, names);
   subEl.classList.toggle('hint', hint);
-  $('#tutSkip').innerHTML = fill(TUTORIAL_TEXT.skip);
+  $('#tutSkip').innerHTML = fill(TUTORIAL_TEXT.skip, names);
 }
 $('#tutSkip').addEventListener('click', () => command('skip'));
 

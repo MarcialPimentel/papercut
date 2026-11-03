@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BTN, step, type FightEvent, type State } from '../src/sim/sim';
 import { HINT_AFTER, STEPS, Tutorial, freshFight } from '../src/tutorial/tutorial';
-import { MOUSE_KEYS, STEP_TEXT, fill, type InputNames } from '../src/tutorial/text';
+import { CURSOR_KEYS, MOUSE_KEYS, STEP_TEXT, fill, mouseNames, type InputNames } from '../src/tutorial/text';
 import type { StepId } from '../src/tutorial/text';
 
 /** A seeded random, so the tests are the same every run. */
@@ -172,8 +172,23 @@ describe('tutorial text', () => {
   it('every step has words, and every {button} has a name', () => {
     for (const id of STEPS) {
       const t = STEP_TEXT[id];
-      for (const line of [t.line, t.hint, t.cheer, 'then' in t ? t.then : '']) expect(fill(line ?? '')).not.toMatch(/\{\w+\}/);
+      for (const names of [MOUSE_KEYS, CURSOR_KEYS])
+        for (const line of [t.line, t.hint, t.cheer, 'then' in t ? t.then : '']) {
+          const out = fill(line ?? '', names);
+          expect(out).not.toMatch(/\{\w+\}/);
+          expect(out).not.toMatch(/middle|line across/i); // the Line guard trial is gone
+        }
     }
+  });
+
+  it('guard words follow the guard style: Flick or Cursor', () => {
+    expect(mouseNames('flick')).toBe(MOUSE_KEYS);
+    expect(mouseNames('cursor')).toBe(CURSOR_KEYS);
+    expect(fill(STEP_TEXT.guard.line, MOUSE_KEYS)).toContain('<kbd>flick up</kbd>');
+    expect(fill(STEP_TEXT.guard.hint, MOUSE_KEYS)).toMatch(/quick move/);
+    expect(fill(STEP_TEXT.guard.line, CURSOR_KEYS)).toContain('crosshair above your waist');
+    expect(fill(STEP_TEXT.parry.hint, CURSOR_KEYS)).toMatch(/crosshair to her height/);
+    expect(fill(STEP_TEXT.parry.hint, MOUSE_KEYS)).not.toContain('<kbd>'); // tips go in as plain text
   });
 
   it('another names table (a gamepad) swaps the buttons', () => {

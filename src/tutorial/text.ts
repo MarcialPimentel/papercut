@@ -1,20 +1,35 @@
 // Every word the tutorial shows. Buttons are written as {tokens} and filled from a names table, so a gamepad
 // (or any other scheme) only needs its own names table: pass it to fill() instead of MOUSE_KEYS.
+// Tokens ending in "Tip" are whole sentences about the scheme (how the guard switches), put in as plain text.
 
-export type InputToken = 'up' | 'down' | 'light' | 'heavy' | 'feint' | 'jump' | 'walk' | 'skip';
+export type InputToken = 'up' | 'down' | 'light' | 'heavy' | 'feint' | 'jump' | 'walk' | 'skip' | 'guardTip' | 'parryTip';
 export type InputNames = Record<InputToken, string>;
 
-/** Mouse and keyboard (the only scheme today). */
+/** Mouse and keyboard, Flick guard (the default): a quick move up or down switches the guard. */
 export const MOUSE_KEYS: InputNames = {
-  up: 'mouse up',
-  down: 'mouse down',
+  up: 'flick up',
+  down: 'flick down',
   light: 'left click',
   heavy: 'right click',
   feint: 'left click (or Q)',
   jump: 'Space',
   walk: 'A / D',
   skip: 'Tab',
+  guardTip: "A short, quick move of the mouse: up for high, down for low. A slow drift doesn't switch.",
+  parryTip: 'Wait for her step in, then flick to her height. Switching too early is just a block.',
 };
+
+/** Mouse and keyboard, Cursor guard (picked in Settings): the crosshair against your fighter's waist. */
+export const CURSOR_KEYS: InputNames = {
+  ...MOUSE_KEYS,
+  up: 'crosshair above your waist',
+  down: 'crosshair below your waist',
+  guardTip: "Move the crosshair above your fighter's waist, then below it.",
+  parryTip: 'Wait for her step in, then move the crosshair to her height. Switching too early is just a block.',
+};
+
+/** The names table for a mouse guard style. */
+export const mouseNames = (style: 'flick' | 'cursor'): InputNames => (style === 'cursor' ? CURSOR_KEYS : MOUSE_KEYS);
 
 export interface StepText {
   title: string;
@@ -31,8 +46,8 @@ export interface StepText {
 export const STEP_TEXT = {
   guard: {
     title: 'Guard',
-    line: 'Guard high with {up}, low with {down}. Try both.',
-    hint: 'Move the mouse well past the middle of the screen, up and then down.',
+    line: 'Guard high ({up}) and low ({down}). Try both.',
+    hint: '{guardTip}',
     cheer: 'Your blade shows your guard. Sumi\'s shows hers.',
   },
   light: {
@@ -70,7 +85,7 @@ export const STEP_TEXT = {
     title: 'Parry',
     line: 'Sumi glints, then swings a heavy. Guard the other height, then switch to hers just before it lands.',
     then: 'Parried! Slash back now for a riposte.',
-    hint: 'Wait for her step in, then flick to her height. Switching too early is just a block.',
+    hint: '{parryTip}',
     cheer: 'A riposte is fast, cuts like a heavy and can\'t be parried.',
   },
   wind: {
@@ -98,5 +113,9 @@ export const TUTORIAL_TEXT = {
 
 /** Put button names into a line, as <kbd> labels. */
 export function fill(line: string, names: InputNames = MOUSE_KEYS): string {
-  return line.replace(/\{(\w+)\}/g, (m, k: string) => (k in names ? `<kbd>${names[k as InputToken]}</kbd>` : m));
+  return line.replace(/\{(\w+)\}/g, (m, k: string) => {
+    if (!(k in names)) return m;
+    const v = names[k as InputToken];
+    return k.endsWith('Tip') ? v : `<kbd>${v}</kbd>`;
+  });
 }
