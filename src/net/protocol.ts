@@ -15,7 +15,7 @@ export type ToServer =
   | { t: 'name'; name: string } // rename yourself in a tournament lobby
   | { t: 'begin' } // the tournament's host starts the bracket
   | { t: 'restart' } // the host deals a new, reshuffled bracket with the same players (between fights only)
-  | { t: 'result'; winner: number } // a tournament fighter: who won the match that just ended
+  | { t: 'result'; winner: number } // sent by older games after a tournament fight; ignored (the server's own re-play decides)
   | { t: 'quick'; look?: string } // pair with whoever is waiting
   | { t: 'cancel' } // leave the room or the queue
   | { t: 'in'; f: number; b: number } // my buttons for frame f

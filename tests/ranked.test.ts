@@ -161,6 +161,65 @@ describe('ranked matches', () => {
     expect(honest.get('ranked')[0].won).toBe(true);
   });
 
+  it('a second, different input for the same frame is neither passed on nor used, so it cannot get the rival judged a cheat', async () => {
+    const dry = await pairUp();
+    const realWinner = playOut(dry.lobby, dry.a, dry.b);
+    const { lobby, a, b } = await pairUp();
+    const start = a.get('start')[0];
+    const s = newMatch(DEFAULT_CFG), pa = brawler(11, 0), pb = brawler(12, 1);
+    for (let f = 0; f < start.delay; f++) step(s, [0, 0]);
+    for (let f = start.delay; f < 100000 && s.phase !== 'over'; f++) {
+      const ia = pa(s), ib = pb(s);
+      lobby.message(a, { t: 'in', f, b: ia });
+      lobby.message(a, { t: 'in', f, b: ia ^ BTN.heavy }); // a modified game tries a second input for the frame
+      lobby.message(b, { t: 'in', f, b: ib });
+      step(s, [ia, ib]);
+      if (s.frame % 60 === 0) {
+        lobby.message(a, { t: 'hash', f: s.frame, h: hashState(s) });
+        lobby.message(a, { t: 'hash', f: s.frame, h: 12345 }); // and a second fingerprint
+        lobby.message(b, { t: 'hash', f: s.frame, h: hashState(s) });
+      }
+    }
+    // The rival only ever got one input per frame.
+    const frames = b.get('in').map((m) => m.f);
+    expect(new Set(frames).size).toBe(frames.length);
+    expect(b.get('hash').every((m) => m.h !== 12345)).toBe(true);
+    // Nobody was judged a cheat: the fight's real winner wins.
+    expect([a, b][realWinner].get('ranked')[0].won).toBe(true);
+  });
+
+  it("a player the database couldn't load is never saved over (their rating survives the outage)", async () => {
+    const store = new MemoryStore();
+    const id = playerId(TOKEN_A);
+    await store.savePlayer({ id, name: 'Ann', rating: 1700, rd: 60, vol: 0.06, games: 30, wins: 20 });
+    let down = true;
+    const read = store.player.bind(store);
+    store.player = (pid: string) => (down ? Promise.reject(new Error('database down')) : read(pid));
+    const ranked = new Ranked(store);
+    const lobby = new Lobby(Math.random, setTimeout, null, () => {}, ranked);
+    const a = new FakePeer();
+    lobby.message(a, { t: 'hello', guard: 'flick', id: TOKEN_A });
+    await flush();
+    lobby.message(a, { t: 'ranked', name: 'Ann' });
+    await flush(); await flush();
+    expect(a.get('err')[0].msg).toMatch(/not available right now/);
+    expect(await read(id)).toMatchObject({ rating: 1700, games: 30 });
+    // Once the database is back, the real rating loads.
+    down = false;
+    expect(await ranked.load(id)).toMatchObject({ rating: 1700, games: 30 });
+  });
+
+  it('a server stopping for a deploy calls off unfinished ranked matches: no one loses rating', async () => {
+    const { lobby, a, b, store } = await pairUp();
+    lobby.message(a, { t: 'in', f: a.get('start')[0].delay, b: 0 });
+    lobby.shutdown();
+    lobby.close(a);
+    lobby.close(b);
+    expect(a.get('ranked')).toHaveLength(0);
+    expect(b.get('ranked')).toHaveLength(0);
+    expect(await store.player(playerId(TOKEN_A))).toBeNull();
+  });
+
   it('counts leaving a ranked match early as a loss', async () => {
     const { lobby, a, b } = await pairUp();
     lobby.message(a, { t: 'in', f: 10, b: 0 });
