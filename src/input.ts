@@ -10,9 +10,11 @@
 // - 'cursor': the original. A drawn crosshair, compared with your fighter's waist on screen.
 // On a controller the left stick (or d-pad) moves left / right and sets the guard up / down (see pad.ts).
 
+import { GUARD } from './feel';
 import { BTN } from './sim/sim';
 import { PAD, actionForKey, load as loadBindings, save as saveBindings, type Action, type Bindings } from './bindings';
 import { PadReader, readPad, type Nav } from './pad';
+import { store } from './store';
 
 type PressName = 'light' | 'heavy' | 'feint' | 'jump' | 'dashL' | 'dashR' | 'rematch';
 type Hold = 'left' | 'right' | 'guardLow';
@@ -22,13 +24,10 @@ export type Device = 'mouse' | 'pad' | 'touch';
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+export type Command = 'restart' | 'menu' | 'rematch' | 'hitboxes' | 'tune';
 export type GuardStyle = 'line' | 'cursor';
 const GUARD_KEY = 'papercut.guard';
-/** Line style: how far (pixels) the hidden mouse can go above or below the line. Small, so a short flick switches. */
-const LINE_BAND = 60;
-/** Ignore tiny wobbles across the line (pixels). */
-const DEAD_ZONE = 4;
-function loadStyle(): GuardStyle { try { return localStorage.getItem(GUARD_KEY) === 'cursor' ? 'cursor' : 'line'; } catch { return 'line'; } }
+function loadStyle(): GuardStyle { return store.get(GUARD_KEY) === 'cursor' ? 'cursor' : 'line'; }
 
 export class Controls {
   private held: Record<Hold, number> = { left: 0, right: 0, guardLow: 0 };
@@ -45,7 +44,7 @@ export class Controls {
   touchLow: boolean | null = null;
   /** True while a fight is on screen: Space and arrows don't scroll the page. */
   active = false;
-  onCommand: (c: 'restart' | 'menu' | 'rematch' | 'hitboxes') => void = () => {};
+  onCommand: (c: Command) => void = () => {};
   onAnyInput: () => void = () => {};
   /** Menu moves from the controller (main moves the focus). */
   onNav: (n: Nav) => void = () => {};
@@ -68,7 +67,8 @@ export class Controls {
   constructor(canvas: HTMLCanvasElement, chips: HTMLElement, aim: HTMLElement) {
     this.canvas = canvas; this.aim = aim;
     this.setGuardStyle(this.guardStyle);
-    const typing = (e: Event) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+    // Typing in a text box doesn't fight; a focused slider (the tuning panel) still lets R, T and Esc through.
+    const typing = (e: Event) => (e.target instanceof HTMLInputElement && e.target.type !== 'range') || e.target instanceof HTMLTextAreaElement;
     addEventListener('keydown', (e) => {
       if (this.capture) {
         e.preventDefault();
@@ -80,7 +80,7 @@ export class Controls {
       if (e.code === 'Escape') { this.onCommand('menu'); return; }
       const a = actionForKey(this.binds, e.code);
       if (!a) return;
-      if (a === 'restart' || a === 'hitboxes') { if (!e.repeat) this.onCommand(a); return; }
+      if (a === 'restart' || a === 'hitboxes' || a === 'tune') { if (!e.repeat) this.onCommand(a); return; }
       if (!this.active) return;
       e.preventDefault();
       this.onAnyInput();
@@ -96,7 +96,7 @@ export class Controls {
         // Locked: the real cursor is hidden and doesn't move, so steer our own one, kept inside the window.
         this.mouseX = clamp(this.mouseX + e.movementX, 0, canvas.clientWidth);
         const y = (this.mouseY ?? canvas.clientHeight / 2) + e.movementY;
-        if (this.guardStyle === 'line') this.mouseY = clamp(y, this.lineY() - LINE_BAND, this.lineY() + LINE_BAND);
+        if (this.guardStyle === 'line') this.mouseY = clamp(y, this.lineY() - GUARD.band, this.lineY() + GUARD.band);
         else this.mouseY = clamp(y, 0, canvas.clientHeight);
         this.drawAim();
       } else this.track(e);
@@ -120,7 +120,7 @@ export class Controls {
       if (!this.locked) { this.track(e); if (this.lockWanted) this.lock(); }
       this.touchLow = null;
       const a = actionForKey(this.binds, `Mouse${e.button}`);
-      if (a === 'restart' || a === 'hitboxes') this.onCommand(a);
+      if (a === 'restart' || a === 'hitboxes' || a === 'tune') this.onCommand(a);
       else if (a) this.down(a, KB, false);
     });
     canvas.addEventListener('pointerup', (e) => {
@@ -187,7 +187,7 @@ export class Controls {
     for (const n of f.nav) this.onNav(n);
     set('guardLow', f.guardLowHeld);
     if (f.guardChanged && f.low !== null) { this.padLow = f.low; this.guardSrc = 'pad'; this.touchLow = null; }
-    for (const a of f.presses) if (a === 'restart' || a === 'hitboxes') this.onCommand(a);
+    for (const a of f.presses) if (a === 'restart' || a === 'hitboxes' || a === 'tune') this.onCommand(a);
     if (!fighting || !this.active) { set('left', false); set('right', false); this.padSide = 0; return; }
     set('left', f.left); set('right', f.right);
     this.padSide = f.left && !f.right ? -1 : f.right && !f.left ? 1 : 0;
@@ -200,7 +200,7 @@ export class Controls {
 
   setGuardStyle(g: GuardStyle) {
     this.guardStyle = g;
-    try { localStorage.setItem(GUARD_KEY, g); } catch { /* not remembered */ }
+    store.set(GUARD_KEY, g);
     this.canvas.classList.toggle('no-cursor', g === 'line');
     this.showAim();
   }
@@ -239,8 +239,8 @@ export class Controls {
     if (this.touchLow !== null) this.low = this.touchLow;
     else if (this.guardSrc === 'pad') this.low = this.padLow;
     else if (this.mouseY !== null && line !== null) {
-      if (this.mouseY > line + DEAD_ZONE) this.low = true;
-      else if (this.mouseY < line - DEAD_ZONE) this.low = false;
+      if (this.mouseY > line + GUARD.deadZone) this.low = true;
+      else if (this.mouseY < line - GUARD.deadZone) this.low = false;
     }
     return this.low;
   }

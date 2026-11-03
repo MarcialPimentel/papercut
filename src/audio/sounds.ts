@@ -16,14 +16,16 @@ const RECORDINGS: Record<string, string[]> = {
   ui: f('select_002'),
   tick: f('tick_001', 'tick_002'),
   clack: f('impactWood_light_000', 'impactWood_light_002'),
+  bell: f('impactBell_heavy_000', 'impactBell_heavy_001'), // the temple bell in the music
 };
 E.want(RECORDINGS);
 
 // The music's scale (miyako-bushi on D) as semitones, shared with the stingers.
 export const SCALE = [0, 1, 5, 7, 8];
-export const note = (degree: number, base = 293.66) => {
-  const oct = Math.floor(degree / SCALE.length), i = ((degree % SCALE.length) + SCALE.length) % SCALE.length;
-  return base * Math.pow(2, oct + SCALE[i] / 12);
+/** The frequency of a scale degree (degree 0 = `base`; every scale here has 5 notes per octave). */
+export const note = (degree: number, base = 293.66, scale: readonly number[] = SCALE) => {
+  const n = scale.length, oct = Math.floor(degree / n), i = ((degree % n) + n) % n;
+  return base * Math.pow(2, oct + scale[i] / 12);
 };
 
 const later = (s: number) => (E.live ? E.live.currentTime + s : 0);

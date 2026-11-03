@@ -19,6 +19,7 @@ describe('bindings', () => {
     expect(actionForKey(b, 'Space')).toBe('jump');
     expect(actionForKey(b, 'KeyR')).toBe('restart');
     expect(actionForKey(b, 'KeyH')).toBe('hitboxes');
+    expect(actionForKey(b, 'KeyT')).toBe('tune');
     expect(b.keys.guardLow).toEqual(['', '']); // unbound by default (Marz's pick)
   });
 

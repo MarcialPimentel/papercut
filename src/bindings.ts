@@ -1,7 +1,10 @@
 // Which keys, mouse buttons and controller buttons do what. Remapped on the Controls screen, saved in this browser.
 // Nothing here touches the fight: input.ts turns these into the same frame buttons the fight always got.
+// Saved through store.ts, so the desktop app keeps them in its settings file.
 
-export type Action = 'light' | 'heavy' | 'feint' | 'left' | 'right' | 'jump' | 'dash' | 'guardLow' | 'restart' | 'hitboxes';
+import { store } from './store';
+
+export type Action = 'light' | 'heavy' | 'feint' | 'left' | 'right' | 'jump' | 'dash' | 'guardLow' | 'restart' | 'hitboxes' | 'tune';
 export const ACTIONS: { id: Action; name: string; note?: string }[] = [
   { id: 'light', name: 'Light slash' },
   { id: 'heavy', name: 'Heavy slash' },
@@ -13,6 +16,7 @@ export const ACTIONS: { id: Action; name: string; note?: string }[] = [
   { id: 'guardLow', name: 'Guard low (hold)', note: 'instead of the mouse' },
   { id: 'restart', name: 'Restart / rematch' },
   { id: 'hitboxes', name: 'Hitbox view' },
+  { id: 'tune', name: 'Tuning panel', note: 'in Practice' },
 ];
 
 /** Slots per action and device. */
@@ -34,12 +38,12 @@ export const DEFAULTS: Bindings = {
   keys: {
     light: ['Mouse0', ''], heavy: ['Mouse2', ''], feint: ['KeyQ', 'Mouse1'],
     left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], jump: ['Space', 'KeyW'],
-    dash: ['', ''], guardLow: ['', ''], restart: ['KeyR', ''], hitboxes: ['KeyH', ''],
+    dash: ['', ''], guardLow: ['', ''], restart: ['KeyR', ''], hitboxes: ['KeyH', ''], tune: ['KeyT', ''],
   },
   pad: {
     light: [PAD.RB, PAD.X], heavy: [PAD.RT, PAD.Y], feint: [PAD.B, -1],
     left: [-1, -1], right: [-1, -1], jump: [PAD.A, -1],
-    dash: [PAD.LB, -1], guardLow: [-1, -1], restart: [PAD.View, -1], hitboxes: [-1, -1],
+    dash: [PAD.LB, -1], guardLow: [-1, -1], restart: [PAD.View, -1], hitboxes: [-1, -1], tune: [-1, -1],
   },
 };
 
@@ -61,8 +65,8 @@ export function parse(raw: string | null): Bindings {
 }
 
 const STORE = 'papercut.bindings';
-export function load(): Bindings { try { return parse(localStorage.getItem(STORE)); } catch { return defaults(); } }
-export function save(b: Bindings) { try { localStorage.setItem(STORE, JSON.stringify(b)); } catch { /* storage blocked: kept for this visit only */ } }
+export function load(): Bindings { return parse(store.get(STORE)); }
+export function save(b: Bindings) { store.set(STORE, JSON.stringify(b)); }
 
 /**
  * Put a key (or mouse button) in one slot. It is taken off any other action that had it, so one key never does two things.

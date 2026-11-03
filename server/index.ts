@@ -6,6 +6,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { fightVersion } from './fightVersion';
 import { Lobby, type Peer } from './lobby';
 import type { ToServer } from '../src/net/protocol';
 
@@ -14,6 +15,8 @@ const BUILD = (process.env.BUILD_SHA || 'dev').slice(0, 7);
 const CAPACITY = Number(process.env.CAPACITY || 200);
 const ALLOWED = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
 const DIST = resolve(fileURLToPath(new URL('.', import.meta.url)), '..', 'dist');
+/** The fight rules this server pairs players for: the same fingerprint the game is built with. */
+const FIGHT = fightVersion(resolve(fileURLToPath(new URL('.', import.meta.url)), '..', 'src', 'sim'));
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -21,7 +24,7 @@ const TYPES: Record<string, string> = {
   '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.glb': 'model/gltf-binary',
 };
 
-const lobby = new Lobby();
+const lobby = new Lobby(Math.random, setTimeout, FIGHT);
 const started = Date.now();
 
 async function serveFile(req: IncomingMessage, res: ServerResponse) {
@@ -48,7 +51,7 @@ async function serveFile(req: IncomingMessage, res: ServerResponse) {
 const server = createServer((req, res) => {
   if (req.url?.startsWith('/api/health')) {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    res.end(JSON.stringify({ ok: true, build: BUILD, uptime: Math.round((Date.now() - started) / 1000), ...lobby.stats }));
+    res.end(JSON.stringify({ ok: true, build: BUILD, fight: FIGHT, uptime: Math.round((Date.now() - started) / 1000), ...lobby.stats }));
     return;
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405).end(); return; }
@@ -64,10 +67,11 @@ server.on('upgrade', (req, socket, head) => {
   wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
 });
 
-wss.on('connection', (ws: WebSocket) => {
+wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   const peer: Peer & { pingAt: number; alive: boolean; budget: number } = {
     send: (m) => { if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(m)); },
     pingAt: 0, alive: true, budget: 400,
+    v: new URL(req.url || '/', 'http://x').searchParams.get('v') ?? undefined, // the game's fight version
   };
   const ping = () => { peer.pingAt = Date.now(); ws.ping(); };
   ws.on('pong', () => {
@@ -101,7 +105,7 @@ wss.on('connection', (ws: WebSocket) => {
   setTimeout(ping, 300);
 });
 
-server.listen(PORT, () => console.log(`Papercut build ${BUILD} on port ${PORT}`));
+server.listen(PORT, () => console.log(`Papercut build ${BUILD} (fight ${FIGHT}) on port ${PORT}`));
 
 const stop = () => { wss.clients.forEach((c) => c.close(1001, 'restarting')); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000); };
 process.on('SIGTERM', stop);
