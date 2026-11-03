@@ -6,12 +6,15 @@ export const C = {
   marble: '#141316', white: '#FFFFFF',
 } as const;
 
-/** A fighter's look: colours by Blender material role (robe, kimono, hakama, accent...).
- *  The samurai is painted as Kami in Blender; a look only lists what it changes. */
-export interface Look { name: string; colors: Record<string, string> }
-export const KAMI: Look = { name: 'Kami', colors: {} };
-// Sumi wears Kami's robes inverted: a cream robe over an indigo kimono, indigo prints (Marz's pick).
-export const SUMI: Look = { name: 'Sumi', colors: { robe: '#F2E3C0', kimono: '#3C3A7E' } };
+/** A fighter's look: colours by Blender material role (robe, kimono, hakama, accent...), and which fighter's own
+ *  paper pieces it wears (`variant`: Kami's topknot and wide sleeves, or Sumi's straw hat and tied-back sleeves;
+ *  pieces named "kami_..." / "sumi_..." in the Blender file). The samurai is painted as Kami in Blender; a look
+ *  only lists what it changes. */
+export interface Look { name: string; colors: Record<string, string>; variant?: 'kami' | 'sumi' }
+export const KAMI: Look = { name: 'Kami', colors: {}, variant: 'kami' };
+// Sumi wears Kami's robes inverted: a cream robe over an indigo kimono, indigo prints (Marz's pick), and their own
+// straw hat and tied-back sleeves (#37, Marz's pick).
+export const SUMI: Look = { name: 'Sumi', colors: { robe: '#F2E3C0', kimono: '#3C3A7E' }, variant: 'sumi' };
 export const LOOKS = [KAMI, SUMI] as const;
 
 export function mulberry32(a: number) {

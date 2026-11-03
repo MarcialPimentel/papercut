@@ -11,7 +11,7 @@ import { MOVES } from '../sim/rules';
 import type { Fighter } from '../sim/sim';
 import { C, D, clamp, easeIn, lerp, type Look } from './common';
 import { ccw, clipConvex, clipHalf, offset, slashLens, type Line, type Pt } from './paper2d';
-import { PIECE_NAMES, SCALE, loadPuppet, type Piece, type PieceName, type Puppet } from './puppet';
+import { PIECE_NAMES, SCALE, loadPuppet, wornBy, type Piece, type PieceName, type Puppet } from './puppet';
 import type { PaperPhysics } from './physics';
 
 const T = 0.005; // paper thickness
@@ -213,7 +213,7 @@ export class FighterView {
   }
 
   private build(p: Puppet) {
-    this.puppet = p; this.dims = dimsOf(p);
+    this.puppet = wornBy(p, this.look.variant ?? 'kami'); this.dims = dimsOf(p);
     const root = new THREE.Group(), parts = {} as Record<PieceName, THREE.Group>;
     for (const name of PIECE_NAMES) { const g = new THREE.Group(); root.add(g); parts[name] = g; }
     this.rig = { root, parts };
