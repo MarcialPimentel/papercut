@@ -193,6 +193,17 @@ $('#bPractice').addEventListener('click', () => startPractice());
 $('#bEndless').addEventListener('click', () => startPractice(true));
 $('#bHowTo').addEventListener('click', () => showMenu('howto'));
 $('#bHowToBack').addEventListener('click', () => showMenu('main'));
+// Guard style (playtest A/B): Line (mouse up / down, no cursor) or Cursor (crosshair against your waist).
+const GUARD_HOW = {
+  line: 'Move the mouse <b>up</b> to guard high, <b>down</b> to guard low. No cursor: just flick.',
+  cursor: "Move the crosshair <b>above</b> your fighter's waist to guard high, <b>below</b> to guard low.",
+};
+function showGuardStyle() {
+  $('#bGuard').textContent = controls.guardStyle === 'line' ? 'Guard: Line' : 'Guard: Cursor';
+  $('#howGuard').innerHTML = GUARD_HOW[controls.guardStyle];
+}
+$('#bGuard').addEventListener('click', () => { controls.setGuardStyle(controls.guardStyle === 'line' ? 'cursor' : 'line'); showGuardStyle(); });
+showGuardStyle();
 let setupFor: 'room' | 'tourney' = 'room';
 function openSetup(kind: 'room' | 'tourney') {
   setupFor = kind;

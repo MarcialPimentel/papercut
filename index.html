@@ -57,6 +57,7 @@
           <div class="row2">
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
             <button class="hbtn" data-sound type="button" aria-expanded="false" aria-controls="soundBox">Sound</button>
+            <button class="hbtn" id="bGuard" type="button" title="How the mouse sets your guard">Guard: Line</button>
           </div>
           <form id="joinForm" class="join">
             <label for="joinCode">Have a room code?</label>
@@ -119,7 +120,7 @@
         <div data-screen="howto" class="stack howto" hidden>
           <p class="big">How to play</p>
           <dl class="controls">
-            <dt>Guard</dt><dd>Move the mouse <b>above</b> your fighter's waist to guard high, <b>below</b> to guard low.</dd>
+            <dt>Guard</dt><dd id="howGuard">Move the mouse <b>up</b> to guard high, <b>down</b> to guard low.</dd>
             <dt><kbd>Left click</kbd></dt><dd>Light slash: quick, small cut.</dd>
             <dt><kbd>Right click</kbd></dt><dd>Heavy slash: slower, steps in, big cut. Blocked, it <b>staggers</b> their guard and you keep the turn. Click again (or <kbd>Q</kbd>) early in the wind-up to feint.</dd>
             <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Walk. Double-tap to dash.</dd>
