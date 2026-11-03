@@ -12,6 +12,7 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 
 .stage { position: fixed; inset: 0; overflow: hidden; background: #E9E4DA; }
 .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.stage canvas.no-cursor { cursor: none; }
 .stage-fallback { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; font-weight: 700; }
 .stage.ready .stage-fallback { display: none; }
 .stage.in-menu .fight-only { display: none !important; }

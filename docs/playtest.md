@@ -13,7 +13,7 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 
 | Action | Input |
 |---|---|
-| Guard high / low | Cursor above / below your fighter's waist |
+| Guard high / low | Mouse up / down (Line style, default), or the crosshair above / below your fighter's waist (Cursor style). Switch with "Guard:" on the main menu |
 | Light slash | Left click |
 | Heavy slash | Right click |
 | Feint (during a heavy's wind-up) | Left click or Q |
@@ -35,7 +35,7 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 ## What to try
 
 - **Guard:** block a light, then a heavy (a heavy chips a sliver of strip through a block).
-- **Parry into riposte:** keep the wrong guard, flick the cursor to the right height just before their slash lands ("Parry"), then click at once: your slash is a riposte (fast, heavy damage, can't be parried).
+- **Parry into riposte:** keep the wrong guard, flick the mouse to the right height just before their slash lands ("Parry"), then click at once: your slash is a riposte (fast, heavy damage, can't be parried).
 - **Feint bait:** start a heavy (right click) and cancel it with a left click. Does your rival swing into it?
 - **Counter cut:** hit someone while their heavy winds up, or right after they miss: instant K.O. The round banner says which it was.
 - **Jump a low slash.** Then try a jump-in slash against someone guarding high: after it's blocked you're stuck for a moment on landing, and they can cut you.
@@ -55,7 +55,7 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 
 - **Feel:** do the slashes, blocks and parries feel crisp? Is anything too fast or too slow to react to?
 - **Reading:** can you tell the rival's guard height and when a heavy is coming?
-- **Cursor guard:** precise or twitchy? Does the guard ever switch when you didn't mean it?
+- **Line vs Cursor guard:** play a few rounds with each ("Guard:" button on the main menu). Which is easier to read and switch? With Line, does the guard ever switch when you didn't mean it, or not switch when you flicked? Keep Line, or go back to Cursor?
 - **Online:** the bottom-left line shows the room and the input delay in frames (2 is great, 8 is the most). Did it feel laggy? Did you ever see "Waiting for your rival's connection" or "Out of sync"? If "Out of sync" shows up, note the frame number and tell Claude.
 
 ## Known limits of this build

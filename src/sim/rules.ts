@@ -30,7 +30,7 @@ export const MOVES = {
 export const RULES = {
   feintFrames: 8, // a feint returns to guard in this long
   feintBefore: 12, // a heavy can be feinted until this frame of its wind-up (its step-in comes after)
-  missOpen: 12, // after a missed slash you're open to a counter cut for this long; later hits are normal hits
+  missOpen: 6, // after a missed slash you're open to a counter cut for this long; later hits are normal hits
   blockStagger: 34, // a blocked heavy staggers the blocker's guard this long: the attacker recovers 4 frames first
   parryWindow: 7, // switch guard to the right height this close to the hit to parry
   parryStun: 30, // the parried attacker is stuck this long
