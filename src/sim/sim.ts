@@ -18,6 +18,7 @@ export const BTN = {
   dashL: 128,
   dashR: 256,
   rematch: 512,
+  emote: 1024, // a press: the "come at me" taunt (only drawn, never changes the fight)
 } as const;
 const PRESSES = ['light', 'heavy', 'feint', 'jump', 'dashL', 'dashR'] as const;
 type Press = (typeof PRESSES)[number];
@@ -49,6 +50,7 @@ export interface Fighter {
   dashDir: number; dashFrom: number; dashLen: number;
   stunT: number;
   walk: number; // -1, 0, 1: walking direction this frame
+  emote: number; // frames left of the taunt (0 = none). Only drawn: nothing in the fight reads it
 }
 
 export interface State {
@@ -99,7 +101,7 @@ function newFighter(side: 0 | 1, maxHp: number): Fighter {
     stance: side === 0 ? 'high' : 'low', stanceAt: -999,
     state: 'guard', t: 0, atk: 'light', slash: 'high', whiffed: false, airSlash: false,
     hp: maxHp, wins: 0, alive: true, riposte: 0, buf: '', bufLeft: 0,
-    dashDir: 0, dashFrom: 0, dashLen: 0, stunT: 0, walk: 0,
+    dashDir: 0, dashFrom: 0, dashLen: 0, stunT: 0, walk: 0, emote: 0,
   };
 }
 
@@ -223,7 +225,19 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
       }
       break;
   }
+  emotes(s, inputs);
   return ev;
+}
+
+/** The taunt: plays while the fighter stands still in guard; moving, jumping, slashing or being hit ends it.
+ *  It travels with the inputs, so the rival sees it online, but it never feeds back into the fight. */
+function emotes(s: State, inputs: readonly [number, number]) {
+  for (const i of [0, 1]) {
+    const f = s.f[i], free = f.alive && f.state === 'guard' && f.y <= 0 && f.walk === 0;
+    if (!free) { f.emote = 0; continue; }
+    if (f.emote > 0) f.emote--;
+    if (inputs[i] & BTN.emote && f.emote === 0) f.emote = RULES.emoteFrames;
+  }
 }
 
 /** Who won the match. In Endless the bot always ends the run. */

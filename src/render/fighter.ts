@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { RigidBody } from '@dimforge/rapier3d-compat';
-import { MOVES } from '../sim/rules';
+import { MOVES, RULES } from '../sim/rules';
 import type { Fighter } from '../sim/sim';
 import { C, D, clamp, easeIn, lerp, type Look } from './common';
 import { ccw, clipConvex, clipHalf, offset, slashLens, type Line, type Pt } from './paper2d';
@@ -119,8 +119,10 @@ interface Rig { root: THREE.Group; parts: Record<PieceName, THREE.Group> }
 // ---------- poses ----------
 /** spreadF / spreadB: how far the front (rival-side) and back hakama halves swing out; the body drops to keep the
  *  feet on the page. lean: the torso's tilt (negative leans toward the rival). hilt / sword: where the sword's
- *  guard is (from the feet) and its angle. head: extra head tilt. */
-export interface Pose { spreadF: number; spreadB: number; lean: number; head: number; hilt: [number, number]; sword: number }
+ *  guard is (from the feet) and its angle. head: extra head tilt. beckon (the taunt): the front hand lets go of
+ *  the sword and reaches for `hand` (from the feet), bent back at the wrist by `curl`. */
+export interface Beckon { hand: [number, number]; curl: number }
+export interface Pose { spreadF: number; spreadB: number; lean: number; head: number; hilt: [number, number]; sword: number; beckon?: Beckon }
 function ik(S: Pt, G: Pt, L1: number, L2: number) {
   const dx = G[0] - S[0], dy = G[1] - S[1], d = clamp(Math.hypot(dx, dy), 0.02, L1 + L2 - 1e-3), base = Math.atan2(dy, dx);
   const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1)), up = base - A, E = vadd(S, [L1 * Math.cos(up), L1 * Math.sin(up)]);
@@ -136,10 +138,12 @@ function applyPose(pr: Record<PieceName, THREE.Group>, P: Pose, d: Dims) {
   setPart(pr.head, onTorso(d.head), P.lean + P.head);
   const H = P.hilt, a = P.sword;
   setPart(pr.sword, H, a);
+  const front = d.armL.shoulder[0] >= d.armR.shoulder[0] ? 'arm_L' : 'arm_R';
   for (const [arm, hand, A, grip] of [['arm_L', 'hand_L', d.armL, GRIP_L], ['arm_R', 'hand_R', d.armR, GRIP_R]] as const) {
-    const S = onTorso(A.shoulder), k = ik(S, vadd(H, rot(a, [grip, 0])), A.l1, L2);
+    const free = P.beckon && arm === front ? P.beckon : null;
+    const S = onTorso(A.shoulder), k = ik(S, free ? free.hand : vadd(H, rot(a, [grip, 0])), A.l1, L2);
     setPart(pr[arm], S, k.up - A.rest);
-    setPart(pr[hand], k.E, k.lo + Math.PI / 2); // the hand hangs straight down in the rest pose
+    setPart(pr[hand], k.E, k.lo + Math.PI / 2 + (free ? free.curl : 0)); // the hand hangs straight down in the rest pose
   }
 }
 const POSE = {
@@ -168,10 +172,22 @@ const POSE = {
 const MOTION = { light: { windK: 0.45 }, heavy: { windK: 1 }, riposte: { windK: 0.6 } };
 // A blocked heavy knocks the guard aside: blade thrown up and back, body rocked away.
 const STAGGER: Pose = { spreadF: 0.1, spreadB: 0.24, lean: 0.2, head: 0.12, hilt: [0.15, 1.6], sword: 80 * D };
+// The taunt ("come at me"): sword hanging loose in the back hand, chin up, the front hand held out palm up and
+// curling its fingers back twice a beat. Two held keys, like stop-motion.
+const TAUNT_BEAT = 8; // frames per key
+const TAUNT: [Pose, Pose] = [
+  { spreadF: 0.1, spreadB: 0.1, lean: 0.06, head: 0.14, hilt: [0.0, 0.62], sword: -105 * D, beckon: { hand: [0.78, 1.22], curl: -0.2 } },
+  { spreadF: 0.1, spreadB: 0.1, lean: 0.08, head: 0.18, hilt: [0.0, 0.62], sword: -105 * D, beckon: { hand: [0.42, 1.52], curl: 1.4 } },
+];
 const POSE_KEYS = ['spreadF', 'spreadB', 'lean', 'head', 'sword'] as const;
 function lerpPose(a: Pose, b: Pose, k: number, out = {} as Pose): Pose {
   for (const key of POSE_KEYS) out[key] = lerp(a[key], b[key], k);
-  out.hilt = [lerp(a.hilt[0], b.hilt[0], k), lerp(a.hilt[1], b.hilt[1], k)]; return out;
+  out.hilt = [lerp(a.hilt[0], b.hilt[0], k), lerp(a.hilt[1], b.hilt[1], k)];
+  // The free hand only blends between two taunt keys; going in or out of the taunt it snaps (the grip lets go).
+  const bA = a.beckon, bB = b.beckon;
+  out.beckon = bA && bB ? { hand: [lerp(bA.hand[0], bB.hand[0], k), lerp(bA.hand[1], bB.hand[1], k)], curl: lerp(bA.curl, bB.curl, k) }
+    : (k < 0.5 ? bA : bB) && { ...(k < 0.5 ? bA : bB)! };
+  return out;
 }
 const copyPose = (p: Pose) => lerpPose(p, p, 0);
 // Turning around: the cut-out flips through edge-on in two held steps.
@@ -192,6 +208,7 @@ function keyPose(f: Fighter, walkT: number): [Pose, string] {
     case 'dash': { const back = f.dashDir !== f.facing; return [{ ...g, lean: back ? 0.12 : -0.12, spreadF: 0.24, spreadB: 0.2 }, back ? 'db' : 'df']; }
     default:
       if (f.y > 0) return f.vy > 0 ? [{ ...g, spreadF: 0.05, spreadB: 0.3, lean: -0.06 }, 'j1' + f.stance] : [{ ...g, spreadF: 0.2, spreadB: 0.2 }, 'j2' + f.stance];
+      if (f.emote > 0) { const n = Math.floor((RULES.emoteFrames - f.emote) / TAUNT_BEAT) % 2; return [TAUNT[n], 'e' + n]; }
       if (f.walk) { const s = Math.floor(walkT / 8) % 2; return [{ ...g, spreadF: s ? 0.24 : 0.06, spreadB: s ? 0.06 : 0.2 }, 'k' + s + f.stance]; }
       return [g, 'g' + f.stance];
   }

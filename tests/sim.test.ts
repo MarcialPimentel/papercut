@@ -479,3 +479,32 @@ describe('custom rules', () => {
     });
   });
 });
+
+describe('taunt (emote)', () => {
+  const { emote } = BTN;
+  it('plays while standing still, then ends on its own', () => {
+    const s = fightAt(3);
+    step(s, [emote, 0]);
+    expect(s.f[0].emote).toBe(RULES.emoteFrames);
+    run(s, RULES.emoteFrames);
+    expect(s.f[0].emote).toBe(0);
+  });
+  it('moving, jumping or slashing ends it at once', () => {
+    for (const b of [BTN.right, jump, light]) {
+      const s = fightAt(3);
+      step(s, [emote, 0]);
+      run(s, 5);
+      step(s, [b, 0]);
+      expect(s.f[0].emote).toBe(0);
+    }
+  });
+  it('never changes the fight', () => {
+    const a = fightAt(), b = fightAt();
+    const inp = (n: number): [number, number] => [n % 40 === 5 ? light : 0, n % 50 === 20 ? heavy : 0];
+    run(a, 400, inp);
+    run(b, 400, (n) => { const [x, y] = inp(n); return [x | (n % 9 === 0 ? emote : 0), y | (n % 13 === 0 ? emote : 0)]; });
+    const strip = (s: State) => ({ ...s, f: s.f.map((f) => ({ ...f, emote: 0 })) });
+    expect(strip(b)).toEqual(strip(a));
+    expect(hashState(b)).toBe(hashState(a));
+  });
+});
