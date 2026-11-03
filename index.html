@@ -6,9 +6,6 @@
   <title>Papercut</title>
   <meta name="description" content="A 3D paper sword-fighting game. Fight a friend online with the mouse.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 </head>
 <body>
   <main class="stage" id="stage">
@@ -56,8 +53,8 @@
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
           <div class="row2">
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
-            <button class="hbtn" data-sound type="button" aria-expanded="false" aria-controls="soundBox">Sound</button>
-            <button class="hbtn" id="bGuard" type="button" title="How the mouse sets your guard">Guard: Line</button>
+            <button class="hbtn" id="bSettings" type="button">Settings</button>
+            <button class="hbtn" id="bQuit" type="button" hidden>Quit</button>
           </div>
           <form id="joinForm" class="join">
             <label for="joinCode">Have a room code?</label>
@@ -116,6 +113,19 @@
           <p class="big" id="errorMsg">Something went wrong.</p>
           <button class="mbtn" data-cancel type="button">Back</button>
         </div>
+
+        <form data-screen="settings" class="stack setup settings" id="settingsForm" hidden>
+          <p class="big">Settings</p>
+          <label>Window <select id="setWindow"><option value="full">Fullscreen</option><option value="win">Windowed</option></select></label>
+          <label>Resolution <select id="setScale"><option value="1">100%</option><option value="0.85">85%</option><option value="0.75">75%</option><option value="0.67">67%</option><option value="0.5">50% (fastest)</option></select></label>
+          <label>Frame rate <select id="setFps"><option value="0">Match the screen</option><option value="30">30 fps</option><option value="60">60 fps</option><option value="120">120 fps</option><option value="144">144 fps</option><option value="240">240 fps</option></select></label>
+          <label data-desktop-only hidden>Vsync <select id="setVsync"><option value="on">On</option><option value="off">Off</option></select></label>
+          <label>Music <input type="range" id="setMusic" min="0" max="100" step="5"></label>
+          <label>Effects <input type="range" id="setSfx" min="0" max="100" step="5"></label>
+          <label>Guard <select id="setGuard"><option value="line">Line: mouse up / down</option><option value="cursor">Cursor: crosshair vs your waist</option></select></label>
+          <p class="muted" id="setNote"></p>
+          <button class="mbtn" type="submit">Done</button>
+        </form>
 
         <div data-screen="howto" class="stack howto" hidden>
           <p class="big">How to play</p>

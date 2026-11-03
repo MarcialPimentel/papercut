@@ -5,6 +5,7 @@ _For the first online build (2026-11-01)._
 ## Open the game
 
 - **Live:** https://papercut.marz.gg. The build number is in the bottom-right corner.
+- **Desktop app (Windows, Steam Deck):** download it from a pull request's CI run; click-by-click in [desktop.md](desktop.md).
 - **On your PC:** `npm install`, then `npm run dev`, then open http://localhost:5173.
 
 Use a desktop browser with a mouse. Phones get on-screen buttons, but the game is made for the mouse.
@@ -13,7 +14,7 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 
 | Action | Input |
 |---|---|
-| Guard high / low | Mouse up / down (Line style, default), or the crosshair above / below your fighter's waist (Cursor style). Switch with "Guard:" on the main menu |
+| Guard high / low | Mouse up / down (Line style, default), or the crosshair above / below your fighter's waist (Cursor style). Switch in Settings on the main menu |
 | Light slash | Left click |
 | Heavy slash | Right click |
 | Feint (during a heavy's wind-up) | Left click or Q |
@@ -22,6 +23,7 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 | Jump | Space or W |
 | Rematch (when the match ends) | R or the Rematch button |
 | Hitbox view on / off | H |
+| Fullscreen on / off (desktop app) | F11 or Alt+Enter |
 | Tuning panel (Practice only) | T (the fight pauses while it's open) |
 | Free the mouse / back to the menu | Esc frees the mouse (held during a fight), Esc again or Leave for the menu |
 
@@ -66,7 +68,7 @@ Online fights, tournament fights and Endless always use the game's own numbers, 
 
 - **Feel:** do the slashes, blocks and parries feel crisp? Is anything too fast or too slow to react to?
 - **Reading:** can you tell the rival's guard height and when a heavy is coming?
-- **Line vs Cursor guard:** play a few rounds with each ("Guard:" button on the main menu). Which is easier to read and switch? With Line, does the guard ever switch when you didn't mean it, or not switch when you flicked? Keep Line, or go back to Cursor?
+- **Line vs Cursor guard:** play a few rounds with each (Settings → Guard on the main menu). Which is easier to read and switch? With Line, does the guard ever switch when you didn't mean it, or not switch when you flicked? Keep Line, or go back to Cursor?
 - **Online:** the bottom-left line shows the room and the input delay in frames (2 is great, 8 is the most). Did it feel laggy? Did you ever see "Waiting for your rival's connection" or "Out of sync"? If "Out of sync" shows up, note the frame number and tell Claude.
 
 ## Known limits of this build

@@ -9,6 +9,7 @@
 
 import { GUARD } from './feel';
 import { BTN } from './sim/sim';
+import { store } from './store';
 
 type PressName = 'light' | 'heavy' | 'feint' | 'jump' | 'dashL' | 'dashR' | 'rematch';
 const KEYS: Record<string, 'left' | 'right' | 'jump' | 'feint'> = {
@@ -20,7 +21,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 export type Command = 'restart' | 'menu' | 'rematch' | 'hitboxes' | 'tune';
 export type GuardStyle = 'line' | 'cursor';
 const GUARD_KEY = 'papercut.guard';
-function loadStyle(): GuardStyle { try { return localStorage.getItem(GUARD_KEY) === 'cursor' ? 'cursor' : 'line'; } catch { return 'line'; } }
+function loadStyle(): GuardStyle { return store.get(GUARD_KEY) === 'cursor' ? 'cursor' : 'line'; }
 
 export class Controls {
   private held = { left: 0, right: 0 }; // bit 1 keyboard, bit 2 touch
@@ -110,7 +111,7 @@ export class Controls {
 
   setGuardStyle(g: GuardStyle) {
     this.guardStyle = g;
-    try { localStorage.setItem(GUARD_KEY, g); } catch { /* not remembered */ }
+    store.set(GUARD_KEY, g);
     this.canvas.classList.toggle('no-cursor', g === 'line');
     this.showAim();
   }

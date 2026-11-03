@@ -7,6 +7,7 @@
 
 import { GUARD, FEEL } from './feel';
 import { MOVES, RULES } from './sim/rules';
+import { store } from './store';
 
 export interface Knob {
   /** Where the number lives, e.g. "moves.heavy.wind". Also the key it is kept and copied under. */
@@ -114,17 +115,14 @@ export function applyTuning(saved: unknown) {
   }
 }
 
-// ---------- kept in this browser ----------
+// ---------- kept in this browser (or the desktop app's settings file) ----------
 const STORE_KEY = 'papercut.tuning';
 export function loadSaved(): Record<string, number> {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) ?? '{}') ?? {}; } catch { return {}; }
+  try { return JSON.parse(store.get(STORE_KEY) ?? '{}') ?? {}; } catch { return {}; }
 }
 export function saveCurrent() {
-  try {
-    const c = changes();
-    if (Object.keys(c).length) localStorage.setItem(STORE_KEY, JSON.stringify(c));
-    else localStorage.removeItem(STORE_KEY);
-  } catch { /* storage blocked: the numbers just aren't remembered */ }
+  const c = changes();
+  store.set(STORE_KEY, JSON.stringify(c)); // {} when nothing is changed
 }
 
 /** The text "Copy numbers" puts on the clipboard: one line per changed number, game value → new value. */
