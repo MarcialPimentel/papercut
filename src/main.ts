@@ -13,7 +13,7 @@ import { Lockstep } from './net/lockstep';
 import { BYE_SLOT, normalizeCode, type ToClient } from './net/protocol';
 import { Spectator } from './net/spectator';
 import { engine } from './audio/engine';
-import { music, type MusicMode, type Tension } from './audio/music';
+import { music, PAGE_TRACKS, type MusicMode, type Tension, type TrackKey } from './audio/music';
 import { sfx } from './audio/sounds';
 import { View } from './render/view';
 import { loadDisplay, saveDisplay, skipFrame } from './settings';
@@ -399,15 +399,20 @@ net.onMessage = (m: ToClient) => {
   }
 };
 
-/** Which music fits the moment: calm on menus, drums for "Round N", the full fight, silence from a K.O. to the next round. */
-function musicFor(m: Mode, s: State): [MusicMode, Tension] {
-  if (m.kind === 'menu') return ['menu', 0];
-  if (s.phase === 'intro') return ['intro', 0];
-  if (s.phase === 'over') return s.phaseT > 240 ? ['menu', 0] : ['off', 0];
-  if (s.phase !== 'fight') return ['off', 0];
+/** Which music fits the moment. Each spread, the menu, Endless, tournaments and the back cover have their own
+ *  track; within a track: drums for "Round N", the full fight, busier when close, silence from a K.O. to the next round. */
+function musicFor(m: Mode, s: State): [MusicMode, Tension, TrackKey, number] {
+  if (m.kind === 'menu') return ['menu', 0, tourney ? 'tourney' : 'menu', 1];
+  const endless = m.kind === 'practice' && m.endless;
+  const track: TrackKey = tourney ? 'tourney' : endless ? 'endless' : PAGE_TRACKS[s.page] ?? 'dojo';
+  const level = endless ? botLevel(s.f[0].wins) : 1;
+  if (s.phase === 'intro') return ['intro', 0, track, level];
+  if (s.phase === 'over') return s.phaseT > 240 ? ['menu', 0, 'cover', 1] : ['off', 0, track, level];
+  if (s.phase !== 'fight') return ['off', 0, track, level];
+  const final = !!tourney?.bracket && !!tourney.fight && tourney.fight[0] === tourney.bracket.rounds.length - 1;
   const deciding = s.cfg.wins > 0 && s.f.every((f) => f.wins === s.cfg.wins - 1);
   const close = s.f.some((f) => f.hp <= s.cfg.maxHp * 0.3) || (s.cfg.roundSecs > 0 && s.clock <= 10 * 60);
-  return ['fight', deciding || close ? 1 : 0];
+  return ['fight', final || deciding || close ? 1 : 0, track, level];
 }
 
 // ---------- the loop ----------
