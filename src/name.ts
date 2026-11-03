@@ -2,11 +2,11 @@
 // and on the leaderboard. Saved like every other setting (store.ts).
 
 import { cleanName } from './net/protocol';
-import { store } from './store';
+import { desktop, store } from './store';
 
 const NAME_KEY = 'papercut.name';
-/** A name for someone who hasn't picked one, like "Ronin 4F2A". */
-function roninName() { return `Ronin ${Math.floor(Math.random() * 0x10000).toString(16).toUpperCase().padStart(4, '0')}`; }
+/** A name for someone who hasn't picked one: their Steam name in the desktop app with Steam open, else like "Ronin 4F2A". */
+function roninName() { return cleanName(desktop?.steam?.name, '') || `Ronin ${Math.floor(Math.random() * 0x10000).toString(16).toUpperCase().padStart(4, '0')}`; }
 /** Your name: the one you typed (here or in a tournament lobby), or a Ronin name made and saved the first time. */
 export function myName(): string {
   const saved = cleanName(store.get(NAME_KEY), '');

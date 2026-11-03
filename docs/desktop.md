@@ -30,7 +30,7 @@ Settings (window, resolution, frame rate, vsync, volume, guard style), your tour
 - Windows: `%APPDATA%\Papercut\settings.json` (paste that into the File Explorer address bar)
 - Linux / Steam Deck: `~/.config/Papercut/settings.json`
 
-Delete the file to go back to the defaults. Steam Cloud will sync this file once the Steamworks issue (#31) is done.
+Delete the file to go back to the defaults. With Steam open, Steam Cloud carries your progress (name, ranked rating, best Endless run, fighter, controls, volume) to your other PCs; window and graphics settings stay on each PC. See [steam.md](steam.md).
 
 ## Online play and versions
 
