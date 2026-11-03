@@ -1,9 +1,13 @@
 // Papercut: menus, practice against the dummy, Endless runs against bots, online fights, tournaments,
 // and the 60-frames-a-second loop.
 
+import '@fontsource/big-shoulders-stencil-display/600';
+import '@fontsource/big-shoulders-stencil-display/800';
+import '@fontsource/atkinson-hyperlegible/400';
+import '@fontsource/atkinson-hyperlegible/700';
 import './style.css';
 import { Hud, botLevel } from './hud';
-import { Controls } from './input';
+import { Controls, type Command } from './input';
 import { Net } from './net/client';
 import { Lockstep } from './net/lockstep';
 import { BYE_SLOT, normalizeCode, type ToClient } from './net/protocol';
@@ -12,8 +16,12 @@ import { engine } from './audio/engine';
 import { music, PAGE_TRACKS, type MusicMode, type Tension, type TrackKey } from './audio/music';
 import { sfx } from './audio/sounds';
 import { View } from './render/view';
+import { loadDisplay, saveDisplay, skipFrame } from './settings';
+import { desktop, store } from './store';
 import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
 import { Dummy } from './sim/dummy';
+import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
+import { TuningPanel } from './tuning-panel';
 import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
@@ -32,6 +40,11 @@ const controls = new Controls(canvas, $('#chips'), $('#aim'));
 const net = new Net();
 const wakeAudio = () => { engine.wake(); };
 $('#build').textContent = `build ${__BUILD__}`;
+/** Where invite links point: this site, or the live site from the desktop app. */
+const SITE = desktop ? desktop.server : location.origin;
+// T in Practice: sliders for the fight's numbers (#9). Practice only; everything else resets them.
+const tuner = new TuningPanel(stage, __BUILD__);
+tuner.onClose = () => { controls.clear(); if (mode.kind === 'practice') { controls.active = true; controls.lockWanted = true; controls.lock(); } };
 
 type Mode =
   | { kind: 'menu'; s: State }
@@ -55,13 +68,13 @@ let tourney: {
   backAt: number;
 } | null = null;
 const NAME_KEY = 'papercut.name';
-function myName() { try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } }
-function saveName(n: string) { try { localStorage.setItem(NAME_KEY, n); } catch { /* not remembered */ } }
+function myName() { return store.get(NAME_KEY) ?? ''; }
+function saveName(n: string) { store.set(NAME_KEY, n); }
 const rulesLabel = (c: MatchCfg) => `${roundsLabel(c.wins)}, ${c.maxHp} health, ${c.roundSecs ? c.roundSecs + 's' : 'no timer'}`;
 const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // ---------- menus ----------
-type Screen = 'main' | 'howto' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error';
+type Screen = 'main' | 'howto' | 'settings' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   screen = to;
@@ -69,7 +82,7 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   $('#menu').hidden = false;
   for (const el of document.querySelectorAll<HTMLElement>('[data-screen]')) el.hidden = el.dataset.screen !== to;
   if (to === 'host' && opts.code) {
-    const link = `${location.origin}/?room=${opts.code}`;
+    const link = `${SITE}/?room=${opts.code}`;
     $<HTMLInputElement>('#inviteLink').value = link;
     $('#inviteCode').textContent = opts.code;
     $('#hostWait').textContent = 'Send this link to a friend. The fight starts when they open it.';
@@ -77,11 +90,13 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (to === 'host' && !opts.code) { $<HTMLInputElement>('#inviteLink').value = ''; $('#inviteCode').textContent = '····'; $('#hostWait').textContent = 'Making your room…'; }
   if (to === 'join') $('#joinWait').textContent = `Joining room ${opts.code}…`;
   if (to === 'error') $('#errorMsg').textContent = opts.msg ?? 'Something went wrong.';
+  if (to === 'settings') fillSettings();
   if (to === 'main') { const b = loadBest(); $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}` : 'How many bots can you cut?'; }
 }
 function hideMenu() { showSound(false); screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
 
 function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
+  tuner.toggle(false); resetTuning();
   if (mode.kind === 'online' || tourney) net.send({ t: 'cancel' });
   tourney = null; hud.tourney = false; hud.names = null;
   controls.active = false; controls.clear();
@@ -92,14 +107,16 @@ function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
   showMenu(to, opts);
 }
 
-// Endless: the best run is kept in this browser only.
+// Endless: the best run is kept in this browser, or on disk in the desktop app.
 const BEST_KEY = 'papercut.endlessBest';
-function loadBest() { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } }
-function saveBest(n: number) { try { if (n > loadBest()) localStorage.setItem(BEST_KEY, String(n)); } catch { /* storage blocked: the run just isn't remembered */ } }
+function loadBest() { return Number(store.get(BEST_KEY)) || 0; }
+function saveBest(n: number) { if (n > loadBest()) store.set(BEST_KEY, String(n)); }
 
 function startPractice(endless = false) {
   wakeAudio();
   const cfg = endless ? ENDLESS_CFG : DEFAULT_CFG;
+  // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) never does.
+  if (endless) resetTuning(); else applyTuning(loadSaved());
   mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless };
   hud.setRules(cfg); hud.best = loadBest();
   begin();
@@ -108,6 +125,7 @@ function startPractice(endless = false) {
 
 function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, names: [string, string] | null = null) {
   wakeAudio();
+  tuner.toggle(false); resetTuning();
   const lock = new Lockstep(seat, delay, (m) => net.send(m), cfg);
   hud.setRules(cfg);
   mode = { kind: 'online', lock, code };
@@ -118,6 +136,7 @@ function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, na
 
 /** Watch a tournament fight between two other players. */
 function startWatching(delay: number, code: string, cfg: MatchCfg, names: [string, string]) {
+  tuner.toggle(false); resetTuning();
   mode = { kind: 'watch', spec: new Spectator(cfg, delay), code, names };
   hud.setRules(cfg);
   view.reset(mode.spec.state);
@@ -140,7 +159,7 @@ function toBracket() {
 
 function renderLobby(m: Extract<ToClient, { t: 'lobby' }>) {
   $('#tCode').textContent = m.code;
-  $<HTMLInputElement>('#tLink').value = `${location.origin}/?room=${m.code}`;
+  $<HTMLInputElement>('#tLink').value = `${SITE}/?room=${m.code}`;
   $('#tRules').textContent = `${rulesLabel(m.cfg)} per fight. Knockout: lose once and you're out.`;
   $('#tPlayers').innerHTML = m.names.map((n, i) => `<li${i === m.you ? ' class="me"' : ''}>${esc(n)}${i === 0 ? ' (host)' : ''}${i === m.you ? ' · you' : ''}</li>`).join('');
   const nameIn = $<HTMLInputElement>('#tName');
@@ -198,12 +217,54 @@ const GUARD_HOW = {
   line: 'Move the mouse <b>up</b> to guard high, <b>down</b> to guard low. No cursor: just flick.',
   cursor: "Move the crosshair <b>above</b> your fighter's waist to guard high, <b>below</b> to guard low.",
 };
-function showGuardStyle() {
-  $('#bGuard').textContent = controls.guardStyle === 'line' ? 'Guard: Line' : 'Guard: Cursor';
-  $('#howGuard').innerHTML = GUARD_HOW[controls.guardStyle];
-}
-$('#bGuard').addEventListener('click', () => { controls.setGuardStyle(controls.guardStyle === 'line' ? 'cursor' : 'line'); showGuardStyle(); });
+function showGuardStyle() { $('#howGuard').innerHTML = GUARD_HOW[controls.guardStyle]; }
 showGuardStyle();
+
+// ---------- settings ----------
+let display = loadDisplay();
+const isFullscreen = () => (desktop ? desktop.isFullscreen() : !!document.fullscreenElement);
+function setFullscreen(on: boolean) {
+  if (desktop) desktop.setFullscreen(on);
+  else if (on && !document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+  else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+function fillSettings() {
+  $<HTMLSelectElement>('#setWindow').value = isFullscreen() ? 'full' : 'win';
+  $<HTMLSelectElement>('#setScale').value = String(display.scale);
+  $<HTMLSelectElement>('#setFps').value = String(display.fps);
+  $<HTMLSelectElement>('#setVsync').value = display.vsync ? 'on' : 'off';
+  $<HTMLSelectElement>('#setGuard').value = controls.guardStyle;
+  syncVolumeInputs();
+  $('#setNote').textContent = desktop
+    ? 'Vsync changes apply the next time you start Papercut. F11 or Alt+Enter also switches fullscreen.'
+    : "In a browser the frame rate can't go above your screen's. Settings are kept in this browser.";
+}
+function readSettings() {
+  display = {
+    fullscreen: $<HTMLSelectElement>('#setWindow').value === 'full',
+    scale: Number($<HTMLSelectElement>('#setScale').value),
+    fps: Number($<HTMLSelectElement>('#setFps').value),
+    vsync: $<HTMLSelectElement>('#setVsync').value === 'on',
+  };
+  saveDisplay(display);
+  view.setScale(display.scale);
+}
+$('#setWindow').addEventListener('change', () => { readSettings(); setFullscreen(display.fullscreen); });
+for (const id of ['#setScale', '#setFps', '#setVsync']) $(id).addEventListener('change', readSettings);
+$('#setGuard').addEventListener('change', () => { controls.setGuardStyle($<HTMLSelectElement>('#setGuard').value === 'cursor' ? 'cursor' : 'line'); showGuardStyle(); });
+$('#settingsForm').addEventListener('submit', (e) => { e.preventDefault(); showMenu('main'); });
+$('#bSettings').addEventListener('click', () => showMenu('settings'));
+for (const el of document.querySelectorAll<HTMLElement>('[data-desktop-only]')) el.hidden = !desktop;
+if (desktop) {
+  $('#bQuit').hidden = false;
+  $('#bQuit').addEventListener('click', () => desktop!.quit());
+  // F11 / Alt+Enter (handled by the app) and the Settings screen both land here, so the saved choice follows.
+  desktop.onFullscreen((on) => {
+    if (display.fullscreen !== on) { display = { ...display, fullscreen: on }; saveDisplay(display); }
+    if (screen === 'settings') $<HTMLSelectElement>('#setWindow').value = on ? 'full' : 'win';
+  });
+}
+view.setScale(display.scale);
 let setupFor: 'room' | 'tourney' = 'room';
 function openSetup(kind: 'room' | 'tourney') {
   setupFor = kind;
@@ -255,6 +316,7 @@ const soundBox = $('#soundBox');
 const soundBtns = [...document.querySelectorAll<HTMLButtonElement>('[data-sound]')];
 function showSound(open: boolean, under?: HTMLElement) {
   soundBox.hidden = !open;
+  if (open) syncVolumeInputs();
   for (const b of soundBtns) b.setAttribute('aria-expanded', String(open));
   if (open && under) {
     // Sit just under the button that opened it, kept on screen.
@@ -264,22 +326,32 @@ function showSound(open: boolean, under?: HTMLElement) {
   }
 }
 for (const b of soundBtns) b.addEventListener('click', () => { wakeAudio(); showSound(soundBox.hidden, b); });
-for (const [id, key] of [['#volMusic', 'music'], ['#volSfx', 'sfx']] as const) {
+// The same two sliders sit in the fight's Sound panel and on the Settings screen.
+const VOLUME_INPUTS = [['#volMusic', 'music'], ['#volSfx', 'sfx'], ['#setMusic', 'music'], ['#setSfx', 'sfx']] as const;
+function syncVolumeInputs() { for (const [id, key] of VOLUME_INPUTS) $<HTMLInputElement>(id).value = String(Math.round(engine.vol[key] * 100)); }
+for (const [id, key] of VOLUME_INPUTS) {
   const input = $<HTMLInputElement>(id);
-  input.value = String(Math.round(engine.vol[key] * 100));
-  input.addEventListener('input', () => engine.setVolumes({ [key]: Number(input.value) / 100 }));
+  input.addEventListener('input', () => { wakeAudio(); engine.setVolumes({ [key]: Number(input.value) / 100 }); });
   if (key === 'sfx') input.addEventListener('change', () => sfx.hit(0)); // a sample of the new level
 }
+syncVolumeInputs();
 document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement) showSound(false); }); // back in the fight
 // A soft paper tap on every menu button.
 document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('.mbtn, .hbtn')) { wakeAudio(); sfx.ui(); } });
 $('#rematch').addEventListener('click', () => command('rematch'));
 
-function command(c: 'restart' | 'menu' | 'rematch' | 'hitboxes') {
+function command(c: Command) {
   if (c === 'hitboxes') { view.hitboxes.toggle(); return; }
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto') showMenu('main'); return; }
+  if (c === 'tune') {
+    if (mode.kind !== 'practice' || mode.endless) return;
+    tuner.toggle();
+    if (tuner.open) { controls.clear(); controls.active = false; controls.lockWanted = false; controls.unlock(); }
+    return;
+  }
+  if (c === 'menu' && tuner.open) { tuner.toggle(false); return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings') showMenu('main'); return; }
   if (mode.kind === 'practice') {
-    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); hud.best = loadBest(); view.reset(mode.s); controls.lockWanted = true; controls.lock(); }
+    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
   } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
 }
 controls.onCommand = command;
@@ -349,10 +421,12 @@ const statusEl = $('#status');
 let lastStatus = '';
 function frame(now: number) {
   requestAnimationFrame(frame);
+  if (skipFrame(display.fps, now - last)) return; // frame cap: the time is counted on the next drawn frame
   const real = Math.min(0.05, (now - last) / 1000); last = now;
   const m = mode;
   const seat = seatOf(m);
-  if (m.kind === 'practice') {
+  if (m.kind === 'practice' && tuner.open) acc = 0; // paused while tuning
+  else if (m.kind === 'practice') {
     acc += real;
     while (acc >= STEP) {
       const s = m.s;
@@ -401,7 +475,7 @@ function frame(now: number) {
   if (m.kind !== 'menu') {
     hud.update(s, m.kind === 'online' ? seat : m.kind === 'watch' ? null : 0);
     // Hold the mouse while fighting; let it go when the match is over so Rematch and Leave can be clicked.
-    controls.lockWanted = m.kind !== 'watch' && s.phase !== 'over';
+    controls.lockWanted = m.kind !== 'watch' && s.phase !== 'over' && !tuner.open;
     if (!controls.lockWanted) controls.unlock();
   }
   music.set(...musicFor(m, s));
@@ -409,7 +483,7 @@ function frame(now: number) {
   stage.style.background = view.sky;
 
   let status = '';
-  if (m.kind === 'practice') status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · Esc for the menu` : 'Practice: Sumi is a dummy · Esc for the menu';
+  if (m.kind === 'practice') status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · Esc for the menu` : `Practice: Sumi is a dummy · T to tune${isTuned() ? ' (tuned numbers)' : ''} · Esc for the menu`;
   else if (m.kind === 'online') {
     const l = m.lock;
     status = l.desynced ? `Out of sync at frame ${l.frame}. Please tell Marz.`

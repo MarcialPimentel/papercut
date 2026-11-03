@@ -2,12 +2,14 @@
 // Audio only starts after the player presses something (browsers require it).
 // Sound never touches the fight rules, so Math.random is fine here.
 
+import { store } from '../store';
+
 export interface Volumes { music: number; sfx: number } // 0-1 each
 
 const KEY = 'papercut.volume';
 function loadVolumes(): Volumes {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const v = JSON.parse(store.get(KEY) || 'null');
     if (v && typeof v.music === 'number' && typeof v.sfx === 'number') return { music: v.music, sfx: v.sfx };
   } catch { /* private window or blocked storage: use the defaults */ }
   return { music: 0.6, sfx: 0.8 };
@@ -48,7 +50,7 @@ export class Engine {
 
   setVolumes(v: Partial<Volumes>) {
     Object.assign(this.vol, v);
-    try { localStorage.setItem(KEY, JSON.stringify(this.vol)); } catch { /* not saved; fine */ }
+    store.set(KEY, JSON.stringify(this.vol));
     this.applyVolumes();
   }
   private applyVolumes() {
