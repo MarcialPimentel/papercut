@@ -4,7 +4,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createServer } from 'vite';
+import { createServer, loadConfigFromFile } from 'vite';
 import { chromium } from 'playwright-core';
 
 export const HERE = dirname(fileURLToPath(import.meta.url));
@@ -14,8 +14,9 @@ export const FPS = 30; // trailer and capture frame rate (the fight itself alway
 
 /** The game's dev server (Vite), which also serves these tools' own pages. */
 export async function startServer() {
-  // Not vite.config.ts: its proxy to the rooms server (not running here) would only log connection errors.
-  const server = await createServer({ root: ROOT, configFile: false, logLevel: 'error', define: { __BUILD__: JSON.stringify('store') }, server: { port: 5299, strictPort: false } });
+  // The game's own config, minus its proxy to the rooms server (not running here; it would only log errors).
+  const { config } = await loadConfigFromFile({ command: 'serve', mode: 'development' }, join(ROOT, 'vite.config.ts'));
+  const server = await createServer({ ...config, configFile: false, root: ROOT, logLevel: 'error', server: { ...config.server, proxy: undefined, port: 5299, strictPort: false } });
   await server.listen();
   const url = server.resolvedUrls.local[0];
   return { server, url };
