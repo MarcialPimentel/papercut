@@ -7,7 +7,7 @@
 
 import { clipConvex, type Pt } from './paper2d';
 import type { Look } from './common';
-import type { Piece, Shape } from './puppet';
+import type { Piece, Shape, Variant } from './puppet';
 
 export interface ColourSet { id: string; name: string; robe: string; kimono: string; hakama: string; hakamaDark: string }
 /** Dark side: `robe` over `kimono`. Light side: the two swapped. Hakama stays. No bright red, pink, orange or
@@ -46,24 +46,33 @@ export const SWORDS: readonly SwordStyle[] = [
   { id: 'hamon', name: 'Hamon', note: 'Steel with an ink temper line, square guard', blade: '#EEF0F2', guard: '#18171C', handle: '#18171C', wrap: '#8A8794', guardShape: 'square', mark: 'hamon', markColor: '#9AA3AD' },
 ];
 
+/** The two fighters' own paper pieces (#37): Kami's topknot and wide sleeves, Sumi's long hair and tied-back
+ *  sleeves. Drawn only: both have the same body and reach. */
+export const FIGHTERS = [
+  { id: 'kami', name: 'Kami', note: 'Topknot and wide sleeves' },
+  { id: 'sumi', name: 'Sumi', note: 'Long hair worn down and tied-back sleeves' },
+] as const satisfies readonly { id: Variant; name: string; note: string }[];
+
 /** What a player picked on the Fighter screen. */
-export interface Pick { set: string; light: boolean; outfit: OutfitId; sword: string }
-export const DEFAULT_PICK: Pick = { set: 'indigo', light: false, outfit: 'waves', sword: 'katana' };
-/** The practice dummy and the default player 2: Indigo worn light, as Sumi always was. */
-export const SUMI_PICK: Pick = { ...DEFAULT_PICK, light: true };
+export interface Pick { set: string; light: boolean; outfit: OutfitId; sword: string; fighter: Variant }
+export const DEFAULT_PICK: Pick = { set: 'indigo', light: false, outfit: 'waves', sword: 'katana', fighter: 'kami' };
+/** The practice dummy and the default player 2: Sumi, in Indigo worn light, as always. */
+export const SUMI_PICK: Pick = { ...DEFAULT_PICK, light: true, fighter: 'sumi' };
 
 const byId = <T extends { id: string }>(list: readonly T[], id: string) => list.find((x) => x.id === id);
 
-/** A pick as a short text code for the server, e.g. "kraft.l.stripes.folded". */
-export const encodePick = (p: Pick) => `${p.set}.${p.light ? 'l' : 'd'}.${p.outfit}.${p.sword}`;
+/** A pick as a short text code for the server, e.g. "kraft.l.stripes.folded.s" (the last letter: Kami or Sumi). */
+export const encodePick = (p: Pick) => `${p.set}.${p.light ? 'l' : 'd'}.${p.outfit}.${p.sword}.${p.fighter === 'sumi' ? 's' : 'k'}`;
 /** Read a pick back; anything unknown falls back to the default, so a bad code can only look plain. */
 export function decodePick(code: unknown, fallback: Pick = DEFAULT_PICK): Pick {
-  const [set, side, outfit, sword] = typeof code === 'string' ? code.split('.') : [];
+  // Older codes have no fighter letter: then the fallback (the seat's own fighter) decides.
+  const [set, side, outfit, sword, who] = typeof code === 'string' ? code.split('.') : [];
   return {
     set: byId(COLOUR_SETS, set ?? '') ? set : fallback.set,
     light: side === 'l' ? true : side === 'd' ? false : fallback.light,
     outfit: byId(OUTFITS, outfit ?? '') ? (outfit as OutfitId) : fallback.outfit,
     sword: byId(SWORDS, sword ?? '') ? sword : fallback.sword,
+    fighter: who === 's' ? 'sumi' : who === 'k' ? 'kami' : fallback.fighter,
   };
 }
 
@@ -75,14 +84,14 @@ export function pairPicks(a: Pick, b: Pick): [Pick, Pick] {
 /** A random look for an Endless bot (rand returns 0..1). */
 export function randomPick(rand: () => number): Pick {
   const any = <T>(list: readonly T[]) => list[Math.min(list.length - 1, Math.floor(rand() * list.length))];
-  return { set: any(COLOUR_SETS).id, light: rand() < 0.5, outfit: any(OUTFITS).id, sword: any(SWORDS).id };
+  return { set: any(COLOUR_SETS).id, light: rand() < 0.5, outfit: any(OUTFITS).id, sword: any(SWORDS).id, fighter: any(FIGHTERS).id };
 }
 
 /** The look the fighter is drawn with: colours by Blender material role, plus the outfit and sword. */
 export function lookOf(p: Pick, name: string): Look {
   const c = byId(COLOUR_SETS, p.set) ?? COLOUR_SETS[0];
   const [robe, kimono] = p.light ? [c.kimono, c.robe] : [c.robe, c.kimono];
-  return { name, key: encodePick(p), colors: { robe, kimono, hakama: c.hakama, hakamaDark: c.hakamaDark }, outfit: p.outfit, sword: p.sword };
+  return { name, key: encodePick(p), colors: { robe, kimono, hakama: c.hakama, hakamaDark: c.hakamaDark }, outfit: p.outfit, sword: p.sword, variant: p.fighter };
 }
 
 // ---------- dressing the pieces ----------

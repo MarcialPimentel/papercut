@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { FighterView } from './render/fighter';
-import { COLOUR_SETS, DEFAULT_PICK, OUTFITS, SWORDS, decodePick, encodePick, lookOf, type Pick } from './render/looks';
+import { COLOUR_SETS, DEFAULT_PICK, FIGHTERS, OUTFITS, SWORDS, decodePick, encodePick, lookOf, type Pick } from './render/looks';
 import type { PaperPhysics } from './render/physics';
 import { newMatch } from './sim/sim';
 import { myName, saveName } from './name';
@@ -31,7 +31,7 @@ export class FighterScreen {
   private pick = myPick();
   private paper: string = 'graph';
 
-  constructor(private canvas: HTMLCanvasElement, private picks: HTMLElement, private nameIn: HTMLInputElement, private nameTag: HTMLElement,
+  constructor(private canvas: HTMLCanvasElement, private picks: HTMLElement, private who: HTMLElement, private nameIn: HTMLInputElement, private nameTag: HTMLElement,
     physics: PaperPhysics, private onChange: (p: Pick) => void) {
     // The tag under the preview follows your typing; the name is saved when you leave the box (or press Enter).
     nameIn.addEventListener('input', () => { nameTag.textContent = cleanName(nameIn.value, ''); });
@@ -44,7 +44,7 @@ export class FighterScreen {
     this.fighter = new FighterView(this.scene, lookOf(this.pick, 'You'), 0, physics);
     this.camera.position.set(0.5, 1.12, 4.4);
     this.camera.lookAt(0.5, 1.05, 0);
-    picks.addEventListener('click', (e) => {
+    const onPick = (e: MouseEvent) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-k]');
       if (!b) return;
       const k = b.dataset.k!, v = b.dataset.v!;
@@ -57,8 +57,10 @@ export class FighterScreen {
         this.onChange(this.pick);
       }
       this.render();
-      this.picks.querySelector<HTMLButtonElement>(`#${b.id}`)?.focus();
-    });
+      document.getElementById(b.id)?.focus();
+    };
+    picks.addEventListener('click', onPick);
+    who.addEventListener('click', onPick);
   }
 
   open() {
@@ -97,6 +99,8 @@ export class FighterScreen {
     const chip = (k: string, v: string, label: string, on: boolean, swatch = '') =>
       `<button class="pchip" type="button" id="fp-${k}-${v}" data-k="${k}" data-v="${v}" aria-pressed="${on}">${swatch ? `<i style="background:${swatch}"></i>` : ''}${label}</button>`;
     const row = (title: string, body: string) => `<div class="frow"><b>${title}</b><div class="chips" data-choices>${body}</div></div>`;
+    // Kami or Sumi, at the top next to the title: which fighter's own paper pieces you wear.
+    this.who.innerHTML = FIGHTERS.map((f) => chip('fighter', f.id, f.name, p.fighter === f.id)).join('');
     this.picks.innerHTML =
       row('Colours', COLOUR_SETS.map((c) => chip('set', c.id, c.name, p.set === c.id, c.robe)).join('')) +
       row('Robe', chip('light', '0', 'Dark', !p.light) + chip('light', '1', 'Light', p.light)) +
