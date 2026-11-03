@@ -7,11 +7,12 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { cleanEndless } from './endless';
+import { readClaim, verifyRun } from './endless';
 import { Lobby, type Peer } from './lobby';
 import { page, readFilter, summarize } from './stats';
-import { Ranked } from './ranked';
-import { openStore } from './store';
+import { Ranked, playerId, tokenOk } from './ranked';
+import { cleanName } from './tourney';
+import { BOARD_SIZE, PERIODS, openStore, type Period } from './store';
 import type { ToServer } from '../src/net/protocol';
 
 const PORT = Number(process.env.PORT || 8790);
@@ -29,7 +30,8 @@ const TYPES: Record<string, string> = {
 const store = await openStore();
 const saveError = (what: string) => (e: Error) => console.error(`Could not save ${what}:`, e.message);
 // Ranked ratings need the database to last; on your own PC they're kept in memory like the stats.
-const lobby = new Lobby(Math.random, setTimeout, (r) => { store.addMatch(BUILD, r).catch(saveError('a match')); }, new Ranked(store));
+const ranked = new Ranked(store);
+const lobby = new Lobby(Math.random, setTimeout, (r) => { store.addMatch(BUILD, r).catch(saveError('a match')); }, ranked);
 setInterval(() => lobby.tick(), 1000).unref();
 const started = Date.now();
 // Inputs older than 90 days are dropped once a day (and once at start).
@@ -51,17 +53,64 @@ function readBody(req: IncomingMessage, limit: number): Promise<string | null> {
   });
 }
 
-async function endlessReport(req: IncomingMessage, res: ServerResponse) {
+function tooMany(req: IncomingMessage) {
   const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim();
   const n = (reports.get(ip) ?? 0) + 1;
   reports.set(ip, n);
-  if (n > REPORTS_PER_MIN) { res.writeHead(429).end(); return; }
-  const body = await readBody(req, 64 * 1024);
-  let run = null;
-  try { run = body && cleanEndless(JSON.parse(body)); } catch { /* not JSON */ }
-  if (!run) { res.writeHead(400).end(); return; }
-  await store.addEndless(BUILD, run).catch(saveError('an Endless run'));
-  res.writeHead(204).end();
+  return n > REPORTS_PER_MIN;
+}
+
+const json = (res: ServerResponse, code: number, body: unknown) => {
+  res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(body));
+};
+
+async function readJson(req: IncomingMessage, limit: number): Promise<unknown> {
+  const body = await readBody(req, limit);
+  try { return body ? JSON.parse(body) : null; } catch { return null; }
+}
+
+/** The places a player holds on the three leaderboards. */
+async function placesOf(pid: string) {
+  const out: Partial<Record<Period, number>> = {};
+  for (const p of PERIODS) { const pl = await store.place(pid, p); if (pl) out[p] = pl.place; }
+  return out;
+}
+
+/**
+ * A finished Endless run: the server re-plays it from its seed and inputs and keeps only the score
+ * the re-play reaches. With the player's token it also goes on the leaderboard.
+ */
+async function endlessReport(req: IncomingMessage, res: ServerResponse) {
+  if (tooMany(req)) return json(res, 429, { error: 'Too many runs at once. Try again in a minute.' });
+  const claim = readClaim(await readJson(req, 4 * 1024 * 1024));
+  if (typeof claim === 'string') return json(res, 400, { error: claim });
+  const checked = await verifyRun(claim);
+  if (typeof checked === 'string') return json(res, 400, { error: checked });
+  const pid = tokenOk(claim.token) ? playerId(claim.token) : undefined;
+  if (pid) {
+    const p = await ranked.load(pid);
+    p.name = cleanName(claim.name, p.name);
+    await store.savePlayer(p).catch(saveError('a player'));
+  }
+  await store.addEndless(BUILD, { ...checked.run, player: pid }).catch(saveError('an Endless run'));
+  json(res, 200, { ok: true, bots: checked.run.bots, places: pid ? await placesOf(pid).catch(() => ({})) : {} });
+}
+
+/** The leaderboard. GET: the top list. POST with the player's token: the top list marked with them, and their place. */
+async function leaderboard(req: IncomingMessage, res: ServerResponse) {
+  const url = new URL(req.url || '/', 'http://x');
+  const body = (req.method === 'POST' ? await readJson(req, 4096) : null) as Record<string, unknown> | null;
+  const asked = body?.period ?? url.searchParams.get('period');
+  const period: Period = PERIODS.includes(asked as Period) ? (asked as Period) : 'all';
+  const pid = body && tokenOk(body.id) ? playerId(body.id) : undefined;
+  const top = await store.board(period, BOARD_SIZE);
+  const you = pid ? await store.place(pid, period) : null;
+  json(res, 200, {
+    period,
+    top: top.map((r) => ({ name: r.name || 'Ronin', bots: r.bots, secs: Math.round(r.frames / 60), you: r.player === pid })),
+    you,
+  });
 }
 
 async function statsPage(req: IncomingMessage, res: ServerResponse, json: boolean) {
@@ -105,7 +154,8 @@ const server = createServer((req, res) => {
     return;
   }
   const path = (req.url || '/').split('?')[0];
-  if (path === '/api/endless' && req.method === 'POST') { endlessReport(req, res).catch(() => res.writeHead(500).end()); return; }
+  if (path === '/api/endless' && req.method === 'POST') { endlessReport(req, res).catch(() => json(res, 500, { error: 'server error' })); return; }
+  if (path === '/api/leaderboard' && (req.method === 'GET' || req.method === 'POST')) { leaderboard(req, res).catch(() => json(res, 503, { error: 'not available' })); return; }
   if ((path === '/stats' || path === '/api/stats') && req.method === 'GET') { statsPage(req, res, path === '/api/stats').catch(() => res.writeHead(500).end()); return; }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405).end(); return; }
   serveFile(req, res).catch(() => res.writeHead(500).end());

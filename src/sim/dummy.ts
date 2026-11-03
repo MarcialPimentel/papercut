@@ -1,6 +1,7 @@
 // Sumi as a practice dummy: presses the same buttons a player would.
 // Switches guard on a timer (with a yellow glint as the tell), walks in when you back off,
-// swings back now and then, and sometimes feints a heavy. Only used offline, so it may use randomness.
+// swings back now and then, and sometimes feints a heavy. Only used offline. Its dice come only from `rand`
+// (never Math.random directly): Endless passes a seeded one so the server can re-play a run (src/sim/endless.ts).
 // Endless mode raises its `level`: from level 1 it also reads your wind-ups and switches guard to block
 // (late switches at high levels become parries), punishes your misses with a counter cut, knocks
 // jumpers out of the air and cuts you while you're stuck landing. Each level does all of it more often.

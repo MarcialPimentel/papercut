@@ -68,7 +68,7 @@ The script [`deploy/hub/add-stats-db.sh`](../deploy/hub/add-stats-db.sh) does ev
 
 If step 3 prints **ERROR**, nothing was left half-changed. Copy the output to Claude.
 
-The same database holds the ranked ratings (table `players`, since the ranked build). The server creates and updates its tables itself on start, so no extra step is needed for new builds.
+The same database holds the ranked ratings (table `players`, since the ranked build) and the Endless leaderboard (table `endless_runs`, each run's player and length since the leaderboard build). The server creates and updates its tables itself on start, so no extra step is needed for new builds.
 
 ### Backups
 

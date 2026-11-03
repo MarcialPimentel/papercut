@@ -57,6 +57,7 @@
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
           <div class="row2">
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
+            <button class="hbtn" id="bBoard" type="button">Leaderboard</button>
             <button class="hbtn" data-sound type="button" aria-expanded="false" aria-controls="soundBox">Sound</button>
             <button class="hbtn" id="bGuard" type="button" title="How the mouse sets your guard">Guard: Line</button>
           </div>
@@ -116,6 +117,19 @@
         <div data-screen="error" class="stack" hidden>
           <p class="big" id="errorMsg">Something went wrong.</p>
           <button class="mbtn" data-cancel type="button">Back</button>
+        </div>
+
+        <div data-screen="board" class="stack board" hidden>
+          <p class="big">Endless leaderboard</p>
+          <div class="tabs" role="group" aria-label="Time">
+            <button class="hbtn" data-period="day" type="button">24 hours</button>
+            <button class="hbtn" data-period="week" type="button">7 days</button>
+            <button class="hbtn" data-period="all" type="button">All time</button>
+          </div>
+          <ol id="boardList"></ol>
+          <p class="muted" id="boardYou"></p>
+          <p class="muted small">Each player's best run: most bots, then the fastest. The server re-plays every run before it counts.</p>
+          <button class="mbtn" id="bBoardBack" type="button">Back</button>
         </div>
 
         <div data-screen="howto" class="stack howto" hidden>
