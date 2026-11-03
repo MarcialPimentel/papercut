@@ -9,14 +9,14 @@ import type { MatchCfg } from '../sim/config';
 export type ToServer =
   | { t: 'hello'; guard: 'flick' | 'cursor' | 'pad'; id?: string } // how this player guards (for the stats) and this browser's ranked token
   | { t: 'ranked'; name?: string; look?: string } // join the ranked queue
-  | { t: 'host'; cfg?: MatchCfg; look?: string } // make a private room for an invite link, with its rules
+  | { t: 'host'; cfg?: MatchCfg; name?: string; look?: string } // make a private room for an invite link, with its rules
   | { t: 'join'; code: string; name?: string; look?: string } // a 1v1 room or a tournament
   | { t: 'tourney'; cfg?: MatchCfg; name?: string; look?: string } // make a tournament room (3-8 players)
   | { t: 'name'; name: string } // rename yourself in a tournament lobby
   | { t: 'begin' } // the tournament's host starts the bracket
   | { t: 'restart' } // the host deals a new, reshuffled bracket with the same players (between fights only)
   | { t: 'result'; winner: number } // a tournament fighter: who won the match that just ended
-  | { t: 'quick'; look?: string } // pair with whoever is waiting
+  | { t: 'quick'; name?: string; look?: string } // pair with whoever is waiting
   | { t: 'cancel' } // leave the room or the queue
   | { t: 'in'; f: number; b: number } // my buttons for frame f
   | { t: 'hash'; f: number; h: number }; // my fight's fingerprint at frame f
@@ -24,7 +24,7 @@ export type ToServer =
 export type ToClient =
   | { t: 'room'; code: string } // your invite room is ready
   | { t: 'waiting'; ranked?: boolean } // you're in the quick-match (or ranked) queue
-  | { t: 'start'; seat: 0 | 1; delay: number; code: string; cfg: MatchCfg; looks?: [string, string]; ranks?: [RankInfo, RankInfo] } // the fight begins: seat 0 is Kami, 1 is Sumi (ranks: a ranked match)
+  | { t: 'start'; seat: 0 | 1; delay: number; code: string; cfg: MatchCfg; looks?: [string, string]; names?: [string, string]; ranks?: [RankInfo, RankInfo] } // the fight begins: seat 0 is Kami, 1 is Sumi (ranks: a ranked match)
   | { t: 'rank'; you: RankInfo } // your ranked standing
   | { t: 'ranked'; won: boolean; why: 'match' | 'left'; delta: number; you: RankInfo } // a ranked match was decided
   | { t: 'in'; f: number; b: number; s?: 0 | 1 } // s: whose buttons, for players watching a tournament fight
@@ -46,6 +46,14 @@ export const BYE_SLOT = -1;
 
 /** A look code as the server keeps it: short lowercase letters, digits and dots, or '' (the default look). */
 export const cleanLook = (x: unknown) => (typeof x === 'string' && /^[a-z0-9.]{1,40}$/.test(x) ? x : '');
+
+/** Longest name a player can pick. */
+export const NAME_MAX = 14;
+/** A player's name: letters, numbers, spaces and _ . ' - only, at most 14 long, never empty (else `fallback`). */
+export function cleanName(x: unknown, fallback: string) {
+  const s = typeof x === 'string' ? x.replace(/[^\p{L}\p{N} _.'-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, NAME_MAX).trim() : '';
+  return s || fallback;
+}
 
 export const CODE_LETTERS = 'BCDFGHJKLMNPQRSTVWXZ';
 export const CODE_LENGTH = 4;

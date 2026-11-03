@@ -43,7 +43,7 @@ Use a desktop browser with a mouse, or plug in a controller (Xbox-style, PlaySta
 
 ## Your fighter
 
-On the main menu, **Your fighter** opens the look picker: 6 colour sets, dark or light robe, 3 outfit prints and 4 sword styles, with a 3D preview that turns its guard high and low. **Page** only changes the preview's background, to check the look on each spread. Your pick is saved in this browser and sent to your rival when an online fight starts. One fighter always wears a dark robe and the other a light one: if you both pick the same side, player 2's robe flips. Looks never change the fight (every sword has the same reach). Endless bots wear random looks.
+On the main menu, **Your fighter** opens your name and the look picker. **Name** is what rivals see over your health strip online, in tournaments, Ranked and the Endless leaderboard (up to 14 letters, numbers, spaces and _ . ' -). It shows in a tag under the preview while you type and is saved when you press Enter or leave the box. Leave it empty and you get a "Ronin" name with four letters and numbers. Then the look picker: 6 colour sets, dark or light robe, 3 outfit prints and 4 sword styles, with a 3D preview that turns its guard high and low. **Page** only changes the preview's background, to check the look on each spread. Your pick is saved in this browser and sent to your rival when an online fight starts. One fighter always wears a dark robe and the other a light one: if you both pick the same side, player 2's robe flips. Looks never change the fight (every sword has the same reach). Endless bots wear random looks.
 
 ## What to try
 
@@ -56,6 +56,7 @@ On the main menu, **Your fighter** opens the look picker: 6 colour sets, dark or
 - **A full match:** best of 5 (first to 3), the page turns between rounds, the winner stands on the back cover.
 - **Custom room:** try best of 1 with 50 health (deadly), or endless rounds with no timer. The status line in the corner shows the room's rules.
 - **Tournament:** with 3+ people (or several browser windows), run a bracket to the end. Does watching feel smooth? Does everyone land back on the bracket after each fight, and does everyone see the same champion?
+- **Your name (name build):** open Your fighter: there's already a Ronin name. Type your own and press Enter; the tag under the preview changes. Play a quick match or invite room against a friend (or a second browser): both of you should see both names over the health strips, not Kami / Sumi. Open a tournament: the lobby's name box shows the same name. Does 14 letters feel like enough?
 - **The cut-out fighters (2026-11-02):** watch a heavy's wind-up: can you read high from low as quickly as before? Turn around (jump over the dummy): the cards flip. Land a few hits: red slashes cut through the paper. K.O. the dummy: the halves should fly, bounce off the pop-ups and lie flat on the page.
 - **Heavy rework (2026-11-02):**
   - Throw a heavy at a guarding Sumi: it should step in, say "Stagger", and knock Sumi's blade up. Click a light right after at the other height: it should land before Sumi can do anything. Does a heavy now feel worth throwing?

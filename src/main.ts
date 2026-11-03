@@ -11,7 +11,7 @@ import { Controls, type Command } from './input';
 import { keysFor, navigate, renderPrompts, restartLabel, setupControlsScreen } from './controlsUi';
 import { Net } from './net/client';
 import { Lockstep } from './net/lockstep';
-import { BYE_SLOT, normalizeCode, type RankInfo, type ToClient } from './net/protocol';
+import { BYE_SLOT, cleanName, normalizeCode, type RankInfo, type ToClient } from './net/protocol';
 import { Spectator } from './net/spectator';
 import { engine } from './audio/engine';
 import { music, PAGE_TRACKS, type MusicMode, type Tension, type TrackKey } from './audio/music';
@@ -20,6 +20,7 @@ import { View } from './render/view';
 import { LOOKS } from './render/common';
 import { DEFAULT_PICK, SUMI_PICK, decodePick, encodePick, lookOf, pairPicks, randomPick, type Pick } from './render/looks';
 import { FighterScreen, myPick } from './fighter-screen';
+import { myName, saveName } from './name';
 import { loadDisplay, saveDisplay, skipFrame } from './settings';
 import { desktop, store } from './store';
 import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
@@ -82,9 +83,6 @@ let tourney: {
   /** When to go back to the bracket after the fight on screen ended (0 = not yet). */
   backAt: number;
 } | null = null;
-const NAME_KEY = 'papercut.name';
-function myName() { return store.get(NAME_KEY) ?? ''; }
-function saveName(n: string) { store.set(NAME_KEY, n); }
 const rulesLabel = (c: MatchCfg) => `${roundsLabel(c.wins)}, ${c.maxHp} health, ${c.roundSecs ? c.roundSecs + 's' : 'no timer'}`;
 const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -379,7 +377,7 @@ $('#bTutEndless').addEventListener('click', () => startPractice(true));
 $('#bTutMenu').addEventListener('click', () => showMenu('main'));
 $('#bEndless').addEventListener('click', () => startPractice(true));
 $('#bHowTo').addEventListener('click', () => showMenu('howto'));
-const fighterScreen = new FighterScreen($<HTMLCanvasElement>('#fCanvas'), $('#fPicks'), view.physics, (p) => { if (mode.kind === 'menu') dress(p, SUMI_PICK); });
+const fighterScreen = new FighterScreen($<HTMLCanvasElement>('#fCanvas'), $('#fPicks'), $<HTMLInputElement>('#fName'), $('#fNameTag'), view.physics, (p) => { if (mode.kind === 'menu') dress(p, SUMI_PICK); });
 $('#bFighter').addEventListener('click', () => showMenu('fighter'));
 $('#bFighterDone').addEventListener('click', () => showMenu('main'));
 $('#bHowToBack').addEventListener('click', () => showMenu('main'));
@@ -483,12 +481,13 @@ $('#setupForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const v = (id: string) => Number($<HTMLSelectElement>(id).value);
   const cfg = cleanCfg({ wins: v('#optWins'), maxHp: v('#optHp'), roundSecs: v('#optTime') });
-  if (setupFor === 'room') { showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg, look: myLook() })); }
+  if (setupFor === 'room') { showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg, name: myName(), look: myLook() })); }
   else { showMenu('join', { code: 'for your tournament' }); ensureNet(() => net.send({ t: 'tourney', cfg, name: myName(), look: myLook() })); }
 });
 $('#tName').addEventListener('change', () => {
-  const n = $<HTMLInputElement>('#tName').value.trim();
-  if (n) { saveName(n); net.send({ t: 'name', name: n }); }
+  const input = $<HTMLInputElement>('#tName');
+  input.value = saveName(input.value); // the same name as on the Fighter screen (empty: a Ronin name)
+  net.send({ t: 'name', name: input.value });
 });
 $('#tBegin').addEventListener('click', () => net.send({ t: 'begin' }));
 $('#bAgain').addEventListener('click', () => net.send({ t: 'restart' }));
@@ -498,7 +497,7 @@ $('#tCopy').addEventListener('click', async () => {
   catch { input.select(); }
   setTimeout(() => { $('#tCopy').textContent = 'Copy link'; }, 1600);
 });
-$('#bQuick').addEventListener('click', () => { searching(false); ensureNet(() => net.send({ t: 'quick', look: myLook() })); });
+$('#bQuick').addEventListener('click', () => { searching(false); ensureNet(() => net.send({ t: 'quick', name: myName(), look: myLook() })); });
 $('#bRanked').addEventListener('click', () => { searching(true); ensureNet(() => net.send({ t: 'ranked', name: myName(), look: myLook() })); });
 function searching(ranked: boolean) {
   $('#searchTitle').textContent = ranked ? 'Looking for a ranked rival…' : 'Looking for a rival…';
@@ -588,7 +587,8 @@ net.onMessage = (m: ToClient) => {
     case 'room': showMenu('host', { code: m.code }); break;
     case 'waiting': if (screen !== 'search') searching(!!m.ranked); break;
     case 'start':
-      startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.ranks ? [m.ranks[0].name, m.ranks[1].name] : null, m.looks);
+      startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.names ? [cleanName(m.names[0], LOOKS[0].name), cleanName(m.names[1], LOOKS[1].name)]
+        : m.ranks ? [m.ranks[0].name, m.ranks[1].name] : null, m.looks);
       hud.ranks = m.ranks ?? null; hud.rankNote = ''; hud.setNames();
       break;
     case 'rank': myRank = m.you; showRank(); break;

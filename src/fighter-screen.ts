@@ -1,12 +1,14 @@
-// The Fighter screen (issue #38): pick a colour set, dark or light robe, an outfit and a sword, and see your
-// samurai turn its guard in a small 3D preview. The pick is kept in this browser and sent once when you start
-// an online match. Nothing here touches the fight.
+// The Fighter screen (issue #38): type your name, pick a colour set, dark or light robe, an outfit and a sword,
+// and see your samurai turn its guard in a small 3D preview. Name and pick are kept in this browser and sent once
+// when you start an online match. Nothing here touches the fight.
 
 import * as THREE from 'three';
 import { FighterView } from './render/fighter';
 import { COLOUR_SETS, DEFAULT_PICK, OUTFITS, SWORDS, decodePick, encodePick, lookOf, type Pick } from './render/looks';
 import type { PaperPhysics } from './render/physics';
 import { newMatch } from './sim/sim';
+import { myName, saveName } from './name';
+import { cleanName } from './net/protocol';
 import { store } from './store';
 
 const KEY = 'papercut.look';
@@ -29,7 +31,12 @@ export class FighterScreen {
   private pick = myPick();
   private paper: string = 'graph';
 
-  constructor(private canvas: HTMLCanvasElement, private picks: HTMLElement, physics: PaperPhysics, private onChange: (p: Pick) => void) {
+  constructor(private canvas: HTMLCanvasElement, private picks: HTMLElement, private nameIn: HTMLInputElement, private nameTag: HTMLElement,
+    physics: PaperPhysics, private onChange: (p: Pick) => void) {
+    // The tag under the preview follows your typing; the name is saved when you leave the box (or press Enter).
+    nameIn.addEventListener('input', () => { nameTag.textContent = cleanName(nameIn.value, ''); });
+    nameIn.addEventListener('change', () => { nameIn.value = nameTag.textContent = saveName(nameIn.value); });
+    nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') nameIn.blur(); });
     const hemi = new THREE.HemisphereLight(0xffffff, 0xe6e0d6, 1.5), sun = new THREE.DirectionalLight(0xffffff, 1.8);
     sun.position.set(-3, 6, 8);
     this.scene.add(hemi, sun);
@@ -59,6 +66,7 @@ export class FighterScreen {
       this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true });
       this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     }
+    this.nameIn.value = this.nameTag.textContent = myName();
     this.render();
     cancelAnimationFrame(this.raf);
     this.last = performance.now();
@@ -66,7 +74,11 @@ export class FighterScreen {
     this.raf = requestAnimationFrame(loop);
   }
 
-  close() { cancelAnimationFrame(this.raf); this.raf = 0; }
+  close() {
+    // Leaving with the box still focused: keep what was typed.
+    if (cleanName(this.nameIn.value, '') !== myName()) this.nameIn.value = saveName(this.nameIn.value);
+    cancelAnimationFrame(this.raf); this.raf = 0;
+  }
 
   /** The guard turns high and low every second or so, so you see the blade both ways. */
   private frame(now: number) {

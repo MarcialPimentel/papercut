@@ -2,7 +2,7 @@
 // The two fighters play an ordinary online match; everyone else in the room gets both players'
 // inputs and watches it live. The fighters report the winner; when they agree, the bracket moves on.
 
-import { BYE_SLOT, delayFor, type BracketMatch, type ToClient } from '../src/net/protocol';
+import { BYE_SLOT, cleanName, delayFor, type BracketMatch, type ToClient } from '../src/net/protocol';
 import type { MatchCfg } from '../src/sim/config';
 import { Referee, type GuardStyle, type MatchRecord } from './referee';
 
@@ -23,11 +23,7 @@ export const BYE = BYE_SLOT;
 /** Seconds between a fight's end and the next fight (time to look at the bracket). */
 export const BREAK_MS = 6000;
 
-/** A player's name: printable, short, never empty. */
-export function cleanName(x: unknown, fallback: string) {
-  const s = typeof x === 'string' ? x.replace(/[^\p{L}\p{N} _.'-]/gu, '').trim().slice(0, 14) : '';
-  return s || fallback;
-}
+export { cleanName };
 
 export class Tourney {
   players: Player[] = [];

@@ -78,9 +78,12 @@
 
        <div data-screen="fighter" class="stack fighter" hidden>
           <p class="big">Your fighter</p>
-          <div class="fprev" data-paper="graph"><canvas id="fCanvas" aria-label="Your fighter, turning its guard high and low"></canvas></div>
-          <div class="fpicks" id="fPicks"></div>
-          <p class="fnote">Looks never change the fight: every sword has the same reach. Online, your rival sees your look. One fighter always wears a dark robe and the other a light one, so if you both pick the same, player 2's robe flips.</p>
+          <div class="fprev" data-paper="graph"><canvas id="fCanvas" aria-label="Your fighter, turning its guard high and low"></canvas><span class="fname" id="fNameTag"></span></div>
+          <div class="fpicks">
+            <label class="frow"><b>Name</b><input class="fname-in" id="fName" maxlength="14" autocomplete="off" spellcheck="false"></label>
+            <div class="fpicks" id="fPicks"></div>
+          </div>
+          <p class="fnote">Looks never change the fight: every sword has the same reach. Online, your rival sees your name and look. One fighter always wears a dark robe and the other a light one, so if you both pick the same, player 2's robe flips.</p>
           <button class="mbtn" id="bFighterDone" type="button">Done</button>
         </div>
 
