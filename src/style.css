@@ -140,6 +140,26 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 .controls dd b { color: var(--red-text); }
 .help p { margin: 0; }
 .help em { font-style: normal; color: var(--red-text); font-weight: 700; }
+/* Controls screen: remap keys and controller buttons. */
+.menu .card:has(.binds:not([hidden])) { width: min(720px, 100%); }
+.bind-table { overflow-x: auto; }
+.binds table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.binds th, .binds td { padding: 3px 4px; text-align: left; }
+.binds thead th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.binds tbody th { font-weight: 700; white-space: nowrap; }
+.binds tbody th small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); white-space: normal; max-width: 200px; }
+.binds tbody tr + tr { border-top: 1px solid rgba(24,23,28,.12); }
+.slot { font: 700 13px var(--body); color: var(--ink); background: #FFF; border: 1.5px solid rgba(24,23,28,.35); border-bottom-width: 3px; border-radius: 3px; min-width: 92px; min-height: 32px; padding: 3px 8px; cursor: pointer; }
+.slot:hover { background: var(--legal); }
+.slot i { color: var(--muted); font-style: normal; }
+.slot.waiting { border-color: var(--red); color: var(--red-text); }
+.bind-msg { min-height: 1.3em; margin: 0; font-weight: 700; color: var(--red-text); }
+.binds .mbtn { text-align: center; }
+/* Prompts for the device in use. */
+body.pad .kb-only, body:not(.pad) .pad-only { display: none; }
+.controls dt i, .binds i { font-style: normal; color: var(--muted); }
+/* On a controller the focus is the cursor, so make it plain to see. */
+body.pad #stage :focus, body.pad .nav-at { outline: 3px solid var(--red); outline-offset: 3px; }
 kbd { font: 700 12px var(--body); border: 1.5px solid rgba(24,23,28,.3); border-bottom-width: 3px; padding: 0 5px; border-radius: 3px; background: #FFF; }
 
 @media (max-width: 620px) {

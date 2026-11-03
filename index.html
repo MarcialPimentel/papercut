@@ -56,6 +56,7 @@
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
             <button class="hbtn" id="bBoard" type="button">Leaderboard</button>
             <button class="hbtn" id="bSettings" type="button">Settings</button>
+            <button class="hbtn" id="bControls" type="button">Controls</button>
             <button class="hbtn" id="bQuit" type="button" hidden>Quit</button>
           </div>
           <form id="joinForm" class="join">
@@ -144,18 +145,36 @@
           <button class="mbtn" type="submit">Done</button>
         </form>
 
+        <div data-screen="controls" class="stack binds" hidden>
+          <p class="big">Controls</p>
+          <p class="muted">Pick a box, then press the key, mouse button or controller button you want there. Press the same one again (or <kbd>Delete</kbd>) to empty it; <kbd>Esc</kbd> or <kbd>Menu</kbd> cancels.</p>
+          <div class="bind-table">
+            <table>
+              <thead><tr><th scope="col">Action</th><th scope="col" colspan="2">Keyboard and mouse</th><th scope="col" colspan="2">Controller</th></tr></thead>
+              <tbody id="bindRows"></tbody>
+            </table>
+          </div>
+          <p class="muted">Always: <kbd>Esc</kbd> frees the mouse and opens the menu. On a controller the left stick or d-pad moves (left / right) and guards (up / down), and <kbd>Menu</kbd> opens the menu.</p>
+          <p class="bind-msg" id="bindMsg" role="status"></p>
+          <div class="row2">
+            <button class="hbtn" id="bindReset" type="button">Reset to defaults</button>
+          </div>
+          <button class="mbtn" id="bindBack" type="button">Done</button>
+        </div>
+
         <div data-screen="howto" class="stack howto" hidden>
           <p class="big">How to play</p>
           <dl class="controls">
             <dt>Guard</dt><dd id="howGuard">Flick the mouse <b>up</b> to guard high, <b>down</b> to guard low.</dd>
-            <dt><kbd>Left click</kbd></dt><dd>Light slash: quick, small cut.</dd>
-            <dt><kbd>Right click</kbd></dt><dd>Heavy slash: slower, steps in, big cut. Blocked, it <b>staggers</b> their guard and you keep the turn. Click again (or <kbd>Q</kbd>) early in the wind-up to feint.</dd>
-            <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Walk. Double-tap to dash.</dd>
-            <dt><kbd>Space</kbd></dt><dd>Jump over low slashes. A slash in the air always comes in <b>high</b>: swing on the way down, or it sails over their head.</dd>
-            <dt><kbd>Esc</kbd></dt><dd>Free the mouse (the game holds it during a fight). Press again for the menu.</dd>
+            <dt data-keys="light"></dt><dd>Light slash: quick, small cut.</dd>
+            <dt data-keys="heavy"></dt><dd>Heavy slash: slower, steps in, big cut. Blocked, it <b>staggers</b> their guard and you keep the turn. Press light again (or <span data-keys="feint"></span>) early in the wind-up to feint.</dd>
+            <dt data-keys="left,right"></dt><dd>Walk. Double-tap to dash<span class="dash-key"> (or <span data-keys="dash"></span>)</span>.</dd>
+            <dt data-keys="jump"></dt><dd>Jump over low slashes. A slash in the air always comes in <b>high</b>: swing on the way down, or it sails over their head.</dd>
+            <dt class="kb-only"><kbd>Esc</kbd></dt><dd class="kb-only">Free the mouse (the game holds it during a fight). Press again for the menu.</dd>
+            <dt class="pad-only"><kbd>Menu</kbd></dt><dd class="pad-only">The menu. In menus, <kbd>A</kbd> picks and <kbd>B</kbd> goes back.</dd>
           </dl>
           <div class="help">
-            <p><b>Hit where they aren't guarding.</b> A slash at the height they guard is blocked. Press <kbd>H</kbd> to see the hitboxes.</p>
+            <p><b>Hit where they aren't guarding.</b> A slash at the height they guard is blocked. <span class="hit-key">Press <span data-keys="hitboxes"></span> to see the hitboxes.</span> Change any key or button in <b>Controls</b>.</p>
             <p><b>Counter cut = instant K.O.</b> While a heavy winds up, and for a moment right after a missed slash, you're open. Land any hit then and the round is over, however much strip is left. So don't throw heavies they can see coming, and don't swing at air.</p>
             <p><b>Jumpers:</b> guard high to block a jump-in, or slash high to cut them out of the air (no one can block mid-air). Landing after an air slash leaves you stuck for a moment.</p>
             <p><b>Parry:</b> switch your guard to the right height just before a hit lands, then slash back for a big riposte.</p>

@@ -8,6 +8,7 @@ import '@fontsource/atkinson-hyperlegible/700';
 import './style.css';
 import { Hud } from './hud';
 import { Controls, type Command } from './input';
+import { keysFor, navigate, renderPrompts, restartLabel, setupControlsScreen } from './controlsUi';
 import { Net } from './net/client';
 import { Lockstep } from './net/lockstep';
 import { BYE_SLOT, normalizeCode, type RankInfo, type ToClient } from './net/protocol';
@@ -82,9 +83,11 @@ const rulesLabel = (c: MatchCfg) => `${roundsLabel(c.wins)}, ${c.maxHp} health, 
 const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // ---------- menus ----------
-type Screen = 'main' | 'howto' | 'board' | 'settings' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error';
+type Screen = 'main' | 'howto' | 'board' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
+  if (screen === 'controls' && to !== 'controls') bindScreen.cancel();
+  const moved = screen !== to;
   screen = to;
   stage.classList.add('in-menu');
   $('#menu').hidden = false;
@@ -100,6 +103,8 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (to === 'error') $('#errorMsg').textContent = opts.msg ?? 'Something went wrong.';
   if (to === 'settings') fillSettings();
   if (to === 'tlobby' || to === 'bracket') for (const h of soundHints()) h.hidden = !!engine.live;
+  // On a controller, put the focus on the screen's first button so A does something straight away.
+  if (moved && controls.device === 'pad') requestAnimationFrame(() => navigate('up', $('#menu .card'), () => {}));
   if (to === 'main') {
     showBest();
     if (loadBest() > 0) fetchBoard('all').then((b) => { myPlace = b?.you?.place ?? null; if (screen === 'main') showBest(); });
@@ -156,7 +161,7 @@ const newSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
  */
 function reportRun(seed: number, inputs: number[], bots: number) {
   hud.placeNote = '';
-  const body = JSON.stringify({ seed, inputs, bots, guard: controls.guardStyle, id: myId(), name: myName() });
+  const body = JSON.stringify({ seed, inputs, bots, guard: controls.device === 'pad' ? 'pad' : controls.guardStyle, id: myId(), name: myName() });
   fetch(`${SITE}/api/endless`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
     .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
     .then(({ ok, j }) => {
@@ -300,14 +305,39 @@ $('#bHowToBack').addEventListener('click', () => showMenu('main'));
 $('#bBoard').addEventListener('click', () => showMenu('board'));
 $('#bBoardBack').addEventListener('click', () => showMenu('main'));
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-period]')) b.addEventListener('click', () => showBoard(b.dataset.period as Period));
-// Guard style (playtest A/B): Flick (mouse up / down, no cursor) or Cursor (crosshair against your waist).
-const GUARD_HOW = {
-  flick: 'Flick the mouse <b>up</b> to guard high, <b>down</b> to guard low. Only the direction counts, not where the mouse is.',
-  cursor: "Move the crosshair <b>above</b> your fighter's waist to guard high, <b>below</b> to guard low.",
+// Controls: remap keys and controller buttons.
+const bindScreen = setupControlsScreen(controls);
+$('#bControls').addEventListener('click', () => showMenu('controls'));
+$('#bindBack').addEventListener('click', () => showMenu('main'));
+// Prompts follow the device in use: keyboard and mouse, or controller.
+controls.onDevice = () => { renderPrompts(controls); sayHello(); hud.restartKey = restartLabel(controls); if (controls.device === 'pad') controls.unlock(); };
+hud.restartKey = restartLabel(controls);
+// Menus on a controller: the stick or d-pad moves, A picks, B goes back, Menu leaves a fight.
+controls.onNav = (n) => {
+  if (!soundBox.hidden && (n === 'back' || n === 'menu')) { showSound(false); return; }
+  if (!soundBox.hidden) { navigate(n, soundBox, () => showSound(false)); return; }
+  // The tuning panel (Practice): stick moves between sliders, left / right changes one, B or Menu closes it.
+  if (tuner.open) { if (n === 'menu') command('menu'); else navigate(n, tuner.el, () => tuner.toggle(false)); return; }
+  if (screen) {
+    if (n === 'menu') { if (screen !== 'main') command('menu'); return; }
+    navigate(n, $('#menu .card'), () => {
+      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bBoardBack, #settingsForm [type=submit]')].find((b) => !b.closest('[hidden]'));
+      back?.click();
+    });
+    return;
+  }
+  if (n === 'menu') { command('menu'); return; }
+  // In a fight, the menu buttons only matter once the match is over (Rematch, Leave). A is jump until then.
+  if (mode.kind !== 'menu' && stateOf(mode).phase === 'over') {
+    const re = $('#rematch');
+    if (n === 'ok' && !re.hidden && !(document.activeElement instanceof HTMLButtonElement)) { re.click(); return; }
+    navigate(n, $('#stage'), () => toMenu());
+  }
 };
-function showGuardStyle() { $('#howGuard').innerHTML = GUARD_HOW[controls.guardStyle]; }
-/** Tell the server this browser's guard style, so the stats can compare Line and Cursor. */
-function sayHello() { net.send({ t: 'hello', guard: controls.guardStyle, id: myId() }); }
+// The How to play text follows the guard style (and the device in use).
+function showGuardStyle() { renderPrompts(controls); }
+/** Tell the server how this player guards (Flick, Cursor, or a controller), so the stats can compare them. */
+function sayHello() { net.send({ t: 'hello', guard: controls.device === 'pad' ? 'pad' : controls.guardStyle, id: myId() }); }
 showGuardStyle();
 
 // ---------- settings ----------
@@ -448,7 +478,7 @@ function command(c: Command) {
     return;
   }
   if (c === 'menu' && tuner.open) { tuner.toggle(false); return; }
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'board') showMenu('main'); return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'board') showMenu('main'); return; }
   if (mode.kind === 'practice') {
     if (c === 'restart' || mode.s.phase === 'over') {
       mode.s = newMatch(mode.s.cfg); mode.tally = new Tally(); mode.inputs = new RunInputs(); hud.placeNote = '';
@@ -535,6 +565,7 @@ function musicFor(m: Mode, s: State): [MusicMode, Tension, TrackKey, number] {
 }
 
 // ---------- the loop ----------
+const menuHint = () => controls.device === 'pad' ? 'Menu button for the menu' : 'Esc for the menu';
 let last = performance.now(), acc = 0;
 const statusEl = $('#status');
 let lastStatus = '';
@@ -544,12 +575,13 @@ function frame(now: number) {
   const real = Math.min(0.05, (now - last) / 1000); last = now;
   const m = mode;
   const seat = seatOf(m);
+  controls.pollPad(now);
   if (m.kind === 'practice' && tuner.open) acc = 0; // paused while tuning
   else if (m.kind === 'practice') {
     acc += real;
     while (acc >= STEP) {
       const s = m.s;
-      const mine = controls.sample(view.waistY(s, 0));
+      const mine = controls.sample(view.waistY(s, 0), s.f[0].facing);
       // Endless: the bot's level follows your score, and your inputs are kept so the server can re-play the run.
       if (m.endless) m.inputs.add(s.frame, mine);
       const ev = step(s, [mine, m.endless ? botInput(m.dummy, s) : m.dummy.think(s)]);
@@ -565,7 +597,7 @@ function frame(now: number) {
     if (lock.backlog > lock.delay + 3) acc += STEP;
     let n = 0;
     while (acc >= STEP && n < 5) {
-      const ev = lock.tick(() => controls.sample(view.waistY(lock.state, seat)));
+      const ev = lock.tick(() => controls.sample(view.waistY(lock.state, seat), lock.state.f[seat].facing));
       if (!ev) { acc = Math.min(acc, STEP); break; }
       view.onStep(lock.state, ev);
       acc -= STEP; n++;
@@ -605,16 +637,20 @@ function frame(now: number) {
   stage.style.background = view.sky;
 
   let status = '';
-  if (m.kind === 'practice') status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · Esc for the menu` : `Practice: Sumi is a dummy · T to tune${isTuned() ? ' (tuned numbers)' : ''} · Esc for the menu`;
+  if (m.kind === 'practice') {
+    const tune = keysFor(controls, 'tune')[0];
+    status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · ${menuHint()}`
+      : `Practice: Sumi is a dummy · ${tune ? `${tune} to tune${isTuned() ? ' (tuned numbers)' : ''} · ` : ''}${menuHint()}`;
+  }
   else if (m.kind === 'online') {
     const l = m.lock;
     status = l.desynced ? `Out of sync at frame ${l.frame}. Please tell Marz.`
       : l.waiting > 20 ? "Waiting for your rival's connection…"
       : `${tourney ? 'Tournament' : 'Online'} · room ${m.code} · ${rulesLabel(l.state.cfg)} · ${l.delay}-frame delay`;
   } else if (m.kind === 'watch') {
-    status = `Watching ${m.names[0]} vs ${m.names[1]} · tournament ${m.code} · Esc to leave`;
+    status = `Watching ${m.names[0]} vs ${m.names[1]} · tournament ${m.code} · ${controls.device === 'pad' ? 'Menu' : 'Esc'} to leave`;
   }
-  if (m.kind !== 'menu' && controls.lockWanted && !controls.locked && matchMedia('(hover: hover) and (pointer: fine)').matches && !status.startsWith('Out')) {
+  if (m.kind !== 'menu' && controls.lockWanted && !controls.locked && controls.device !== 'pad' && matchMedia('(hover: hover) and (pointer: fine)').matches && !status.startsWith('Out')) {
     status = 'Click the fight to hold the mouse · ' + status;
   }
   if (status !== lastStatus) { statusEl.textContent = status; lastStatus = status; statusEl.classList.toggle('warn', status.startsWith('Out') || status.startsWith('Wait')); }

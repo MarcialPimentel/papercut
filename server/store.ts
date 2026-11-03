@@ -34,7 +34,7 @@ const better = (a: { bots: number; frames: number }, b: { bots: number; frames: 
 export interface Player extends Rating { id: string; name: string; games: number; wins: number }
 
 export type RulesFilter = 'standard' | 'custom' | 'all';
-export type GuardFilter = 'any' | 'flick' | 'cursor';
+export type GuardFilter = 'any' | 'flick' | 'cursor' | 'pad';
 export interface Filter { build: string; rules: RulesFilter; guard: GuardFilter }
 
 /** A match as the stats page reads it (no inputs). */

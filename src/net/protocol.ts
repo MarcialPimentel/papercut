@@ -5,7 +5,7 @@
 import type { MatchCfg } from '../sim/config';
 
 export type ToServer =
-  | { t: 'hello'; guard: 'flick' | 'cursor'; id?: string } // guard style (for the stats) and this browser's ranked token
+  | { t: 'hello'; guard: 'flick' | 'cursor' | 'pad'; id?: string } // how this player guards (for the stats) and this browser's ranked token
   | { t: 'ranked'; name?: string } // join the ranked queue
   | { t: 'host'; cfg?: MatchCfg } // make a private room for an invite link, with its rules
   | { t: 'join'; code: string; name?: string } // a 1v1 room or a tournament
