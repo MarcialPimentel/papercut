@@ -56,10 +56,9 @@ export const sfx = {
     if (heavy) E.hiss({ dur: 0.28, type: 'bandpass', freq: 900, sweep: 320, q: 1.2, gain: 0.5, attack: 0.05, pan });
     else E.hiss({ dur: 0.13, type: 'bandpass', freq: 1700, sweep: 700, q: 1.1, gain: 0.32, attack: 0.02, pan });
   },
-  /** A heavy's wind-up: a quiet rising paper creak, so players can hear the opening as well as see it. */
+  /** Every heavy's wind-up: a paper fold, the same whether it comes out or is feinted, so the sound alone never gives a feint away. */
   windup(pan: number) {
-    E.hiss({ dur: 0.3, type: 'bandpass', freq: 380, sweep: 1900, q: 2.5, gain: 0.16, attack: 0.12, pan });
-    E.tone({ f0: 160, f1: 240, dur: 0.3, type: 'triangle', gain: 0.05, attack: 0.1, pan });
+    if (!E.sample('fold', { gain: 1.5, pan })) E.hiss({ dur: 0.22, type: 'bandpass', freq: 1600, sweep: 900, gain: 0.25, pan });
   },
   /** Two attacks meeting: a bright double blade ring and a paper snap. The loudest "sword" sound. */
   clash(pan: number) {
@@ -111,7 +110,6 @@ export const sfx = {
     }
     E.duck(0.85, 1.4, 1.0);
   },
-  feint(pan: number) { if (!E.sample('fold', { gain: 1.5, pan })) E.hiss({ dur: 0.22, type: 'bandpass', freq: 1600, sweep: 900, gain: 0.25, pan }); },
   hop(pan: number) { if (!E.sample('hop', { gain: 0.5, pan })) E.hiss({ dur: 0.1, type: 'lowpass', freq: 700, gain: 0.25, pan }); },
   land(pan: number) {
     if (E.sample('land', { gain: 0.5, pan })) return;

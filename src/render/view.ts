@@ -111,7 +111,7 @@ export class View {
     const fx = this.fx;
     switch (e.k) {
       case 'swing': if (e.atk === 'heavy') sfx.windup(pan(s.f[e.p].x)); break;
-      case 'feint': fx.label('Feint', s.f[e.p].x, s.f[e.p].y + 2.3, 'gold'); sfx.feint(pan(s.f[e.p].x)); break;
+      case 'feint': fx.label('Feint', s.f[e.p].x, s.f[e.p].y + 2.3, 'gold'); break; // silent: the fold already played when the heavy started
       case 'jump': case 'dash': sfx.hop(pan(s.f[e.p].x)); break;
       case 'whiff':
         fx.razor(e.x, e.y, e.ang, C.ink, e.heavy ? 2.8 : 1.8);
