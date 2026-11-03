@@ -84,7 +84,7 @@ export class FighterScreen {
     const p = this.pick;
     const chip = (k: string, v: string, label: string, on: boolean, swatch = '') =>
       `<button class="pchip" type="button" id="fp-${k}-${v}" data-k="${k}" data-v="${v}" aria-pressed="${on}">${swatch ? `<i style="background:${swatch}"></i>` : ''}${label}</button>`;
-    const row = (title: string, body: string) => `<div class="frow"><b>${title}</b><div class="chips">${body}</div></div>`;
+    const row = (title: string, body: string) => `<div class="frow"><b>${title}</b><div class="chips" data-choices>${body}</div></div>`;
     this.picks.innerHTML =
       row('Colours', COLOUR_SETS.map((c) => chip('set', c.id, c.name, p.set === c.id, c.robe)).join('')) +
       row('Robe', chip('light', '0', 'Dark', !p.light) + chip('light', '1', 'Light', p.light)) +
