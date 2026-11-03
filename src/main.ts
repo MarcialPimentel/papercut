@@ -27,6 +27,7 @@ import { Dummy } from './sim/dummy';
 import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
 import { TuningPanel } from './tuning-panel';
 import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
+import { Tally, type MatchTally } from './sim/tally';
 import { HINT_AFTER, STEPS, TUTORIAL_CFG, Tutorial, freshFight } from './tutorial/tutorial';
 import { STEP_TEXT, TUTORIAL_TEXT, fill, namesFor } from './tutorial/text';
 
@@ -60,7 +61,7 @@ tuner.onClose = () => { controls.clear(); if (mode.kind === 'practice') { contro
 
 type Mode =
   | { kind: 'menu'; s: State }
-  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean }
+  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; tally: Tally }
   | { kind: 'tutorial'; s: State; tut: Tutorial }
   | { kind: 'online'; lock: Lockstep; code: string }
   | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] }; // watching a tournament fight
@@ -143,13 +144,18 @@ function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
 const BEST_KEY = 'papercut.endlessBest';
 function loadBest() { return Number(store.get(BEST_KEY)) || 0; }
 function saveBest(n: number) { if (n > loadBest()) store.set(BEST_KEY, String(n)); }
+/** Send a finished Endless run to the server's balance stats (no personal data; failures are ignored). */
+function reportRun(bots: number, tally: MatchTally) {
+  const body = JSON.stringify({ bots, guard: controls.device === 'pad' ? 'pad' : controls.guardStyle, tally });
+  fetch(`${SITE}/api/endless`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+}
 
 function startPractice(endless = false) {
   wakeAudio();
   const cfg = endless ? ENDLESS_CFG : DEFAULT_CFG;
   // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) never does.
   if (endless) resetTuning(); else applyTuning(loadSaved());
-  mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless };
+  mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless, tally: new Tally() };
   // Practice is against Sumi; in Endless every bot wears a random look.
   const mine = myPick(), botLook = () => lookOf(pairPicks(mine, randomPick(Math.random))[1], LOOKS[1].name);
   view.spawnLook = endless ? botLook : null;
@@ -311,7 +317,7 @@ const bindScreen = setupControlsScreen(controls);
 $('#bControls').addEventListener('click', () => showMenu('controls'));
 $('#bindBack').addEventListener('click', () => showMenu('main'));
 // Prompts follow the device in use: keyboard and mouse, or controller.
-controls.onDevice = () => { renderPrompts(controls); hud.restartKey = restartLabel(controls); if (controls.device === 'pad') controls.unlock(); };
+controls.onDevice = () => { renderPrompts(controls); sayHello(); hud.restartKey = restartLabel(controls); if (controls.device === 'pad') controls.unlock(); };
 hud.restartKey = restartLabel(controls);
 // Menus on a controller: the stick or d-pad moves, A picks, B goes back, Menu leaves a fight.
 controls.onNav = (n) => {
@@ -337,6 +343,8 @@ controls.onNav = (n) => {
 };
 // The How to play text follows the guard style (and the device in use).
 function showGuardStyle() { renderPrompts(controls); }
+/** Tell the server how this player guards (Flick, Cursor, or a controller), so the stats can compare them. */
+function sayHello() { net.send({ t: 'hello', guard: controls.device === 'pad' ? 'pad' : controls.guardStyle }); }
 showGuardStyle();
 
 // ---------- settings ----------
@@ -370,7 +378,7 @@ function readSettings() {
 }
 $('#setWindow').addEventListener('change', () => { readSettings(); setFullscreen(display.fullscreen); });
 for (const id of ['#setScale', '#setFps', '#setVsync']) $(id).addEventListener('change', readSettings);
-$('#setGuard').addEventListener('change', () => { controls.setGuardStyle($<HTMLSelectElement>('#setGuard').value === 'cursor' ? 'cursor' : 'flick'); showGuardStyle(); });
+$('#setGuard').addEventListener('change', () => { controls.setGuardStyle($<HTMLSelectElement>('#setGuard').value === 'cursor' ? 'cursor' : 'flick'); showGuardStyle(); sayHello(); });
 $('#settingsForm').addEventListener('submit', (e) => { e.preventDefault(); showMenu('main'); });
 $('#bSettings').addEventListener('click', () => showMenu('settings'));
 for (const el of document.querySelectorAll<HTMLElement>('[data-desktop-only]')) el.hidden = !desktop;
@@ -477,13 +485,14 @@ function command(c: Command) {
   }
   if (c === 'skip') return;
   if (mode.kind === 'practice') {
-    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
+    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); mode.tally = new Tally(); hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
   } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
 }
 controls.onCommand = command;
 controls.onAnyInput = wakeAudio;
 
 net.onStatus = (open) => {
+  if (open) sayHello();
   if (open && pendingSend) { const f = pendingSend; pendingSend = null; f(); }
   if (open) return;
   if (mode.kind === 'online' || mode.kind === 'watch' || tourney) toMenu('error', { msg: 'Lost the connection to the server. Check your internet and try again.' });
@@ -560,7 +569,8 @@ function frame(now: number) {
       const s = m.s;
       if (m.endless) m.dummy.level = botLevel(s.f[0].wins);
       const ev = step(s, [controls.sample(view.waistY(s, 0), s.f[0].facing), m.dummy.think(s)]);
-      if (m.endless && ev.some((e) => e.k === 'over')) saveBest(s.f[0].wins);
+      const done = m.tally.feed(s, ev);
+      if (m.endless && done) { saveBest(s.f[0].wins); reportRun(s.f[0].wins, done); }
       view.onStep(s, ev);
       acc -= STEP;
     }

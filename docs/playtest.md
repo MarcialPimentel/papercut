@@ -64,6 +64,15 @@ On the main menu, **Your fighter** opens the look picker: 6 colour sets, dark or
 - **Spacing:** fighters start further apart and walk and dash further, so the spacing should feel as before with honest swords. Too roomy or too cramped?
 - **Endless:** how far do you get? The cut bots' halves pile up on the page (the last 5 stay). From level 2 (bot 6) the bots block heavies they see coming, punish your misses and swat jumpers.
 
+## Match stats
+
+https://papercut.marz.gg/stats shows the numbers from every finished online match and Endless run (on your PC: http://localhost:5173/stats, kept until the server restarts). Pick a build, the rules and a guard style at the top. Useful questions for tuning:
+
+- **How rounds end:** if counter cuts end most rounds, heavies are too risky; if time ends many, fights are too passive.
+- **What each slash does:** how often heavies land, get blocked, parried or feinted, and how often a blocked heavy's stagger is followed by a cut.
+- **Kami vs Sumi:** should stay near 50%. If not, one side has an edge.
+- **Flick vs Cursor vs controller:** how often each guard style wins against players using a different one.
+
 ## What to report
 
 ## Tuning the fight (T in Practice)
