@@ -2,7 +2,7 @@
 
 _Added in the sound pass (2026-11-01). Code: `src/audio/`._
 
-Papercut's sound is a mix: **free recordings** (CC0, from Kenney) for clashes, blocks and clicks, **paper recordings Marz picked on Freesound** for cuts, tears and the menus, and **sounds made in code** for everything else, including all the music. Every sound has a code-made version, so the game always has sound even before (or without) any recordings.
+Papercut's sound is a mix: **free recordings** (CC0, from Kenney) for clashes, blocks and clicks, **paper recordings Marz picked on Freesound** for cuts, tears and the menus, **two recorded songs** Marz made with Suno (the title screen and regular fights), and **sounds made in code** for everything else, including the rest of the music. Every sound has a code-made version, so the game always has sound even before (or without) any recordings.
 
 Sound never touches the fight rules (`src/sim/`), so it can't affect online sync.
 
@@ -34,12 +34,36 @@ Sounds pan left and right with where they happen on the page, and each play vari
 
 ## Music
 
+### Recorded songs
+
+Two songs Marz made with Suno (2026-11-03) replace the code-made music where it matters most. The originals (WAV, 48 kHz) are kept outside the repo in `GameDev/_suno/Papercut/`; the game ships trimmed OGG loops in `public/music/`.
+
+| Song | File | Plays on | Tempo | Loop |
+|---|---|---|---|---|
+| 刀の合戦 (title) | `title.ogg`, 136 s, 2.1 MB | The title screen and main menus | ~141 bpm | Plays from the top once, then loops 66.8 s to 136.4 s. Restarts from the top each time you come back to the menu |
+| 祭りの合図 (fight) | `fight.ogg`, 154 s, 2.4 MB | Every fight on the notebook's pages: practice, online, invite rooms, Ranked | ~131 bpm | Plays from the top once, then loops 57.0 s to 154.2 s. Carries on from round to round within a match, and starts from the top for a new match |
+
+How the songs fit the fight:
+- "Round N" still plays the page's code-made drums; the fight song comes in on "Cut!".
+- From a K.O. to the next round the music is silent, as before; the song picks up where it stopped.
+- A tense round (low strip, last 10 seconds, deciding round) doesn't change a recorded song. The code-made tracks still speed up.
+- **Endless** keeps its build-up track, **tournaments** keep their festival theme (fights and bracket), and the **back cover** keeps its quiet piece. To move any of them to a song, change `songFor()` in `src/audio/music.ts`.
+- Until a file has loaded (a second or two after the first click), or if it fails to load, the code-made track plays instead.
+
+**Licence.** Made by Marz with Suno. Songs made on a paid Suno plan (Pro or Premier) may be used commercially, including in a game sold on Steam; songs made on the free plan may not. Check that the plan was active when each song was made before release. Not CC0, so these files must not be copied into the shared `_audio` library.
+
+**Levels.** Each song plays at a fixed gain (`SONGS` in `src/audio/music.ts`: title 0.7, fight 0.8) so that, at the default music volume, the fight song averages about -35.5 dB like the Dojo track and the title sits just under it. Big hits still duck the music, and the Music slider still sets it.
+
+**Replacing a song.** Put the new WAV in `GameDev/_suno/Papercut/`, then ask Claude to make a loop of it: it finds two points in the song that sound alike (same tempo, level and section), bakes a short crossfade into the file's last beat so the jump back is seamless, encodes OGG (Vorbis, quality 4) and updates `loopStart`/`loopEnd`. `loop-check-*.wav` next to the originals are 16-second clips across each loop's jump, for checking by ear.
+
+### Code-made music
+
 All made in code (`src/audio/music.ts`), from the same paper-theatre band: taiko drums, a small high drum, wooden clappers (a recording), a temple bell (a recording), a plucked bass, a koto-like pluck and a bamboo flute, on Japanese five-note scales. It writes fresh melodies as it goes (a new phrase every eight bars), so no two fights sound quite the same. Each part of the game has its **own track**, so a session never loops one tune (#39).
 
 | Track | Plays on | Feel | Tempo (normal / tense), scale | Lead and extras |
 |---|---|---|---|---|
-| Menu | Title screen and menus | Bright and eager, "the show is about to start" | 96, yo scale on D | A rolling taiko groove (don, do-don), clappers on the backbeat, a walking bass, a full koto line. A little quieter than the fight tracks, so the first fight still feels like a step up |
-| Dojo | Graph Paper Dojo (rounds 1 and 4) | Steady, the original track | 100 / 112, miyako-bushi on D | Koto |
+| Menu | Title screen and menus (the fallback until the title song loads) | Bright and eager, "the show is about to start" | 96, yo scale on D | A rolling taiko groove (don, do-don), clappers on the backbeat, a walking bass, a full koto line. A little quieter than the fight tracks, so the first fight still feels like a step up |
+| Dojo | Graph Paper Dojo (rounds 1 and 4): its "Round N" drums, and the fight if the song hasn't loaded | Steady, the original track | 100 / 112, miyako-bushi on D | Koto |
 | Courtyard | Ruled Courtyard (rounds 2 and 5) | Brighter and lighter | 108 / 120, yo scale on E | Bamboo flute, clappers on the offbeat |
 | Grove | Legal Pad Grove (round 3) | Darker and slower | 84 / 96, in-sen scale on A | Sparse koto, a low drone, the temple bell every 4 bars, wind |
 | Endless | Every Endless fight | Restless, builds with each bot level (below) | 92 to 112, kumoi scale on C | Koto, then the flute |
@@ -104,7 +128,7 @@ The **Sound** button (on the title screen next to "How to play", and top-right d
 
 Freesound sounds each carry their own licence: CC0 (no credit), CC BY (credit the author in the game's credits) or CC BY-NC (**not allowed**: Papercut will be sold on Steam). Each row needs its Freesound link and licence before release; a CC BY-NC sound has to be replaced.
 
-Still code-made: whooshes, parry, jump/dash hop, taiko drums, the gong, all stings, and all music apart from the clappers and the bell.
+Still code-made: whooshes, parry, jump/dash hop, taiko drums, the gong, all stings, and all music apart from the two songs, the clappers and the bell.
 
 ## Swapping a recording
 
