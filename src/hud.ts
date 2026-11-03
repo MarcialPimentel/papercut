@@ -33,6 +33,8 @@ export class Hud {
   online = false;
   /** A tournament fight: no rematch; the bracket comes next. */
   tourney = false;
+  /** Playing back a saved fight: no rematch. */
+  replay = false;
   /** Player names for the two bars (tournaments); null = the fighters' own names. */
   names: [string, string] | null = null;
   /** The tutorial: no round tally, and a K.O. banner that only says why. */
@@ -122,7 +124,7 @@ export class Hud {
     } else if (s.phase === 'over') {
       const w = matchWinner(s);
       const waiting = mySeat !== null && s.rematch[mySeat];
-      const hint = this.ranks ? `${this.rankNote || 'Counting the result…'} Esc for the menu.` : this.tourney ? 'Back to the bracket in a moment…' : !this.online ? this.again('start a new match') : waiting ? 'Waiting for your rival to say yes…' : this.again('fight again');
+      const hint = this.replay ? 'End of the replay. Esc for your replays.' : this.ranks ? `${this.rankNote || 'Counting the result…'} Esc for the menu.` : this.tourney ? 'Back to the bracket in a moment…' : !this.online ? this.again('start a new match') : waiting ? 'Waiting for your rival to say yes…' : this.again('fight again');
       html = `${name(w)} wins<small>${s.f[w].wins}-${s.f[1 - w].wins}. ${hint}</small>`;
     }
     if (html !== this.lastBanner) {
@@ -130,6 +132,6 @@ export class Hud {
       this.banner.hidden = !html;
       if (html) this.bannerText.innerHTML = html;
     }
-    this.rematchBtn.hidden = this.tourney || !!this.ranks || s.phase !== 'over' || (mySeat !== null && s.rematch[mySeat]);
+    this.rematchBtn.hidden = this.tourney || this.replay || !!this.ranks || s.phase !== 'over' || (mySeat !== null && s.rematch[mySeat]);
   }
 }

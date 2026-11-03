@@ -47,6 +47,10 @@ On the main menu, **Your fighter** opens your name and the look picker. **Name**
 
 **Title-screen leaderboard:** the panel out on the right side of the title screen (below the menu on a narrow window; the title screen fits without scrolling down to 1280x720) switches between Ranked (top 10 by rating, division and points) and Endless (top 10 best runs). Your own place shows underneath, and the game remembers which one you picked.
 
+## Replays
+
+On the title screen, **Replays** lists your last 20 online fights (quick match, friend rooms, tournaments and Ranked), newest first: won or lost, your rival's name, the mode and when. Pick one to watch it again, seen from your side. Controls (buttons at the bottom, or keys): **Space** pause / play, **→** one frame on (pauses), **←** back 5 seconds, **↑ / ↓** faster / slower (0.25x, 0.5x, 1x, 2x), **From the start**, and **Esc** or **Your replays** to go back to the list. H still shows the hitboxes. Replays are kept 90 days. After an update that changes the fight rules, older replays show greyed out ("older rules"), since they would play out differently. Fights from before replays existed aren't listed. Like Ranked, the list follows your identity in this browser (or Steam Cloud in the desktop app).
+
 ## What to try
 
 - **Tutorial (2026-11-02):** play it from start to finish without reading How to play. Does every step make sense from its one line? Where did you get stuck, and did the hint (after 3 tries) help? At the end, could you say what a counter cut is? Then switch Guard to Cursor in Settings and replay the first step: the prompt should talk about the crosshair instead of flicks. With a controller: start the tutorial with A, check every prompt names pad buttons (left stick, RB, RT, B, A), and that LT skips a step.
