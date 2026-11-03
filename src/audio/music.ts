@@ -34,6 +34,13 @@ interface Track {
   wind: boolean;
   /** A low held drone every two bars. */
   drone: boolean;
+  /** Lively on menu screens: the taiko plays every bar and the melody is as full as in a fight
+   *  (other tracks' menu versions play the taiko every other bar and thin the melody). */
+  lively?: boolean;
+  /** Which sixteenths the bass plucks on (default: the bar line only). */
+  bassSteps?: readonly number[];
+  /** Overall level (default 1). */
+  level?: number;
 }
 
 // Scales (semitones). All have five notes, as Japanese folk scales do.
@@ -47,11 +54,14 @@ const CALM: Kit = { don: [0], ka: [], tick: [8] };
 const INTRO: Kit = { don: [0, 8], ka: [], tick: [4, 12] };
 
 export const TRACKS: Record<TrackKey, Track> = {
-  // Title screen and menus: an open, unhurried koto with wind.
+  // Title screen and menus: bright and eager, "the show is about to start". A rolling taiko groove,
+  // clappers on the backbeat and a full koto line, but lighter than any fight track.
   menu: {
-    scale: YO, root: 293.66, bass: 73.42, bassLine: [0, 0, -2, -1],
-    bpm: 72, tenseBpm: 72, calmBpm: 72, calm: CALM, intro: INTRO, fight: CALM, tense: CALM,
-    lead: ['koto'], density: 0.6, bell: 0, wind: true, drone: false,
+    scale: YO, root: 293.66, bass: 73.42, bassLine: [0, -2, 0, 1, 0, -2, 2, 1], bassSteps: [0, 10],
+    bpm: 96, tenseBpm: 96, calmBpm: 96,
+    calm: { don: [0, 7, 8], ka: [4, 12], tick: [2, 6, 10, 14], clap: [12] }, intro: INTRO, fight: CALM, tense: CALM,
+    lead: ['koto'], density: 0.85, bell: 0, wind: false, drone: false, lively: true,
+    level: 0.78, // a touch under the fight tracks, so the first fight still feels like a step up
   },
   // Graph Paper Dojo: the steady taiko and koto from the first sound pass.
   dojo: {
@@ -129,7 +139,7 @@ export function endlessLayers(level: number, tension: Tension) {
 export function arrangement(key: TrackKey, mode: MusicMode, tension: Tension, level = 1) {
   const t = TRACKS[key];
   const base = { kit: t.fight, bpm: t.bpm, density: t.density, lead: t.lead, bell: t.bell, melody: true, bass: true };
-  if (mode === 'menu') return { ...base, kit: t.calm, bpm: t.calmBpm, density: Math.min(t.density, 0.7) };
+  if (mode === 'menu') return { ...base, kit: t.calm, bpm: t.calmBpm, density: t.lively ? t.density : Math.min(t.density, 0.7) };
   if (mode === 'intro') return { ...base, kit: t.intro, melody: false, bass: false, bell: 0 }; // drums only under the banner
   if (key === 'endless') return { ...base, ...endlessLayers(level, tension) };
   return tension ? { ...base, kit: t.tense, bpm: t.tenseBpm, density: Math.min(1, t.density + 0.15) } : base;
@@ -192,7 +202,7 @@ export class Music {
   private start(a: AudioContext) {
     if (this.gain) { const old = this.gain; old.gain.setTargetAtTime(0, a.currentTime, 0.15); setTimeout(() => old.disconnect(), 1500); }
     this.gain = a.createGain(); this.gain.gain.value = 0.0001; this.gain.connect(E.musicBus);
-    this.fade(1, 0.4);
+    this.fade(TRACKS[this.track].level ?? 1, 0.4);
     this.next = a.currentTime + 0.06; this.step = 0; this.bar = 0;
     this.phrases = [makePhrase(this.arr.density), makePhrase(this.arr.density)];
     if (!this.timer) this.timer = window.setInterval(() => this.pump(), 25);
@@ -231,7 +241,7 @@ export class Music {
 
   private play(t: number, st: number) {
     const bus = this.gain!, tr = TRACKS[this.track], arr = this.arr, kit = arr.kit;
-    const calm = this.mode === 'menu';
+    const calm = this.mode === 'menu' && !tr.lively;
     if (kit.don.includes(st) && !(calm && this.bar % 2)) taiko(t, st === 0 ? 0.7 : 0.45, bus);
     if (kit.ka.includes(st)) {
       E.hiss({ dur: 0.05, type: 'bandpass', freq: 1800, q: 4, gain: 0.35, at: t, bus });
@@ -257,8 +267,12 @@ export class Music {
     }
 
     if (!arr.melody) return;
-    // Bass pluck on the bar line.
-    if (st === 0) E.pluck({ freq: note(tr.bassLine[this.bar % tr.bassLine.length], tr.bass, tr.scale), gain: 0.55, at: t, bus, dur: 1.4 });
+    // Bass plucks (on the bar line unless the track says otherwise), walking through its bass line.
+    const bassSteps = tr.bassSteps ?? [0], bi = bassSteps.indexOf(st);
+    if (bi >= 0) {
+      const deg = tr.bassLine[(this.bar * bassSteps.length + bi) % tr.bassLine.length];
+      E.pluck({ freq: note(deg, tr.bass, tr.scale), gain: bi === 0 ? 0.55 : 0.4, at: t, bus, dur: bi === 0 ? 1.4 : 0.8 });
+    }
     const pos = (this.bar % 2) * STEPS + st;
     const ph = this.phrases[this.form[Math.floor(this.bar / 2) % 4]], d = ph[pos];
     if (d === null || d === undefined) return;
