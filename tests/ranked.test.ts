@@ -220,6 +220,60 @@ describe('ranked matches', () => {
     expect(await store.player(playerId(TOKEN_A))).toBeNull();
   });
 
+  it('a player who goes silent (hidden tab) while the rival keeps playing loses after about 10 s', async () => {
+    let clock = 0;
+    const store = new MemoryStore(), ranked = new Ranked(store);
+    const lobby = new Lobby(Math.random, setTimeout, null, () => {}, ranked, () => clock);
+    const a = new FakePeer(), b = new FakePeer();
+    lobby.message(a, { t: 'hello', guard: 'flick', id: TOKEN_A });
+    lobby.message(b, { t: 'hello', guard: 'flick', id: TOKEN_B });
+    await flush();
+    lobby.message(a, { t: 'ranked', name: 'Ann' });
+    lobby.message(b, { t: 'ranked', name: 'Bo' });
+    await flush(); await flush();
+    const d = a.get('start')[0].delay;
+    // Both play 50 frames, then Bo goes quiet while Ann's game keeps sending.
+    for (let f = d; f < d + 50; f++) { lobby.message(a, { t: 'in', f, b: 0 }); lobby.message(b, { t: 'in', f, b: 0 }); }
+    for (let f = d + 50; f < d + 60; f++) lobby.message(a, { t: 'in', f, b: 0 });
+    lobby.tick();
+    clock = 9000; lobby.tick();
+    expect(a.get('ranked')).toHaveLength(0); // a short hitch is fine
+    clock = 10000; lobby.tick();
+    expect(b.get('ranked')[0]).toMatchObject({ won: false, why: 'left' });
+    expect(b.get('err')[0].msg).toMatch(/away from the ranked fight/);
+    expect(a.get('ranked')[0]).toMatchObject({ won: true, why: 'left' });
+    expect(a.last().t).toBe('gone');
+    // Counted once: later ticks and Bo closing the tab change nothing.
+    clock = 30000; lobby.tick(); lobby.close(b);
+    expect(a.get('ranked')).toHaveLength(1);
+    expect(b.get('ranked')).toHaveLength(1);
+  });
+
+  it('a fight that keeps moving, or waits on both players, is never called a stall', async () => {
+    let clock = 0;
+    const ranked = new Ranked(new MemoryStore());
+    const lobby = new Lobby(Math.random, setTimeout, null, () => {}, ranked, () => clock);
+    const a = new FakePeer(), b = new FakePeer();
+    lobby.message(a, { t: 'hello', guard: 'flick', id: TOKEN_A });
+    lobby.message(b, { t: 'hello', guard: 'flick', id: TOKEN_B });
+    await flush();
+    lobby.message(a, { t: 'ranked', name: 'Ann' });
+    lobby.message(b, { t: 'ranked', name: 'Bo' });
+    await flush(); await flush();
+    const d = a.get('start')[0].delay;
+    // Bo is slow but keeps up: each tick the fight has moved on.
+    for (let s = 0; s < 5; s++) {
+      for (let f = d + s * 10; f < d + s * 10 + 10; f++) lobby.message(a, { t: 'in', f, b: 0 });
+      for (let f = d + s * 10; f < d + s * 10 + 5; f++) lobby.message(b, { t: 'in', f, b: 0 });
+      lobby.tick(); clock += 6000;
+      for (let f = d + s * 10 + 5; f < d + s * 10 + 10; f++) lobby.message(b, { t: 'in', f, b: 0 });
+    }
+    // Then both go quiet (a network hiccup on both sides): nobody is judged.
+    clock += 60000; lobby.tick(); clock += 60000; lobby.tick();
+    expect(a.get('ranked')).toHaveLength(0);
+    expect(b.get('ranked')).toHaveLength(0);
+  });
+
   it('counts leaving a ranked match early as a loss', async () => {
     const { lobby, a, b } = await pairUp();
     lobby.message(a, { t: 'in', f: 10, b: 0 });
