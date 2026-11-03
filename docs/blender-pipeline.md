@@ -61,7 +61,7 @@ Rules: straight edges only (no curves, bevels or Subdivision Surface), no holes,
 1. Click a piece, then the **Material** tab in the Properties panel (the red-and-grey sphere near the bottom of the tab column).
 2. Pick the material (`pc_robe`, `pc_kimono`, `pc_hakama`...), change **Base Color**. Every piece using it changes.
 
-Sumi uses the same model and swaps `robe` and `kimono` in code: a cream robe over an indigo kimono, indigo prints. Sumi's own pieces (straw hat, tied-back sleeves) are in step 7.
+Sumi uses the same model and swaps `robe` and `kimono` in code: a cream robe over an indigo kimono, indigo prints. Sumi's own pieces (long hair worn down, tied-back sleeves) are in step 7.
 
 ## 4. Add a print (a pattern, a crest)
 Prints are flat shapes laid just in front of their paper piece, in the same object. The game draws them without an ink line.
@@ -89,14 +89,14 @@ The game reads every pivot from this file (the empties' positions): waist, neck,
 
 The guide suggests a PNG sequence or texture atlas as the export; Papercut draws the fighters live in its 3D book instead, so it uses the `.glb`.
 
-## 7. Kami's and Sumi's own pieces (#37: Sumi's straw hat and tied-back sleeves)
+## 7. Kami's and Sumi's own pieces (#37: Sumi's long hair and tied-back sleeves)
 Both fighters share one rig and one set of pieces. A paper piece whose name starts with **`kami_`** is worn by Kami only, and one starting with **`sumi_`** by Sumi only. Pieces with any other name are worn by both. Sumi's colour swap (cream robe, indigo kimono) still applies to Sumi's own pieces.
 
-**Already in the file** (built by Claude from these steps on 2026-11-02, at Marz's request; the cord is a little thicker than in 7d: corners (0.64, 2.34), (0.915, 2.375), (0.935, 2.48), (0.605, 2.45), and the forearms a little wider). The steps stay here so you can see how each piece is made and change any corner. Marz's picks:
+**Already in the file** (built by Claude from these steps on 2026-11-02, at Marz's request; the cord is a little thicker than in 7d: corners (0.64, 2.34), (0.915, 2.375), (0.935, 2.48), (0.605, 2.45), and the forearms a little wider). The steps stay here so you can see how each piece is made and change any corner. Marz's picks (the straw hat of the first draft was swapped for hair worn down at Marz's request):
 - **Kami** keeps the topknot and the wide hanging sleeves.
-- **Sumi** gets a wide straw hat over short hair, and sleeves tied back above the elbow with a cord, with bare forearms.
+- **Sumi** wears long hair down (no topknot), and sleeves tied back above the elbow with a cord, with bare forearms.
 
-**Stay inside the H box:** the game hits a box 0.9 m wide and 2.15 m tall. In Blender units that's X −0.86 to +0.86 and Z up to 4.10. The hat below peaks at Z 4.00 and is 1.24 wide.
+**Stay inside the H box:** the game hits a box 0.9 m wide and 2.15 m tall. In Blender units that's X −0.86 to +0.86 and Z up to 4.10. Sumi's hair below stays inside it (the top of the head and X −0.47 at the back).
 
 **Typing an exact corner:** in Edit Mode (**Tab**, then **1**), click one corner and press **N**. In the **Item** tab, click **Global**, then type the **X**, **Y** and **Z** under **Vertex**. Every corner below is given as (X, Z), with the Y to type.
 
@@ -106,28 +106,30 @@ Work in your usual `papercut` folder (`art/fighters/samurai.blend`), not in Clau
 1. In the Outliner, double-click **hair** and rename it `kami_hair`.
 2. Rename **sleeve_L** to `kami_sleeve_L` and **sleeve_R** to `kami_sleeve_R`.
 
-### 7b. Sumi's short hair (under the hat)
+### 7b. Sumi's long hair, worn down
 1. Click `kami_hair`. With the mouse over the 3D view, press **Shift+D**, then **right-click**: the copy stays in place.
 2. Rename the copy `sumi_hair`.
-3. **Tab**, then **1**. Hover the topknot, press **L** (it selects the whole topknot). Hover the gold tie and press **L** again.
-4. **X → Vertices**, then **Tab**. The short hair stays.
-
-### 7c. Sumi's straw hat
-1. Click `hand_L_paper` (the left mitten; it has 6 corners). **Shift+D**, **right-click**. Rename the copy `sumi_hat`.
-2. Move it to the head: keep `sumi_hat` selected, **Ctrl+click** the empty **head** in the Outliner, hover the 3D view, **Ctrl+P → Object (Keep Transform)**.
-3. Colour: open the **Material** tab. Next to `pc_skin`, click the **new material** button (two sheets), rename the copy `pc_straw` and set **Base Color** to hex `C9A86A`. If the piece has a second material slot, select it, pick `pc_straw` there too, **Tab**, **A**, **Assign**, **Tab**.
-4. **Tab**, **1**, and type the 6 corners, all with **Y −0.12**. Go round the outline in order:
+3. **Tab**, then **1**. Hover the topknot, press **L** (it selects the whole topknot). Hover the gold tie and press **L** again. **X → Vertices**: the short hair stays.
+4. Now let it fall down the back. **A** selects every corner; **X → Vertices** clears them, then type a new outline instead (all with **Y −0.1**; head-local numbers, so in **Item** click **Local**, not Global). Click a corner, **E** (extrude), type the next, and so on round the outline; at the end select the first and last corners and press **F** to close it, then **A** and **F** again to fill the face:
 
 | corner | X | Z |
 |---|---|---|
-| brim, back tip | −0.62 | 3.60 |
-| brim, front tip | 0.62 | 3.60 |
-| front shoulder | 0.58 | 3.67 |
-| top, front | 0.10 | 4.00 |
-| top, back | −0.10 | 4.00 |
-| back shoulder | −0.58 | 3.67 |
+| fringe, front top | 0.311 | 0.782 |
+| fringe, front | 0.345 | 0.644 |
+| fringe, inner | 0.069 | 0.621 |
+| temple | −0.023 | 0.437 |
+| behind the jaw | −0.092 | 0.161 |
+| nape | −0.12 | −0.10 |
+| tip, front | −0.15 | −0.62 |
+| tip | −0.22 | −0.70 |
+| tip notch | −0.29 | −0.63 |
+| tip | −0.36 | −0.72 |
+| tip, back | −0.43 | −0.64 |
+| back of the hair | −0.47 | −0.30 |
+| back of the head | −0.42 | 0.23 |
+| crown | −0.333 | 0.794 |
 
-5. **Tab**. The hat sits over the head with its brim at the eyebrows.
+5. **Tab**. The hair falls from the crown to between the shoulder blades, with a cut-paper ragged tip.
 
 ### 7d. Sumi's tied-back sleeves (left first)
 1. Click `kami_sleeve_L`, **Shift+D**, **right-click**, rename the copy `sumi_sleeve_L`.
