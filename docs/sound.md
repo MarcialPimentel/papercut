@@ -120,13 +120,13 @@ The **Sound** button (on the title screen next to "How to play", and top-right d
 
 | Sound | Files | From (original file, part used) | Licence |
 |---|---|---|---|
-| Light hit | paperCut_000 | "Short paper cut", the clean snip at 2.93 s. The two earlier cuts in the file have a pitched buzz (squeak risk) and aren't used | **To confirm** (Freesound page link and licence) |
-| Heavy hit, riposte | paperTear_000, paperTear_001 | "Paper tear" (0.38 s, 0.36 s long) and "Paper tear 2" (the first tear, 0.27 s, 0.42 s long) | **To confirm** |
-| K.O. | paperTearLong_000, paperTearLong_001 | The same two tears, played longer (0.70 s and 0.60 s) | **To confirm** |
-| Menu: move | menuFlick_000, menuFlick_001 | "Newspaper turn page", two short crinkles (1.80 s, 2.73 s) | **To confirm** |
-| Menu: press | menuPage_000 | "Newspaper turn page", the turn itself (2.33 s, 0.32 s long) | **To confirm** |
+| Light hit | paperCut_000 | ["180081 Paper Tearing 03 SHORT.WAV"](https://freesound.org/people/FST180081/sounds/441804/) by FST180081 (saved as "Short paper cut"): the clean snip at 2.93 s. The two earlier sounds in the file have a pitched buzz (squeak risk) and aren't used | CC BY 4.0 |
+| Heavy hit, riposte | paperTear_000, paperTear_001 | ["Tearing Paper 01"](https://freesound.org/people/Aiwha/sounds/496140/) by Aiwha (saved as "Paper tear"; from 0.38 s, 0.36 s long) and ["Paper Tear.MP3"](https://freesound.org/people/FunWithSound/sounds/367684/) by FunWithSound (saved as "paper tear 2"; the first tear, from 0.27 s, 0.42 s long) | CC BY 4.0; CC0 |
+| K.O. | paperTearLong_000, paperTearLong_001 | The same two tears, played longer (0.70 s and 0.60 s) | CC BY 4.0; CC0 |
+| Menu: move | menuFlick_000, menuFlick_001 | ["Turning newspaper page (SoundAction 281)"](https://freesound.org/people/alexarje/sounds/863259/) by alexarje (saved as "Newspaper turn page"): two short crinkles (1.80 s, 2.73 s) | CC BY 4.0 |
+| Menu: press | menuPage_000 | The same newspaper recording: the turn itself (2.33 s, 0.32 s long) | CC BY 4.0 |
 
-Freesound sounds each carry their own licence: CC0 (no credit), CC BY (credit the author in the game's credits) or CC BY-NC (**not allowed**: Papercut will be sold on Steam). Each row needs its Freesound link and licence before release; a CC BY-NC sound has to be replaced.
+Freesound sounds each carry their own licence: CC0 (no credit needed), CC BY (credit the author, the sound's title and the licence where players can see it) or CC BY-NC (**not allowed**: Papercut will be sold on Steam). All four here allow commercial use (checked 2026-11-03). The CC BY credits, with a note that the sounds were trimmed and levelled, are on the **How to play** screen (`index.html`); keep them there, and add the Steam store page's credits when it lists any. Any new CC BY sound gets added to that line.
 
 Still code-made: whooshes, parry, jump/dash hop, taiko drums, the gong, all stings, and all music apart from the two songs, the clappers and the bell.
 
