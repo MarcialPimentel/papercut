@@ -398,6 +398,9 @@ function renderBracket() {
   const cur = b.current && b.rounds[b.current[0]][b.current[1]];
   $('#bTitle').textContent = b.champion !== null ? `${b.names[b.champion]} wins!` : 'Bracket';
   $('#bAgain').hidden = !b.restart;
+  // Opened with Esc while watching: the fight plays on underneath, one click away.
+  $('#bWatch').hidden = mode.kind !== 'watch';
+  $('#bWatch').querySelector('small')!.textContent = controls.device === 'pad' ? 'B or Menu also takes you back' : 'Esc also takes you back';
   $('#bNext').textContent = b.champion !== null ? (b.champion === b.you ? 'You won the tournament!' : 'The tournament is over.')
     : cur ? `Now: ${nm(cur.a)} vs ${nm(cur.b)}` : 'Next fight in a few seconds…';
   $('#bLeaveT').textContent = b.champion !== null ? 'Back to the menu' : 'Leave tournament';
@@ -450,6 +453,8 @@ controls.onNav = (n) => {
   if (screen) {
     if (n === 'menu') { if (screen !== 'main') command('menu'); return; }
     navigate(n, $('#menu'), () => {
+      // B on the bracket never leaves the tournament: it goes back to the fight being watched, or does nothing.
+      if (screen === 'bracket') { if (mode.kind === 'watch') hideMenu(); return; }
       const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
       back?.click();
     });
@@ -541,6 +546,7 @@ $('#tName').addEventListener('change', () => {
 });
 $('#tBegin').addEventListener('click', () => net.send({ t: 'begin' }));
 $('#bAgain').addEventListener('click', () => net.send({ t: 'restart' }));
+$('#bWatch').addEventListener('click', () => { if (mode.kind === 'watch') hideMenu(); });
 $('#tCopy').addEventListener('click', async () => {
   const input = $<HTMLInputElement>('#tLink');
   try { await navigator.clipboard.writeText(input.value); $('#tCopy').textContent = 'Copied'; }
@@ -608,6 +614,8 @@ function command(c: Command) {
     return;
   }
   if (c === 'menu' && tuner.open) { tuner.toggle(false); return; }
+  // Watching a tournament fight: Esc shows the bracket over it (and back), never leaves the tournament.
+  if (c === 'menu' && mode.kind === 'watch') { if (screen === 'bracket') hideMenu(); else { showMenu('bracket'); renderBracket(); } return; }
   if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone' || screen === 'board') showMenu('main'); return; }
   if (mode.kind === 'tutorial') {
     if (c === 'skip') mode.tut.skip();
@@ -662,6 +670,7 @@ net.onMessage = (m: ToClient) => {
       if (!tourney) break;
       tourney.bracket = m;
       if (mode.kind === 'menu') { if (screen !== 'bracket') showMenu('bracket'); renderBracket(); break; }
+      if (screen === 'bracket') renderBracket(); // a watcher looking at the bracket over the fight
       if (tourney.fight && !(m.current && m.current[0] === tourney.fight[0] && m.current[1] === tourney.fight[1])) {
         // The fight on screen is decided. A walkover (someone left) goes straight back; otherwise let the end play out.
         if (m.rounds[tourney.fight[0]][tourney.fight[1]].forfeit) toBracket();
@@ -797,7 +806,7 @@ function frame(now: number) {
       : l.waiting > 20 ? "Waiting for your rival's connection…"
       : `${tourney ? 'Tournament' : 'Online'} · room ${m.code} · ${rulesLabel(l.state.cfg)} · ${l.delay}-frame delay`;
   } else if (m.kind === 'watch') {
-    status = `Watching ${m.names[0]} vs ${m.names[1]} · tournament ${m.code} · ${controls.device === 'pad' ? 'Menu' : 'Esc'} to leave`;
+    status = `Watching ${m.names[0]} vs ${m.names[1]} · tournament ${m.code} · ${controls.device === 'pad' ? 'Menu' : 'Esc'} for the bracket`;
   }
   if (m.kind !== 'menu' && controls.lockWanted && !controls.locked && controls.device !== 'pad' && matchMedia('(hover: hover) and (pointer: fine)').matches && !status.startsWith('Out')) {
     status = 'Click the fight to hold the mouse · ' + status;
