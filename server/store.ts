@@ -48,6 +48,10 @@ export const READ_LIMIT = 20000;
 
 export interface Store {
   readonly kind: 'postgres' | 'memory';
+  /** Make the tables (Postgres). Throws if the database can't be reached. */
+  setup(): Promise<void>;
+  /** Does the database answer a trivial query within `ms`? */
+  ping(ms: number): Promise<boolean>;
   addMatch(build: string, r: MatchRecord): Promise<void>;
   addEndless(build: string, r: EndlessRecord): Promise<void>;
   matches(f: Filter): Promise<MatchRow[]>;
@@ -75,6 +79,9 @@ export class MemoryStore implements Store {
   readonly runs: (EndlessRow & { at: number; frames: number; player?: string })[] = [];
   readonly players = new Map<string, Player>();
   constructor(private now: () => number = Date.now) {}
+
+  async setup() {}
+  async ping() { return true; }
 
   async addMatch(build: string, r: MatchRecord) {
     this.rows.push({ build, mode: r.mode, standard: r.standard, guard: r.guard, winner: r.winner, tally: r.tally, at: this.now(), inputs: r.inputs, players: r.players });
@@ -170,6 +177,15 @@ export class PgStore implements Store {
   private init() {
     if (!this.ready) this.ready = this.pool.query(SCHEMA).then(() => undefined, (e) => { this.ready = null; throw e; });
     return this.ready;
+  }
+
+  setup() { return this.init(); }
+
+  async ping(ms: number) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<false>((done) => { timer = setTimeout(() => done(false), ms); });
+    const answer = this.pool.query('SELECT 1').then(() => true, () => false);
+    try { return await Promise.race([answer, late]); } finally { clearTimeout(timer); }
   }
 
   async addMatch(build: string, r: MatchRecord) {
