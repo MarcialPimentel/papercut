@@ -4,7 +4,7 @@
 
 import { store } from './store';
 
-export type Action = 'light' | 'heavy' | 'feint' | 'left' | 'right' | 'jump' | 'dash' | 'guardLow' | 'restart' | 'hitboxes' | 'tune' | 'skip';
+export type Action = 'light' | 'heavy' | 'feint' | 'left' | 'right' | 'jump' | 'dash' | 'guardLow' | 'emote' | 'restart' | 'hitboxes' | 'tune' | 'skip';
 export const ACTIONS: { id: Action; name: string; note?: string }[] = [
   { id: 'light', name: 'Light slash' },
   { id: 'heavy', name: 'Heavy slash' },
@@ -14,6 +14,7 @@ export const ACTIONS: { id: Action; name: string; note?: string }[] = [
   { id: 'jump', name: 'Jump' },
   { id: 'dash', name: 'Dash', note: 'the way you are moving; backdash when still' },
   { id: 'guardLow', name: 'Guard low (hold)', note: 'instead of the mouse' },
+  { id: 'emote', name: 'Taunt', note: '"come at me"; only for show, standing still' },
   { id: 'restart', name: 'Restart / rematch' },
   { id: 'hitboxes', name: 'Hitbox view' },
   { id: 'tune', name: 'Tuning panel', note: 'in Practice' },
@@ -39,12 +40,12 @@ export const DEFAULTS: Bindings = {
   keys: {
     light: ['Mouse0', ''], heavy: ['Mouse2', ''], feint: ['KeyQ', 'Mouse1'],
     left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], jump: ['Space', 'KeyW'],
-    dash: ['', ''], guardLow: ['', ''], restart: ['KeyR', ''], hitboxes: ['KeyH', ''], tune: ['KeyT', ''], skip: ['Tab', ''],
+    dash: ['', ''], guardLow: ['', ''], emote: ['KeyE', ''], restart: ['KeyR', ''], hitboxes: ['KeyH', ''], tune: ['KeyT', ''], skip: ['Tab', ''],
   },
   pad: {
     light: [PAD.RB, PAD.X], heavy: [PAD.RT, PAD.Y], feint: [PAD.B, -1],
     left: [-1, -1], right: [-1, -1], jump: [PAD.A, -1],
-    dash: [PAD.LB, -1], guardLow: [-1, -1], restart: [PAD.View, -1], hitboxes: [-1, -1], tune: [-1, -1], skip: [PAD.LT, -1],
+    dash: [PAD.LB, -1], guardLow: [-1, -1], emote: [PAD.RS, -1], restart: [PAD.View, -1], hitboxes: [-1, -1], tune: [-1, -1], skip: [PAD.LT, -1],
   },
 };
 

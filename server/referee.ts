@@ -29,8 +29,15 @@ export interface MatchRecord {
   /** The frame the match started on (a rematch carries on the frame count), then its inputs. */
   start: number;
   inputs: InputLog;
-  /** Ranked: the two players' ids (hashes, not their tokens). */
+  /** How many frames the match ran from `start` (what a replay plays). */
+  frames: number;
+  /** Both players' ids (hashes of their tokens, '' for a game that didn't say), so each can find their replays. */
   players?: [string, string];
+  /** The names and looks shown in the fight (drawn only, for replays). */
+  names?: [string, string];
+  looks?: [string, string];
+  /** The fight version it was played on (server/fightVersion.ts): a replay only plays back on the same rules. */
+  fight?: string;
 }
 
 /** How far ahead of the fight a player's inputs may run before the server ignores them. */
@@ -151,7 +158,7 @@ export class Referee {
     try {
       this.onRecord({
         mode: this.mode, cfg: this.cfg, standard: isStandard(this.cfg), guard: this.guard,
-        winner: t.winner, tally: structuredClone(t), start: this.start, inputs: this.log.slice(),
+        winner: t.winner, tally: structuredClone(t), start: this.start, inputs: this.log.slice(), frames: this.state.frame - this.start,
       });
     } catch (e) { console.error('Could not record a match:', e); }
   }

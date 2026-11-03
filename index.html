@@ -23,6 +23,14 @@
       <button class="hbtn" id="bLeave" type="button">Leave</button>
     </div>
     <div class="hud banner fight-only" id="banner" hidden><div id="bannerText"></div></div>
+    <div class="hud replaybar fight-only" id="replayBar" hidden>
+      <button class="hbtn" id="rpRestart" type="button">From the start</button>
+      <button class="hbtn" id="rpBack" type="button">Back 5s</button>
+      <button class="hbtn" id="rpPause" type="button">Pause</button>
+      <button class="hbtn" id="rpStep" type="button">+1 frame</button>
+      <button class="hbtn" id="rpSpeed" type="button">Speed 1x</button>
+      <button class="hbtn" id="rpList" type="button">Your replays</button>
+    </div>
     <div class="hud rematch fight-only"><button class="mbtn red" id="rematch" type="button" hidden>Rematch</button></div>
     <div class="hud tut fight-only" id="tut" hidden aria-live="polite">
       <div class="tut-card">
@@ -65,6 +73,7 @@
             <button class="hbtn" id="bFighter" type="button">Your fighter</button>
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
             <button class="hbtn" id="bBoard" type="button">Leaderboard</button>
+            <button class="hbtn" id="bReplays" type="button">Replays</button>
             <button class="hbtn" id="bSettings" type="button">Settings</button>
             <button class="hbtn" id="bControls" type="button">Controls</button>
             <button class="hbtn" id="bQuit" type="button" hidden>Quit</button>
@@ -153,6 +162,12 @@
           <p class="muted" id="boardYou"></p>
           <p class="muted small">Each player's best run: most bots, then the fastest. The server re-plays every run before it counts.</p>
           <button class="mbtn" id="bBoardBack" type="button">Back</button>
+        </div>
+        <div data-screen="replays" class="stack replays" hidden>
+          <p class="big">Your replays</p>
+          <div id="replayList" class="stack"></div>
+          <p class="muted small">Your last 20 online fights. Replays are kept for 90 days, and only play back on the rules they were fought on.</p>
+          <button class="mbtn" id="bReplaysBack" type="button">Back</button>
         </div>
         <form data-screen="settings" class="stack setup settings" id="settingsForm" hidden>
           <p class="big">Settings</p>

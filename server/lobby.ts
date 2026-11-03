@@ -227,17 +227,18 @@ export class Lobby {
     this.roomOf.set(guest, r);
     const delay = delayFor(r.host.rtt ?? 80, guest.rtt ?? 80);
     const mode = r.ranked ? 'ranked' : r.quick ? 'quick' : 'room';
-    const ref = new Referee(mode, r.cfg, delay, [r.host.guard ?? '', guest.guard ?? ''], (rec) => {
-      if (r.ranked) rec.players = r.ranked.ids;
-      this.record(rec);
-      if (rec.winner === 0 || rec.winner === 1) this.settle(r, rec.winner, 'match');
-    });
-    r.ref = ref;
     const a = r.ranked && this.ranked?.info(r.host), b = r.ranked && this.ranked?.info(guest);
     const extra = a && b ? { ranks: [a, b] as [RankInfo, RankInfo] } : {};
     const looks: [string, string] = [r.host.look ?? '', guest.look ?? ''];
     // Ranked names come from the ranked record (it fills in a Ronin name); otherwise the names the players sent.
     const names: [string, string] = a && b ? [a.name, b.name] : [r.host.name || 'Kami', guest.name || 'Sumi'];
+    const ref = new Referee(mode, r.cfg, delay, [r.host.guard ?? '', guest.guard ?? ''], (rec) => {
+      rec.players = r.ranked ? r.ranked.ids : [r.host.pid ?? '', guest.pid ?? ''];
+      rec.names = names; rec.looks = looks;
+      this.record(rec);
+      if (rec.winner === 0 || rec.winner === 1) this.settle(r, rec.winner, 'match');
+    });
+    r.ref = ref;
     r.host.send({ t: 'start', seat: 0, delay, code: r.code, cfg: r.cfg, looks, names, ...extra });
     guest.send({ t: 'start', seat: 1, delay, code: r.code, cfg: r.cfg, looks, names, ...extra });
   }
