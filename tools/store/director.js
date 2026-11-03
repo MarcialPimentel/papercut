@@ -37,7 +37,7 @@
     if (me.queue.length) return me.queue.shift() | me.held;
     if (me.hold) return 0;
     let b = 0;
-    if (s.phase === 'over') return B.rematch;
+    if (s.phase === 'over') return me.noRematch ? 0 : B.rematch;
     if (s.phase !== 'fight' || s.hitstop > 0) return me.low ? B.low : 0;
     const a = s.f[0], r = s.f[1];
     const dx = Math.abs(r.x - a.x), toward = r.x > a.x ? B.right : B.left, away = r.x > a.x ? B.left : B.right;
@@ -89,13 +89,19 @@
     takeOver(level = 3) {
       const pc = window.__pc, m = pc.mode;
       pc.controls.sample = () => duelist(pc.mode.s);
-      if (m.dummy) m.dummy.level = level;
+      if (m.dummy) {
+        m.dummy.level = level;
+        // The bot normally uses Math.random; a seeded one makes every run play the same fight.
+        let bs = (cfg.seed || 7) * 7919 + 1;
+        m.dummy.rand = () => { bs = (bs * 1103515245 + 12345) % 2147483648; return bs / 2147483648; };
+      }
       const v = pc.view, onStep = v.onStep.bind(v);
-      v.onStep = (s, ev) => { for (const e of ev) events.push({ f: s.frame, k: e.k, p: e.p, how: e.how, why: s.why, page: s.page, round: s.round }); onStep(s, ev); };
+      v.onStep = (s, ev) => { for (const e of ev) events.push({ f: s.frame, k: e.k, p: e.p, winner: e.winner, how: e.how, why: s.why, page: s.page, round: s.round, wins: s.f[0].wins }); onStep(s, ev); };
     },
     /** Key art: both fighters stand still; `press` queues Kami's presses (BTN bits, one per frame). */
     hold() { me.queue.length = 0; me.held = 0; me.hold = true; const m = window.__pc.mode; if (m.dummy) m.dummy.think = () => 0; },
     press(...bits) { me.queue.push(...bits); },
+    noRematch() { me.noRematch = true; },
     /** Skip drawing (fast-forward) or draw again. */
     drawing(on) {
       const v = window.__pc.view;
