@@ -47,7 +47,17 @@ _Since 2026-11-02, from Marz's art-direction brief ("Stylized 2D Papercraft"), h
 
 **The look:** a cream inner kimono with a crossed collar, a cream obi with a knot and tails, an indigo outer robe with wide cream lapels and cream waves at the hem, big flared sleeves with a blossom crest and cream waves, two-tone indigo hakama, black feet, a big profile head (cream face, wedge nose, slash eye) under a black hair block with a tall topknot and gold tie, and a long katana with a gold-wrapped hilt and black guard.
 
-**Kami and Sumi:** the same robes inverted, and different outlines (#37, Marz's picks 2026-11-02). Kami wears indigo over cream, with the topknot and wide hanging sleeves. Sumi wears cream over indigo (indigo prints), a wide straw hat over short hair, and sleeves tied back above the elbow with a red cord, with bare forearms. One rig and piece list: pieces named `kami_...` / `sumi_...` in the Blender file are worn by that fighter only ([blender-pipeline.md](blender-pipeline.md), step 7). Hakama and gold stay the same.
+**Kami and Sumi:** the same robes inverted, and different outlines (#37, Marz's picks 2026-11-02). Kami wears indigo over cream, with the topknot and wide hanging sleeves. Sumi wears cream over indigo (indigo prints), a wide straw hat over short hair, and sleeves tied back above the elbow with a cord in the kimono colour (never red: red is for cuts), with bare forearms. With player looks (#38), player 1 always wears Kami's pieces and player 2 Sumi's, whatever colours they pick. One rig and piece list: pieces named `kami_...` / `sumi_...` in the Blender file are worn by that fighter only ([blender-pipeline.md](blender-pipeline.md), step 7). Hakama and gold stay the same.
+
+**Player looks (since 2026-11-02, #38):** on the "Your fighter" screen each player picks a colour set worn as a dark or light robe, an outfit print and a sword style; the data is in `src/render/looks.ts`.
+
+| Choice | Options | What changes |
+|---|---|---|
+| Colours | Indigo (Kami's), Kraft, Sumi ink, Pine, Graph blue, Plum; each dark (robe over trim) or light (swapped) | `robe`, `kimono`, `hakama`, `hakamaDark` roles |
+| Outfit | Waves (the model's waves and sleeve crests), Stripes, Plain (hem band only) | The robe's and sleeves' prints, never the paper outline |
+| Sword | Katana (the model's), Folded (white paper blade with a centre fold), Bokken (kraft wood, no guard), Hamon (steel with an ink temper line, square guard) | Blade, guard, grip and wrap colours, the guard's shape and a blade print; the blade outline (and reach) never changes |
+
+Rules: no red, pink, orange or yellow in any look (red is for cuts, yellow for tells); blades stay pale so the guard reads from the blade; one fighter always wears a dark robe and the other a light one (on a tie player 2 flips), so who's who reads at a glance. Default player 1 is still Kami (Indigo dark) and player 2 Sumi (Indigo light). New colour sets, prints or swords are a few lines of data in `looks.ts`; new shapes (a hat, armour) need new pieces in the Blender model.
 
 **In the game:** a thick ink line round every paper piece (seen wherever it overlaps paper behind it), a thin cream rim round the whole figure, the sword outlined on its own. Hits cut a red slash through every piece the blade crosses. The K.O. cuts every piece along the blade; each half keeps its outline, shows a thin red edge, and falls as paper physics. A fighter facing left is drawn mirrored. Poses snap like stop-motion (one in-between at most); turning around, the cut-out flips through edge-on.
 
@@ -135,4 +145,5 @@ Check the commercial-use terms of any image tool, and don't name other franchise
 - 2026-11-02: fighters are papercraft samurai modelled in Blender to Marz's model guide, moving in stop-motion pose snaps; Endless keeps the last 5 bots' halves on the page.
 - Mouse controls: cursor guard, left click light, right click heavy, keyboard movement; feint and riposte; no two players on one PC, no gamepads for now.
 - A practice dummy in Milestone 1 and a computer fighter later; one shared move set in Milestone 1; simple specials later.
-- Since the first build (2026-11-02): Endless mode, custom room rules and tournaments use the same two looks (Kami and Sumi) with player names on the HUD; their rules are in the GDD. Whether bots and tournament players get looks of their own is an open art question.
+- Since the first build (2026-11-02): Endless mode, custom room rules and tournaments show player names on the HUD; their rules are in the GDD.
+- 2026-11-02 (#38): players pick their own look (colours, outfit print, sword style), shown to the rival and tournament watchers; Endless bots wear random looks.

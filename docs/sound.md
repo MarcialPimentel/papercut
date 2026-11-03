@@ -12,7 +12,7 @@ Sound never touches the fight rules (`src/sim/`), so it can't affect online sync
 |---|---|---|
 | "Round N" banner | Wooden clappers, speeding up (kabuki hyoshigi) | |
 | "Cut!" (fight starts) | Taiko drum + clapper | |
-| Heavy slash wind-up | A quiet rising paper creak | Lets you hear the counter-cut opening as well as see it |
+| Heavy slash wind-up | A paper fold, the same for a real heavy and a feint | Lets you hear a heavy coming without telling you if it's a feint (#29) |
 | Slash comes out | Whoosh (heavy is lower and longer) | |
 | Clash (two slashes meet) | Bright double blade ring + paper snap | Its own sound now; used to share the block sound |
 | Block | A duller, shorter knock | |
@@ -21,7 +21,7 @@ Sound never touches the fight rules (`src/sim/`), so it can't affect online sync
 | Heavy hit / riposte | A long paper tear + thump | |
 | K.O. | Taiko boom + full tear | |
 | Counter cut | The K.O. plus a long blade ring | |
-| Feint, jump, dash, landing | Paper fold, hop, soft thud | |
+| Jump, dash, landing | Hop, soft thud | The feint's cancel is silent (#29) |
 | Last 10 seconds | A wood tick each second, sharper for the last 3 | |
 | Time up | A low gong | |
 | Round won / lost | A rising / falling pluck | "Won" means you won (seat 0 in practice) |
@@ -33,16 +33,40 @@ Sounds pan left and right with where they happen on the page, and each play vari
 
 ## Music
 
-Made in code: taiko drums, a small high drum, a plucked bass and a koto-like melody on a Japanese scale (miyako-bushi on D). It writes fresh melodies as it goes, so no two fights sound quite the same.
+All made in code (`src/audio/music.ts`), from the same paper-theatre band: taiko drums, a small high drum, wooden clappers (a recording), a temple bell (a recording), a plucked bass, a koto-like pluck and a bamboo flute, on Japanese five-note scales. It writes fresh melodies as it goes (a new phrase every eight bars), so no two fights sound quite the same. Each part of the game has its **own track**, so a session never loops one tune (#39).
+
+| Track | Plays on | Feel | Tempo (normal / tense), scale | Lead and extras |
+|---|---|---|---|---|
+| Menu | Title screen and menus | Bright and eager, "the show is about to start" | 96, yo scale on D | A rolling taiko groove (don, do-don), clappers on the backbeat, a walking bass, a full koto line. A little quieter than the fight tracks, so the first fight still feels like a step up |
+| Dojo | Graph Paper Dojo (rounds 1 and 4) | Steady, the original track | 100 / 112, miyako-bushi on D | Koto |
+| Courtyard | Ruled Courtyard (rounds 2 and 5) | Brighter and lighter | 108 / 120, yo scale on E | Bamboo flute, clappers on the offbeat |
+| Grove | Legal Pad Grove (round 3) | Darker and slower | 84 / 96, in-sen scale on A | Sparse koto, a low drone, the temple bell every 4 bars, wind |
+| Endless | Every Endless fight | Restless, builds with each bot level (below) | 92 to 112, kumoi scale on C | Koto, then the flute |
+| Tournament | Every tournament fight and the bracket screen | Festival drums | 116 / 128 (bracket 90), yo scale on F | Flute and koto together, clappers on the backbeat |
+| Back cover | After a match, once the win/lose sting has played | Still and wistful | 64, hirajoshi on A | Koto, the bell, wind |
+
+Within every fight track, the music still follows the fight:
 
 | When | Music |
 |---|---|
-| Menus | Calm and slow |
-| "Round N" banner | Drums only |
-| Fight | Full, 100 beats a minute |
-| Tense (deciding round, either strip at 25 or less, or the last 10 seconds) | Busier drums, 112 beats a minute |
-| From a K.O. to the next round | Silent |
-| Match over | The win/lose sting, then the menu music after 4 seconds |
+| "Round N" banner | That page's drums only |
+| Fight | The full track |
+| Tense (deciding round, either strip at 30% or less, or the last 10 seconds) | Busier drums and faster. A **tournament final** is tense from the first round |
+| From a K.O. to the next round | Silent. The next page's track starts with its "Round N" |
+| Match over | The win/lose sting, then the back cover track after 4 seconds |
+
+**Endless levels.** The bots level up every 5 bots cut, and the music adds a layer and 4 beats a minute each level, topping out at level 6:
+
+| Level | Bots cut | Adds |
+|---|---|---|
+| 1 | 0-4 | Taiko on beats 1 and 3, bass, a sparse koto |
+| 2 | 5-9 | High ticks |
+| 3 | 10-14 | The high drum on the backbeat |
+| 4 | 15-19 | Wooden clappers |
+| 5 | 20-24 | Busier taiko; the flute joins the koto |
+| 6 | 25+ | Fast ticks and the temple bell |
+
+To change a track: each one is a block in `TRACKS` in `src/audio/music.ts` (scale, key, tempo, which sixteenths each drum plays on, lead instruments, how many melody notes play, bell, wind, drone). `tests/music.test.ts` checks that every page has its own track, tense is faster and busier, and Endless keeps building.
 
 ## Volume
 
@@ -50,7 +74,7 @@ The **Sound** button (on the title screen next to "How to play", and top-right d
 
 ## Recordings in the game
 
-19 files in `public/sfx/`, from three free Kenney packs, downloaded 2026-11-01. All Kenney packs are CC0 (public domain): no credit is required, but we credit Kenney (www.kenney.nl) anyway. Several files for one sound = one is picked at random each time.
+21 files in `public/sfx/`, from three free Kenney packs, downloaded 2026-11-01. All Kenney packs are CC0 (public domain): no credit is required, but we credit Kenney (www.kenney.nl) anyway. Several files for one sound = one is picked at random each time.
 
 | Sound | Files | Pack | How it's used |
 |---|---|---|---|
@@ -64,9 +88,10 @@ The **Sound** button (on the title screen next to "How to play", and top-right d
 | Landing | impactSoft_medium_000, _001, _002 | Impact Sounds | |
 | Menu buttons | select_002 | Interface Sounds | |
 | Last-10-seconds tick | tick_001, tick_002 | Interface Sounds | Higher for the last 3 seconds |
-| Round clappers | impactWood_light_000, _002 | Impact Sounds | Sped up, with a code-made crack on top |
+| Round clappers | impactWood_light_000, _002 | Impact Sounds | Sped up, with a code-made crack on top. Also the music's clappers (Courtyard, Tournament, Endless level 4+) |
+| Temple bell (music) | impactBell_heavy_000, _001 | Impact Sounds | Grove, the back cover and Endless level 6. Code-made bell if missing |
 
-Still code-made: whooshes, the heavy wind-up creak, parry, jump/dash hop, taiko drums, the gong, all stings and all music.
+Still code-made: whooshes, parry, jump/dash hop, taiko drums, the gong, all stings, and all music apart from the clappers and the bell.
 
 ## Swapping a recording
 

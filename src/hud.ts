@@ -1,13 +1,15 @@
 // The flat paper HUD over the scene: health strips, the clock, round diamonds and banners.
 
-import { DEFAULT_CFG, ENDLESS, type MatchCfg } from './sim/config';
+import type { RankInfo } from './net/protocol';
+import { botLevel } from './sim/endless';
+import { DEFAULT_CFG, type MatchCfg } from './sim/config';
 import { PAGES, RULES } from './sim/rules';
 import { matchWinner, type State } from './sim/sim';
 import { LOOKS } from './render/common';
 
 const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
 /** Endless: the bot's level (1, 2, 3…) after `cut` bots. */
-export const botLevel = (cut: number) => Math.floor(cut / ENDLESS.healEvery) + 1;
+export { botLevel };
 
 /** The round-end line. A counter cut says why it was an instant K.O., so players learn the rule. */
 function howText(s: State, loser: string) {
@@ -33,8 +35,19 @@ export class Hud {
   tourney = false;
   /** Player names for the two bars (tournaments); null = the fighters' own names. */
   names: [string, string] | null = null;
+  /** The tutorial: no round tally, and a K.O. banner that only says why. */
+  tutorial = false;
   /** Endless: your best run before this one, for the end banner. */
   best = 0;
+  /** A ranked match: both players' divisions (shown beside their names); no rematch. */
+  ranks: [RankInfo, RankInfo] | null = null;
+  /** Endless: where the finished run put you on the leaderboard (or why it wasn't posted). */
+  placeNote = '';
+  /** Ranked: the result once the server has counted it, e.g. "+18 · Cardstock 1518". */
+  rankNote = '';
+  /** The key or button that restarts, for "Press R or Rematch" (null if none is bound). Set by main. */
+  restartKey: string | null = 'R';
+  private again(what: string) { return this.restartKey ? `Press ${this.restartKey} or Rematch to ${what}.` : `Rematch to ${what}.`; }
   private cfg: MatchCfg = DEFAULT_CFG;
   private lastTally = '';
 
@@ -52,6 +65,11 @@ export class Hud {
       const nm = bar.querySelector('.nm')!;
       nm.textContent = this.names?.[i] ?? LOOKS[i].name;
       bar.classList.toggle('you', this.you === i);
+      let rk = bar.querySelector<HTMLElement>('.rk');
+      if (!rk) { rk = document.createElement('span'); rk.className = 'rk'; nm.after(rk); }
+      const r = this.ranks?.[i];
+      rk.hidden = !r;
+      rk.textContent = r ? (r.placed ? `${r.division} ${r.points}` : r.division) : '';
     });
   }
 
@@ -74,7 +92,7 @@ export class Hud {
     });
     const g = s.cfg.gauntlet, cut = s.f[0].wins;
     if (s.cfg.wins === 0) {
-      const t = g ? [`Bots cut: ${cut}`, `Level ${botLevel(cut)}`] : [`Rounds: ${s.f[0].wins}`, `Rounds: ${s.f[1].wins}`];
+      const t = this.tutorial ? ['', ''] : g ? [`Bots cut: ${cut}`, `Level ${botLevel(cut)}`] : [`Rounds: ${s.f[0].wins}`, `Rounds: ${s.f[1].wins}`];
       const key = t.join('|') + (g ? `|Bot ${cut + 1}` : '');
       if (key !== this.lastTally) {
         this.lastTally = key;
@@ -91,17 +109,20 @@ export class Hud {
       html = s.phaseT >= RULES.introCut ? 'Cut!'
         : g ? `Bot ${cut + 1}<small>Level ${botLevel(cut)} · ${PAGES[s.page].name}</small>`
         : `Round ${s.round}<small>${PAGES[s.page].name}</small>`;
+    } else if (s.phase === 'ko' && s.phaseT > 30 && this.tutorial && s.roundWinner >= 0) {
+      const why = howText(s, s.roundWinner === 0 ? LOOKS[1].name : 'You').replace(/^Counter cut! /, '').replace(/: instant K\.O\.$/, '.');
+      html = `Counter cut<small>${why} Instant K.O.</small>`;
     } else if (s.phase === 'ko' && s.phaseT > 54 && g && s.roundWinner >= 0) {
       html = s.roundWinner === 0 ? `Bot ${cut} cut<small>${howText(s, `Bot ${cut}`)}</small>` : `Cut down<small>${howText(s, 'You')}</small>`;
     } else if (s.phase === 'ko' && s.phaseT > 54) {
       html = s.roundWinner >= 0 ? `${name(s.roundWinner)} takes round ${s.round}<small>${howText(s, this.names?.[1 - s.roundWinner] ?? LOOKS[1 - s.roundWinner].name)}</small>`
         : `Draw<small>${s.how === 'Time' ? 'Time ran out with the strips level.' : s.how} The round is replayed.</small>`;
     } else if (s.phase === 'over' && g) {
-      html = `Run over<small>${cut} bot${cut === 1 ? '' : 's'} cut. ${cut > this.best ? 'A new best!' : `Best: ${this.best}.`} Press R or Rematch to run again.</small>`;
+      html = `Run over<small>${cut} bot${cut === 1 ? '' : 's'} cut. ${cut > this.best ? 'A new best!' : `Best: ${this.best}.`} ${this.placeNote || 'Checking the leaderboard…'} ${this.again('run again')}</small>`;
     } else if (s.phase === 'over') {
       const w = matchWinner(s);
       const waiting = mySeat !== null && s.rematch[mySeat];
-      const hint = this.tourney ? 'Back to the bracket in a moment…' : !this.online ? 'Press R or Rematch for a new match.' : waiting ? 'Waiting for your rival to say yes…' : 'Press R or Rematch to fight again.';
+      const hint = this.ranks ? `${this.rankNote || 'Counting the result…'} Esc for the menu.` : this.tourney ? 'Back to the bracket in a moment…' : !this.online ? this.again('start a new match') : waiting ? 'Waiting for your rival to say yes…' : this.again('fight again');
       html = `${name(w)} wins<small>${s.f[w].wins}-${s.f[1 - w].wins}. ${hint}</small>`;
     }
     if (html !== this.lastBanner) {
@@ -109,6 +130,6 @@ export class Hud {
       this.banner.hidden = !html;
       if (html) this.bannerText.innerHTML = html;
     }
-    this.rematchBtn.hidden = this.tourney || s.phase !== 'over' || (mySeat !== null && s.rematch[mySeat]);
+    this.rematchBtn.hidden = this.tourney || !!this.ranks || s.phase !== 'over' || (mySeat !== null && s.rematch[mySeat]);
   }
 }

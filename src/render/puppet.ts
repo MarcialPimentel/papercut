@@ -12,6 +12,8 @@ import { loopsFromTriangles, type Pt } from './paper2d';
  *  `paper` shapes are cut paper (they get the ink line); the rest are prints on the paper in front of them. */
 export interface Shape {
   pts: Pt[]; role: string; color: string; z: number; paper: boolean;
+  /** The Blender paper object it came from (robe_L, kami_sleeve_R...). */
+  obj: string;
   /** Worn by one fighter only: the paper object's name starts with "kami_" or "sumi_" (Sumi's straw hat, Kami's
    *  topknot...). Untagged pieces are worn by both. */
   only?: Variant;
@@ -66,11 +68,11 @@ function readPiece(node: THREE.Object3D, root: THREE.Object3D): Piece {
   };
   visit(node, null);
   const shapes: Shape[] = [];
-  for (const [obj, parts] of objects) {
+  for (const [own, parts] of objects) {
     // The paper is the object's back-most plane; anything in front of it is printed on it.
     const back = Math.min(...parts.flatMap((p) => p.loops.map((l) => l.z)));
     for (const { loops, role, color } of parts) for (const l of loops) {
-      shapes.push({ pts: l.pts.map(([x, y]) => [x * SCALE, y * SCALE] as Pt), role, color, z: l.z * SCALE, paper: l.z - back < 0.002, only: only.get(obj) });
+      shapes.push({ pts: l.pts.map(([x, y]) => [x * SCALE, y * SCALE] as Pt), role, color, z: l.z * SCALE, paper: l.z - back < 0.002, obj: own.name, only: only.get(own) });
     }
   }
   shapes.sort((a, b) => a.z - b.z);
@@ -81,16 +83,19 @@ function readPiece(node: THREE.Object3D, root: THREE.Object3D): Piece {
 let loading: Promise<Puppet> | null = null;
 /** The fighter, loaded once. */
 export function loadPuppet(url = PUPPET_URL): Promise<Puppet> {
-  loading ??= new GLTFLoader().loadAsync(url).then((gltf) => {
-    gltf.scene.updateMatrixWorld(true);
-    const root = gltf.scene.getObjectByName('root') ?? gltf.scene;
-    const out = {} as Puppet;
-    for (const name of PIECE_NAMES) {
-      const node = root.getObjectByName(name);
-      if (!node) throw new Error(`samurai.glb has no rig node called "${name}"`);
-      out[name] = readPiece(node, root);
-    }
-    return out;
-  });
+  loading ??= new GLTFLoader().loadAsync(url).then((gltf) => puppetFrom(gltf.scene));
   return loading;
+}
+
+/** Read the puppet's pieces from a loaded samurai scene (also used by the tests). */
+export function puppetFrom(scene: THREE.Object3D): Puppet {
+  scene.updateMatrixWorld(true);
+  const root = scene.getObjectByName('root') ?? scene;
+  const out = {} as Puppet;
+  for (const name of PIECE_NAMES) {
+    const node = root.getObjectByName(name);
+    if (!node) throw new Error(`samurai.glb has no rig node called "${name}"`);
+    out[name] = readPiece(node, root);
+  }
+  return out;
 }

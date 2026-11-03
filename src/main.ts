@@ -1,20 +1,38 @@
-// Papercut: menus, practice against the dummy, Endless runs against bots, online fights, tournaments,
-// and the 60-frames-a-second loop.
+// Papercut: menus, the tutorial, practice against the dummy, Endless runs against bots, online fights,
+// tournaments, and the 60-frames-a-second loop.
 
+import '@fontsource/big-shoulders-stencil-display/600';
+import '@fontsource/big-shoulders-stencil-display/800';
+import '@fontsource/atkinson-hyperlegible/400';
+import '@fontsource/atkinson-hyperlegible/700';
 import './style.css';
-import { Hud, botLevel } from './hud';
-import { Controls } from './input';
+import { Hud } from './hud';
+import { Controls, type Command } from './input';
+import { keysFor, navigate, renderPrompts, restartLabel, setupControlsScreen } from './controlsUi';
 import { Net } from './net/client';
 import { Lockstep } from './net/lockstep';
-import { BYE_SLOT, normalizeCode, type ToClient } from './net/protocol';
+import { BYE_SLOT, cleanName, normalizeCode, type RankInfo, type ToClient } from './net/protocol';
 import { Spectator } from './net/spectator';
 import { engine } from './audio/engine';
-import { music, type MusicMode, type Tension } from './audio/music';
+import { music, PAGE_TRACKS, type MusicMode, type Tension, type TrackKey } from './audio/music';
 import { sfx } from './audio/sounds';
 import { View } from './render/view';
+import { LOOKS } from './render/common';
+import { DEFAULT_PICK, SUMI_PICK, decodePick, encodePick, lookOf, pairPicks, randomPick, type Pick } from './render/looks';
+import { FighterScreen, myPick } from './fighter-screen';
+import { myName, saveName } from './name';
+import { loadDisplay, saveDisplay, skipFrame } from './settings';
+import { desktop, store } from './store';
 import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
 import { Dummy } from './sim/dummy';
-import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
+import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
+import { forDivision, forEndless, fromEvents, unlock } from './achievements';
+import { TuningPanel } from './tuning-panel';
+import { hashState, newMatch, step, type State } from './sim/sim';
+import { Tally } from './sim/tally';
+import { RunInputs, botInput, botLevel, endlessBot } from './sim/endless';
+import { HINT_AFTER, STEPS, TUTORIAL_CFG, Tutorial, freshFight } from './tutorial/tutorial';
+import { STEP_TEXT, TUTORIAL_TEXT, fill, namesFor } from './tutorial/text';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const stage = $('#stage'), canvas = $<HTMLCanvasElement>('#scene');
@@ -31,11 +49,23 @@ const hud = new Hud();
 const controls = new Controls(canvas, $('#chips'), $('#aim'));
 const net = new Net();
 const wakeAudio = () => { engine.wake(); };
+// Browsers only allow sound after the player presses something. Tournament guests arrive by link and their
+// fights start from the server, so any press anywhere counts, not just fight keys and menu buttons.
+const soundHints = () => document.querySelectorAll<HTMLElement>('[data-sound-hint]');
+for (const ev of ['pointerdown', 'keydown', 'touchend'] as const) {
+  addEventListener(ev, () => { wakeAudio(); for (const h of soundHints()) h.hidden = true; }, { capture: true, passive: true });
+}
 $('#build').textContent = `build ${__BUILD__}`;
+/** Where invite links point: this site, or the live site from the desktop app. */
+const SITE = desktop ? desktop.server : location.origin;
+// T in Practice: sliders for the fight's numbers (#9). Practice only; everything else resets them.
+const tuner = new TuningPanel(stage, __BUILD__);
+tuner.onClose = () => { controls.clear(); if (mode.kind === 'practice') { controls.active = true; controls.lockWanted = true; controls.lock(); } };
 
 type Mode =
   | { kind: 'menu'; s: State }
-  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean }
+  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; tally: Tally; seed: number; inputs: RunInputs }
+  | { kind: 'tutorial'; s: State; tut: Tutorial }
   | { kind: 'online'; lock: Lockstep; code: string }
   | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] }; // watching a tournament fight
 let mode: Mode = { kind: 'menu', s: newMatch() };
@@ -50,64 +80,261 @@ let tourney: {
   bracket: BracketMsg | null;
   /** The bracket spot of the fight on screen; when a bracket arrives without it, that fight is over. */
   fight: [number, number] | null;
-  reported: boolean;
   /** When to go back to the bracket after the fight on screen ended (0 = not yet). */
   backAt: number;
 } | null = null;
-const NAME_KEY = 'papercut.name';
-function myName() { try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } }
-function saveName(n: string) { try { localStorage.setItem(NAME_KEY, n); } catch { /* not remembered */ } }
 const rulesLabel = (c: MatchCfg) => `${roundsLabel(c.wins)}, ${c.maxHp} health, ${c.roundSecs ? c.roundSecs + 's' : 'no timer'}`;
 const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+// ---------- looks (issue #38) ----------
+/** Dress both fighters: seat 0 and seat 1, with the who's-who rule (one dark robe, one light). */
+function dress(a: Pick, b: Pick) {
+  const [p0, p1] = pairPicks(a, b);
+  view.setLooks([lookOf(p0, LOOKS[0].name), lookOf(p1, LOOKS[1].name)]);
+}
+/** The looks from a 'start' or 'match' message ('' or anything unknown is the default Kami / Sumi look). */
+const dressOnline = (looks?: [string, string]) => dress(decodePick(looks?.[0], DEFAULT_PICK), decodePick(looks?.[1], SUMI_PICK));
+/** Your look, as sent to the server with every request to play. */
+const myLook = () => encodePick(myPick());
+
 // ---------- menus ----------
-type Screen = 'main' | 'howto' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error';
+type Screen = 'main' | 'fighter' | 'howto' | 'board' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
+  if (screen === 'controls' && to !== 'controls') bindScreen.cancel();
+  if (screen === 'fighter' && to !== 'fighter') fighterScreen.close();
+  const moved = screen !== to;
   screen = to;
   stage.classList.add('in-menu');
   $('#menu').hidden = false;
   for (const el of document.querySelectorAll<HTMLElement>('[data-screen]')) el.hidden = el.dataset.screen !== to;
   if (to === 'host' && opts.code) {
-    const link = `${location.origin}/?room=${opts.code}`;
+    const link = `${SITE}/?room=${opts.code}`;
     $<HTMLInputElement>('#inviteLink').value = link;
     $('#inviteCode').textContent = opts.code;
     $('#hostWait').textContent = 'Send this link to a friend. The fight starts when they open it.';
   }
   if (to === 'host' && !opts.code) { $<HTMLInputElement>('#inviteLink').value = ''; $('#inviteCode').textContent = '····'; $('#hostWait').textContent = 'Making your room…'; }
   if (to === 'join') $('#joinWait').textContent = `Joining room ${opts.code}…`;
+  if (to === 'fighter') fighterScreen.open();
   if (to === 'error') $('#errorMsg').textContent = opts.msg ?? 'Something went wrong.';
-  if (to === 'main') { const b = loadBest(); $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}` : 'How many bots can you cut?'; }
+  if (to === 'settings') fillSettings();
+  if (to === 'tlobby' || to === 'bracket') for (const h of soundHints()) h.hidden = !!engine.live;
+  // On a controller, put the focus on the screen's first button so A does something straight away.
+  if (moved && controls.device === 'pad') requestAnimationFrame(() => navigate('up', $('#menu .card'), () => {}));
+  $('#sideBoard').hidden = to !== 'main';
+  if (to === 'main') {
+    showSide();
+    showBest();
+    if (loadBest() > 0) fetchBoard('all').then((b) => { myPlace = b?.you?.place ?? null; if (screen === 'main') showBest(); });
+  }
+  if (to === 'board') showBoard('all');
 }
-function hideMenu() { showSound(false); screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
+function hideMenu() { showSound(false); if (screen === 'fighter') fighterScreen.close(); screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
 
 function toMenu(to: Screen = 'main', opts: { msg?: string } = {}) {
+  tuner.toggle(false); resetTuning();
   if (mode.kind === 'online' || tourney) net.send({ t: 'cancel' });
-  tourney = null; hud.tourney = false; hud.names = null;
+  tourney = null; hud.tourney = false; hud.names = null; hud.ranks = null; hud.rankNote = ''; hud.tutorial = false; showTut(null);
   controls.active = false; controls.clear();
   controls.lockWanted = false; controls.unlock();
   mode = { kind: 'menu', s: newMatch() };
+  view.spawnLook = null; dress(myPick(), SUMI_PICK);
   view.reset(mode.s);
   hud.you = null; hud.online = false; hud.setNames();
   showMenu(to, opts);
 }
 
-// Endless: the best run is kept in this browser only.
+// Endless: the best run is kept in this browser, or on disk in the desktop app.
 const BEST_KEY = 'papercut.endlessBest';
-function loadBest() { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } }
-function saveBest(n: number) { try { if (n > loadBest()) localStorage.setItem(BEST_KEY, String(n)); } catch { /* storage blocked: the run just isn't remembered */ } }
+function loadBest() { return Number(store.get(BEST_KEY)) || 0; }
+function saveBest(n: number) { if (n > loadBest()) store.set(BEST_KEY, String(n)); }
+// Ranked: this browser's secret token (who you are to the server; it only keeps a hash of it).
+const ID_KEY = 'papercut.id';
+function myId(): string {
+  let id = store.get(ID_KEY);
+  if (!id || !/^[0-9a-f]{32}$/.test(id)) {
+    id = [...crypto.getRandomValues(new Uint8Array(16))].map((x) => x.toString(16).padStart(2, '0')).join('');
+    store.set(ID_KEY, id);
+  }
+  return id;
+}
+/** Your ranked standing, from the server. */
+let myRank: RankInfo | null = null;
+function showRank() {
+  $('#rankLine').textContent = !myRank ? 'Rated fights, paper-grade divisions'
+    : myRank.placed ? `${myRank.division} · ${myRank.points} points` : `${myRank.division} · your first 5 matches place you`;
+}
+
+// ---------- Endless leaderboard ----------
+type Period = 'day' | 'week' | 'all';
+const PERIOD_NAMES: Record<Period, string> = { day: 'today', week: 'this week', all: 'all time' };
+/** Your place on the all-time board (null: not on it, or not known yet). */
+let myPlace: number | null = null;
+
+/** A fresh seed for an Endless run: the bot's dice for this run. */
+const newSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
+
+/**
+ * Send a finished Endless run: its seed and your inputs. The server re-plays it, and only the score
+ * the re-play reaches goes on the leaderboard (and into the stats).
+ */
+function reportRun(seed: number, inputs: number[], bots: number) {
+  hud.placeNote = '';
+  const body = JSON.stringify({ seed, inputs, bots, guard: controls.device === 'pad' ? 'pad' : controls.guardStyle, id: myId(), name: myName() });
+  fetch(`${SITE}/api/endless`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
+    .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
+    .then(({ ok, j }) => {
+      if (!ok) { hud.placeNote = `Not posted to the leaderboard (${j.error ?? 'refused'}).`; return; }
+      const places = (j.places ?? {}) as Partial<Record<Period, number>>;
+      if (places.all) myPlace = places.all;
+      const parts = (['day', 'week', 'all'] as Period[]).filter((p) => places[p]).map((p) => `#${places[p]} ${PERIOD_NAMES[p]}`);
+      hud.placeNote = parts.length ? `Leaderboard: ${parts.join(', ')}.` : '';
+    })
+    .catch(() => { hud.placeNote = 'Not posted to the leaderboard (no connection).'; });
+}
+
+interface BoardReply { period: Period; top: { name: string; bots: number; secs: number; you: boolean }[]; you: { place: number; bots: number } | null }
+async function fetchBoard(period: Period): Promise<BoardReply | null> {
+  try {
+    const r = await fetch(`${SITE}/api/leaderboard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ period, id: myId() }) });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+const clock = (secs: number) => `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+async function showBoard(period: Period) {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-period]')) b.classList.toggle('on', b.dataset.period === period);
+  $('#boardList').innerHTML = '<li class="muted">Loading…</li>';
+  const b = await fetchBoard(period);
+  if (screen !== 'board') return;
+  if (!b) { $('#boardList').innerHTML = '<li class="muted">The leaderboard is not available right now.</li>'; $('#boardYou').textContent = ''; return; }
+  $('#boardList').innerHTML = b.top.length
+    ? b.top.map((r, i) => `<li class="${r.you ? 'you' : ''}"><span>${i + 1}</span><b>${esc(r.name)}</b><span>${r.bots} bot${r.bots === 1 ? '' : 's'}</span><span class="muted">${clock(r.secs)}</span></li>`).join('')
+    : `<li class="muted">No runs ${PERIOD_NAMES[period]} yet. Be the first.</li>`;
+  $('#boardYou').textContent = b.you ? `You: #${b.you.place} ${PERIOD_NAMES[period]} with ${b.you.bots} bot${b.you.bots === 1 ? '' : 's'}.` : `You have no run ${PERIOD_NAMES[period]} yet.`;
+}
+// The title screen's leaderboard panel: Ranked (placed players by rating) or Endless (best runs, all time).
+type Side = 'ranked' | 'endless';
+const SIDE_KEY = 'papercut.sideBoard';
+/** How many places the panel shows (the full Endless list has 100). */
+const SIDE_ROWS = 10;
+let side: Side = store.get(SIDE_KEY) === 'endless' ? 'endless' : 'ranked';
+let sideAsk = 0;
+interface RankedReply { top: (RankInfo & { you: boolean })[]; you: (RankInfo & { place: number | null }) | null }
+async function fetchRanked(): Promise<RankedReply | null> {
+  try {
+    const r = await fetch(`${SITE}/api/ranked-board`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: myId() }) });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+async function showSide(which: Side = side) {
+  side = which;
+  store.set(SIDE_KEY, which);
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-side]')) {
+    const on = b.dataset.side === which;
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+  }
+  $('#sideMore').hidden = which !== 'endless';
+  const list = $('#sideList'), you = $('#sideYou'), ask = ++sideAsk;
+  if (!list.children.length) list.innerHTML = '<li class="muted">Loading…</li>';
+  const row = (i: number, name: string, right: string, mine: boolean) =>
+    `<li class="${mine ? 'you' : ''}"><span>${i + 1}</span><b>${esc(name)}</b><span>${right}</span></li>`;
+  if (which === 'ranked') {
+    const b = await fetchRanked();
+    if (ask !== sideAsk) return;
+    if (!b) { list.innerHTML = '<li class="muted">Not available right now.</li>'; you.textContent = ''; return; }
+    list.innerHTML = b.top.length
+      ? b.top.slice(0, SIDE_ROWS).map((r, i) => row(i, r.name, `${esc(r.division)} <span class="muted">${r.points}</span>`, r.you)).join('')
+      : '<li class="muted">No ranked players yet. Play 5 ranked matches to appear here.</li>';
+    you.textContent = !b.you || b.you.place === null
+      ? `You: ${b.you ? b.you.division : `Placement 0/5`} · your first 5 ranked matches place you.`
+      : `You: #${b.you.place} · ${b.you.division} ${b.you.points}`;
+  } else {
+    const b = await fetchBoard('all');
+    if (ask !== sideAsk) return;
+    if (!b) { list.innerHTML = '<li class="muted">Not available right now.</li>'; you.textContent = ''; return; }
+    list.innerHTML = b.top.length
+      ? b.top.slice(0, SIDE_ROWS).map((r, i) => row(i, r.name, `${r.bots} bot${r.bots === 1 ? '' : 's'} <span class="muted">${clock(r.secs)}</span>`, r.you)).join('')
+      : '<li class="muted">No Endless runs yet. Be the first.</li>';
+    you.textContent = b.you ? `You: #${b.you.place} with ${b.you.bots} bot${b.you.bots === 1 ? '' : 's'}` : 'You: no run yet. Press Endless to start one.';
+  }
+}
+for (const b of document.querySelectorAll<HTMLButtonElement>('[data-side]')) b.addEventListener('click', () => showSide(b.dataset.side as Side));
+$('#sideMore').addEventListener('click', () => showMenu('board'));
+
+/** The title screen's Endless line: your best run, and your place if you have one. */
+function showBest() {
+  const b = loadBest();
+  $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}${myPlace ? ` · #${myPlace} on the leaderboard` : ''}` : 'How many bots can you cut?';
+}
 
 function startPractice(endless = false) {
   wakeAudio();
   const cfg = endless ? ENDLESS_CFG : DEFAULT_CFG;
-  mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless };
+  // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) never does.
+  if (endless) resetTuning(); else applyTuning(loadSaved());
+  const seed = newSeed();
+  mode = { kind: 'practice', s: newMatch(cfg), dummy: endless ? endlessBot(seed) : new Dummy(), endless, tally: new Tally(), seed, inputs: new RunInputs() };
+  hud.placeNote = '';
+  // Practice is against Sumi; in Endless every bot wears a random look.
+  const mine = myPick(), botLook = () => lookOf(pairPicks(mine, randomPick(Math.random))[1], LOOKS[1].name);
+  view.spawnLook = endless ? botLook : null;
+  dress(mine, SUMI_PICK);
+  if (endless) view.fighters[1].setLook(botLook());
   hud.setRules(cfg); hud.best = loadBest();
   begin();
   hud.you = null; hud.online = false; hud.setNames(); view.you = 0;
 }
 
-function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, names: [string, string] | null = null) {
+// ---------- the tutorial ----------
+// Offered once on the first visit; always on the title screen. Remembered with the other settings (store.ts).
+const TUT_KEY = 'papercut.tutorial';
+function tutorialSeen() { return store.get(TUT_KEY) !== null; }
+function markTutorial(v: 'offered' | 'done') { if (store.get(TUT_KEY) !== 'done') store.set(TUT_KEY, v); }
+
+function startTutorial() {
   wakeAudio();
+  markTutorial('offered');
+  tuner.toggle(false); resetTuning(); // the tutorial always teaches the real numbers
+  mode = { kind: 'tutorial', s: freshFight(), tut: new Tutorial() };
+  view.spawnLook = null; dress(myPick(), SUMI_PICK); // your own look against the real Sumi
+  hud.setRules(TUTORIAL_CFG);
+  begin();
+  hud.you = 0; hud.online = false; hud.tutorial = true; hud.setNames(); view.you = 0;
+}
+
+/** The paper prompt: which step, what to do, and progress or a hint. Cheap to call every frame. */
+const tutEl = $('#tut');
+let tutKey = '';
+function showTut(t: Tutorial | null) {
+  const id = t?.step ?? null;
+  if (!t || !id) { if (tutKey) { tutEl.hidden = true; tutKey = ''; } return; }
+  const text: { title: string; line: string; then?: string; hint: string; cheer: string } = STEP_TEXT[id];
+  const nice = t.cheer > 0;
+  const line = nice ? text.cheer : t.part === 1 && text.then ? text.then : text.line;
+  const sub = nice ? '' : t.fails >= HINT_AFTER ? text.hint : t.need ? TUTORIAL_TEXT.progress(t.got, t.need) : '';
+  const hint = !nice && t.fails >= HINT_AFTER;
+  // The words follow the device in use (controller or mouse), the guard style in Settings, and the player's own bindings.
+  const bound = Object.fromEntries((['light', 'heavy', 'feint', 'jump', 'skip', 'left', 'right'] as const).map((a) => [a, keysFor(controls, a)]));
+  const names = namesFor(controls.device, controls.guardStyle, bound);
+  const key = [id, line, sub, nice, JSON.stringify(names)].join('|');
+  if (key === tutKey) return;
+  tutKey = key;
+  tutEl.hidden = false;
+  tutEl.classList.toggle('nice', nice);
+  $('#tutStep').textContent = nice ? TUTORIAL_TEXT.nice : `${TUTORIAL_TEXT.stepOf(t.i + 1, STEPS.length)} · ${text.title}`;
+  $('#tutLine').innerHTML = fill(line, names);
+  const subEl = $('#tutSub');
+  subEl.innerHTML = fill(sub, names);
+  subEl.classList.toggle('hint', hint);
+  $('#tutSkip').innerHTML = names.skip ? fill(TUTORIAL_TEXT.skip, names) : TUTORIAL_TEXT.skipPlain;
+}
+$('#tutSkip').addEventListener('click', () => command('skip'));
+
+function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, names: [string, string] | null = null, looks?: [string, string]) {
+  wakeAudio();
+  view.spawnLook = null; dressOnline(looks);
+  tuner.toggle(false); resetTuning();
   const lock = new Lockstep(seat, delay, (m) => net.send(m), cfg);
   hud.setRules(cfg);
   mode = { kind: 'online', lock, code };
@@ -117,7 +344,9 @@ function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, na
 }
 
 /** Watch a tournament fight between two other players. */
-function startWatching(delay: number, code: string, cfg: MatchCfg, names: [string, string]) {
+function startWatching(delay: number, code: string, cfg: MatchCfg, names: [string, string], looks?: [string, string]) {
+  view.spawnLook = null; dressOnline(looks);
+  tuner.toggle(false); resetTuning();
   mode = { kind: 'watch', spec: new Spectator(cfg, delay), code, names };
   hud.setRules(cfg);
   view.reset(mode.spec.state);
@@ -140,7 +369,7 @@ function toBracket() {
 
 function renderLobby(m: Extract<ToClient, { t: 'lobby' }>) {
   $('#tCode').textContent = m.code;
-  $<HTMLInputElement>('#tLink').value = `${location.origin}/?room=${m.code}`;
+  $<HTMLInputElement>('#tLink').value = `${SITE}/?room=${m.code}`;
   $('#tRules').textContent = `${rulesLabel(m.cfg)} per fight. Knockout: lose once and you're out.`;
   $('#tPlayers').innerHTML = m.names.map((n, i) => `<li${i === m.you ? ' class="me"' : ''}>${esc(n)}${i === 0 ? ' (host)' : ''}${i === m.you ? ' · you' : ''}</li>`).join('');
   const nameIn = $<HTMLInputElement>('#tName');
@@ -169,6 +398,10 @@ function renderBracket() {
   }).join('')}</div>`).join('');
   const cur = b.current && b.rounds[b.current[0]][b.current[1]];
   $('#bTitle').textContent = b.champion !== null ? `${b.names[b.champion]} wins!` : 'Bracket';
+  $('#bAgain').hidden = !b.restart;
+  // Opened with Esc while watching: the fight plays on underneath, one click away.
+  $('#bWatch').hidden = mode.kind !== 'watch';
+  $('#bWatch').querySelector('small')!.textContent = controls.device === 'pad' ? 'B or Menu also takes you back' : 'Esc also takes you back';
   $('#bNext').textContent = b.champion !== null ? (b.champion === b.you ? 'You won the tournament!' : 'The tournament is over.')
     : cur ? `Now: ${nm(cur.a)} vs ${nm(cur.b)}` : 'Next fight in a few seconds…';
   $('#bLeaveT').textContent = b.champion !== null ? 'Back to the menu' : 'Leave tournament';
@@ -190,20 +423,103 @@ function ensureNet(then: () => void) {
 let pendingSend: (() => void) | null = null;
 
 $('#bPractice').addEventListener('click', () => startPractice());
+$('#bTutorial').addEventListener('click', () => startTutorial());
+$('#bWelcomeGo').addEventListener('click', () => startTutorial());
+$('#bWelcomeSkip').addEventListener('click', () => showMenu('main'));
+$('#bTutPractice').addEventListener('click', () => startPractice());
+$('#bTutEndless').addEventListener('click', () => startPractice(true));
+$('#bTutMenu').addEventListener('click', () => showMenu('main'));
 $('#bEndless').addEventListener('click', () => startPractice(true));
 $('#bHowTo').addEventListener('click', () => showMenu('howto'));
+const fighterScreen = new FighterScreen($<HTMLCanvasElement>('#fCanvas'), $('#fPicks'), $<HTMLInputElement>('#fName'), $('#fNameTag'), view.physics, (p) => { if (mode.kind === 'menu') dress(p, SUMI_PICK); });
+$('#bFighter').addEventListener('click', () => showMenu('fighter'));
+$('#bFighterDone').addEventListener('click', () => showMenu('main'));
 $('#bHowToBack').addEventListener('click', () => showMenu('main'));
-// Guard style (playtest A/B): Line (mouse up / down, no cursor) or Cursor (crosshair against your waist).
-const GUARD_HOW = {
-  line: 'Move the mouse <b>up</b> to guard high, <b>down</b> to guard low. No cursor: just flick.',
-  cursor: "Move the crosshair <b>above</b> your fighter's waist to guard high, <b>below</b> to guard low.",
+$('#bBoard').addEventListener('click', () => showMenu('board'));
+$('#bBoardBack').addEventListener('click', () => showMenu('main'));
+for (const b of document.querySelectorAll<HTMLButtonElement>('[data-period]')) b.addEventListener('click', () => showBoard(b.dataset.period as Period));
+// Controls: remap keys and controller buttons.
+const bindScreen = setupControlsScreen(controls);
+$('#bControls').addEventListener('click', () => showMenu('controls'));
+$('#bindBack').addEventListener('click', () => showMenu('main'));
+// Prompts follow the device in use: keyboard and mouse, or controller.
+controls.onDevice = () => { renderPrompts(controls); sayHello(); hud.restartKey = restartLabel(controls); if (controls.device === 'pad') controls.unlock(); };
+hud.restartKey = restartLabel(controls);
+// Menus on a controller: the stick or d-pad moves, A picks, B goes back, Menu leaves a fight.
+controls.onNav = (n) => {
+  if (!soundBox.hidden && (n === 'back' || n === 'menu')) { showSound(false); return; }
+  if (!soundBox.hidden) { navigate(n, soundBox, () => showSound(false)); return; }
+  // The tuning panel (Practice): stick moves between sliders, left / right changes one, B or Menu closes it.
+  if (tuner.open) { if (n === 'menu') command('menu'); else navigate(n, tuner.el, () => tuner.toggle(false)); return; }
+  if (screen) {
+    if (n === 'menu') { if (screen !== 'main') command('menu'); return; }
+    navigate(n, $('#menu'), () => {
+      // B on the bracket never leaves the tournament: it goes back to the fight being watched, or does nothing.
+      if (screen === 'bracket') { if (mode.kind === 'watch') hideMenu(); return; }
+      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
+      back?.click();
+    });
+    return;
+  }
+  if (n === 'menu') { command('menu'); return; }
+  // In a fight, the menu buttons only matter once the match is over (Rematch, Leave). A is jump until then.
+  if (mode.kind !== 'menu' && stateOf(mode).phase === 'over') {
+    const re = $('#rematch');
+    if (n === 'ok' && !re.hidden && !(document.activeElement instanceof HTMLButtonElement)) { re.click(); return; }
+    navigate(n, $('#stage'), () => toMenu());
+  }
 };
-function showGuardStyle() {
-  $('#bGuard').textContent = controls.guardStyle === 'line' ? 'Guard: Line' : 'Guard: Cursor';
-  $('#howGuard').innerHTML = GUARD_HOW[controls.guardStyle];
-}
-$('#bGuard').addEventListener('click', () => { controls.setGuardStyle(controls.guardStyle === 'line' ? 'cursor' : 'line'); showGuardStyle(); });
+// The How to play text follows the guard style (and the device in use).
+function showGuardStyle() { renderPrompts(controls); }
+/** Tell the server how this player guards (Flick, Cursor, or a controller), so the stats can compare them. */
+function sayHello() { net.send({ t: 'hello', guard: controls.device === 'pad' ? 'pad' : controls.guardStyle, id: myId() }); }
 showGuardStyle();
+
+// ---------- settings ----------
+let display = loadDisplay();
+const isFullscreen = () => (desktop ? desktop.isFullscreen() : !!document.fullscreenElement);
+function setFullscreen(on: boolean) {
+  if (desktop) desktop.setFullscreen(on);
+  else if (on && !document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+  else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+function fillSettings() {
+  $<HTMLSelectElement>('#setWindow').value = isFullscreen() ? 'full' : 'win';
+  $<HTMLSelectElement>('#setScale').value = String(display.scale);
+  $<HTMLSelectElement>('#setFps').value = String(display.fps);
+  $<HTMLSelectElement>('#setVsync').value = display.vsync ? 'on' : 'off';
+  $<HTMLSelectElement>('#setGuard').value = controls.guardStyle;
+  syncVolumeInputs();
+  $('#setNote').textContent = desktop
+    ? 'Vsync changes apply the next time you start Papercut. F11 or Alt+Enter also switches fullscreen.'
+    : "In a browser the frame rate can't go above your screen's. Settings are kept in this browser.";
+}
+function readSettings() {
+  display = {
+    fullscreen: $<HTMLSelectElement>('#setWindow').value === 'full',
+    scale: Number($<HTMLSelectElement>('#setScale').value),
+    fps: Number($<HTMLSelectElement>('#setFps').value),
+    vsync: $<HTMLSelectElement>('#setVsync').value === 'on',
+  };
+  saveDisplay(display);
+  view.setScale(display.scale);
+}
+$('#setWindow').addEventListener('change', () => { readSettings(); setFullscreen(display.fullscreen); });
+for (const id of ['#setScale', '#setFps', '#setVsync']) $(id).addEventListener('change', readSettings);
+$('#setGuard').addEventListener('change', () => { controls.setGuardStyle($<HTMLSelectElement>('#setGuard').value === 'cursor' ? 'cursor' : 'flick'); showGuardStyle(); sayHello(); });
+$('#settingsForm').addEventListener('submit', (e) => { e.preventDefault(); showMenu('main'); });
+$('#bSettings').addEventListener('click', () => showMenu('settings'));
+for (const el of document.querySelectorAll<HTMLElement>('[data-desktop-only]')) el.hidden = !desktop;
+if (desktop) {
+  $('#bQuit').hidden = false;
+  $('#bQuit').addEventListener('click', () => desktop!.quit());
+  // F11 / Alt+Enter (handled by the app) and the Settings screen both land here, so the saved choice follows.
+  desktop.onFullscreen((on) => {
+    if (display.fullscreen !== on) { display = { ...display, fullscreen: on }; saveDisplay(display); }
+    if (screen === 'settings') $<HTMLSelectElement>('#setWindow').value = on ? 'full' : 'win';
+  });
+}
+view.setScale(display.scale);
 let setupFor: 'room' | 'tourney' = 'room';
 function openSetup(kind: 'room' | 'tourney') {
   setupFor = kind;
@@ -221,26 +537,37 @@ $('#setupForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const v = (id: string) => Number($<HTMLSelectElement>(id).value);
   const cfg = cleanCfg({ wins: v('#optWins'), maxHp: v('#optHp'), roundSecs: v('#optTime') });
-  if (setupFor === 'room') { showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg })); }
-  else { showMenu('join', { code: 'for your tournament' }); ensureNet(() => net.send({ t: 'tourney', cfg, name: myName() })); }
+  if (setupFor === 'room') { showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg, name: myName(), look: myLook() })); }
+  else { showMenu('join', { code: 'for your tournament' }); ensureNet(() => net.send({ t: 'tourney', cfg, name: myName(), look: myLook() })); }
 });
 $('#tName').addEventListener('change', () => {
-  const n = $<HTMLInputElement>('#tName').value.trim();
-  if (n) { saveName(n); net.send({ t: 'name', name: n }); }
+  const input = $<HTMLInputElement>('#tName');
+  input.value = saveName(input.value); // the same name as on the Fighter screen (empty: a Ronin name)
+  net.send({ t: 'name', name: input.value });
 });
 $('#tBegin').addEventListener('click', () => net.send({ t: 'begin' }));
+$('#bAgain').addEventListener('click', () => net.send({ t: 'restart' }));
+$('#bWatch').addEventListener('click', () => { if (mode.kind === 'watch') hideMenu(); });
 $('#tCopy').addEventListener('click', async () => {
   const input = $<HTMLInputElement>('#tLink');
   try { await navigator.clipboard.writeText(input.value); $('#tCopy').textContent = 'Copied'; }
   catch { input.select(); }
   setTimeout(() => { $('#tCopy').textContent = 'Copy link'; }, 1600);
 });
-$('#bQuick').addEventListener('click', () => { showMenu('search'); ensureNet(() => net.send({ t: 'quick' })); });
+$('#bQuick').addEventListener('click', () => { searching(false); ensureNet(() => net.send({ t: 'quick', name: myName(), look: myLook() })); });
+$('#bRanked').addEventListener('click', () => { searching(true); ensureNet(() => net.send({ t: 'ranked', name: myName(), look: myLook() })); });
+function searching(ranked: boolean) {
+  $('#searchTitle').textContent = ranked ? 'Looking for a ranked rival…' : 'Looking for a rival…';
+  $('#searchNote').textContent = ranked
+    ? "You'll be paired with someone close to your rating. The longer you wait, the wider the search."
+    : "You'll be paired with the next person who presses 'Find a fight'. Send a friend to papercut.marz.gg to make it quicker.";
+  showMenu('search');
+}
 $('#joinForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const code = normalizeCode($<HTMLInputElement>('#joinCode').value);
   if (code.length < 4) return;
-  showMenu('join', { code }); ensureNet(() => net.send({ t: 'join', code, name: myName() }));
+  showMenu('join', { code }); ensureNet(() => net.send({ t: 'join', code, name: myName(), look: myLook() }));
 });
 for (const b of document.querySelectorAll('[data-cancel]')) b.addEventListener('click', () => { net.send({ t: 'cancel' }); toMenu(); });
 $('#copyLink').addEventListener('click', async () => {
@@ -255,6 +582,7 @@ const soundBox = $('#soundBox');
 const soundBtns = [...document.querySelectorAll<HTMLButtonElement>('[data-sound]')];
 function showSound(open: boolean, under?: HTMLElement) {
   soundBox.hidden = !open;
+  if (open) syncVolumeInputs();
   for (const b of soundBtns) b.setAttribute('aria-expanded', String(open));
   if (open && under) {
     // Sit just under the button that opened it, kept on screen.
@@ -264,28 +592,50 @@ function showSound(open: boolean, under?: HTMLElement) {
   }
 }
 for (const b of soundBtns) b.addEventListener('click', () => { wakeAudio(); showSound(soundBox.hidden, b); });
-for (const [id, key] of [['#volMusic', 'music'], ['#volSfx', 'sfx']] as const) {
+// The same two sliders sit in the fight's Sound panel and on the Settings screen.
+const VOLUME_INPUTS = [['#volMusic', 'music'], ['#volSfx', 'sfx'], ['#setMusic', 'music'], ['#setSfx', 'sfx']] as const;
+function syncVolumeInputs() { for (const [id, key] of VOLUME_INPUTS) $<HTMLInputElement>(id).value = String(Math.round(engine.vol[key] * 100)); }
+for (const [id, key] of VOLUME_INPUTS) {
   const input = $<HTMLInputElement>(id);
-  input.value = String(Math.round(engine.vol[key] * 100));
-  input.addEventListener('input', () => engine.setVolumes({ [key]: Number(input.value) / 100 }));
+  input.addEventListener('input', () => { wakeAudio(); engine.setVolumes({ [key]: Number(input.value) / 100 }); });
   if (key === 'sfx') input.addEventListener('change', () => sfx.hit(0)); // a sample of the new level
 }
+syncVolumeInputs();
 document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement) showSound(false); }); // back in the fight
 // A soft paper tap on every menu button.
 document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('.mbtn, .hbtn')) { wakeAudio(); sfx.ui(); } });
 $('#rematch').addEventListener('click', () => command('rematch'));
 
-function command(c: 'restart' | 'menu' | 'rematch' | 'hitboxes') {
+function command(c: Command) {
   if (c === 'hitboxes') { view.hitboxes.toggle(); return; }
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto') showMenu('main'); return; }
+  if (c === 'tune') {
+    if (mode.kind !== 'practice' || mode.endless) return;
+    tuner.toggle();
+    if (tuner.open) { controls.clear(); controls.active = false; controls.lockWanted = false; controls.unlock(); }
+    return;
+  }
+  if (c === 'menu' && tuner.open) { tuner.toggle(false); return; }
+  // Watching a tournament fight: Esc shows the bracket over it (and back), never leaves the tournament.
+  if (c === 'menu' && mode.kind === 'watch') { if (screen === 'bracket') hideMenu(); else { showMenu('bracket'); renderBracket(); } return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone' || screen === 'board') showMenu('main'); return; }
+  if (mode.kind === 'tutorial') {
+    if (c === 'skip') mode.tut.skip();
+    if (c === 'restart') { mode.s = freshFight(); view.reset(mode.s); }
+    return;
+  }
+  if (c === 'skip') return;
   if (mode.kind === 'practice') {
-    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); hud.best = loadBest(); view.reset(mode.s); controls.lockWanted = true; controls.lock(); }
-  } else if (mode.kind === 'online' && mode.lock.state.phase === 'over') controls.press('rematch');
+    if (c === 'restart' || mode.s.phase === 'over') {
+      mode.s = newMatch(mode.s.cfg); mode.tally = new Tally(); mode.inputs = new RunInputs(); hud.placeNote = '';
+      if (mode.endless) { mode.seed = newSeed(); mode.dummy = endlessBot(mode.seed); } else mode.dummy.reset();
+      hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
+  } else if (mode.kind === 'online' && !hud.ranks && mode.lock.state.phase === 'over') controls.press('rematch');
 }
 controls.onCommand = command;
 controls.onAnyInput = wakeAudio;
 
 net.onStatus = (open) => {
+  if (open) sayHello();
   if (open && pendingSend) { const f = pendingSend; pendingSend = null; f(); }
   if (open) return;
   if (mode.kind === 'online' || mode.kind === 'watch' || tourney) toMenu('error', { msg: 'Lost the connection to the server. Check your internet and try again.' });
@@ -294,14 +644,26 @@ net.onStatus = (open) => {
 net.onMessage = (m: ToClient) => {
   switch (m.t) {
     case 'room': showMenu('host', { code: m.code }); break;
-    case 'waiting': showMenu('search'); break;
-    case 'start': startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg)); break;
+    case 'waiting': if (screen !== 'search') searching(!!m.ranked); break;
+    case 'start':
+      startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.names ? [cleanName(m.names[0], LOOKS[0].name), cleanName(m.names[1], LOOKS[1].name)]
+        : m.ranks ? [m.ranks[0].name, m.ranks[1].name] : null, m.looks);
+      hud.ranks = m.ranks ?? null; hud.rankNote = ''; hud.setNames();
+      break;
+    case 'rank': myRank = m.you; showRank(); if (m.you.placed) unlock(forDivision(m.you.division)); break;
+    case 'ranked': {
+      myRank = m.you; showRank();
+      if (m.you.placed) unlock(forDivision(m.you.division));
+      const pts = `${m.delta >= 0 ? '+' : ''}${m.delta}`;
+      hud.rankNote = `${m.won ? 'Win' : 'Loss'} ${pts}: ${m.you.placed ? `${m.you.division} ${m.you.points}` : m.you.division}.`;
+      break;
+    }
     case 'in': case 'hash':
       if (mode.kind === 'online') mode.lock.receive(m);
       else if (mode.kind === 'watch') mode.spec.receive(m);
       break;
     case 'lobby':
-      if (!tourney) tourney = { code: m.code, bracket: null, fight: null, reported: false, backAt: 0 };
+      if (!tourney) tourney = { code: m.code, bracket: null, fight: null, backAt: 0 };
       if (new URLSearchParams(location.search).has('room')) history.replaceState(null, '', location.pathname);
       if (screen !== 'tlobby') showMenu('tlobby');
       renderLobby(m);
@@ -309,7 +671,9 @@ net.onMessage = (m: ToClient) => {
     case 'bracket':
       if (!tourney) break;
       tourney.bracket = m;
+      if (m.champion !== null && m.champion === m.you) unlock(['TOURNEY_WIN']);
       if (mode.kind === 'menu') { if (screen !== 'bracket') showMenu('bracket'); renderBracket(); break; }
+      if (screen === 'bracket') renderBracket(); // a watcher looking at the bracket over the fight
       if (tourney.fight && !(m.current && m.current[0] === tourney.fight[0] && m.current[1] === tourney.fight[1])) {
         // The fight on screen is decided. A walkover (someone left) goes straight back; otherwise let the end play out.
         if (m.rounds[tourney.fight[0]][tourney.fight[1]].forfeit) toBracket();
@@ -318,43 +682,91 @@ net.onMessage = (m: ToClient) => {
       break;
     case 'match':
       if (!tourney) break;
-      tourney.fight = tourney.bracket?.current ?? null; tourney.reported = false; tourney.backAt = 0;
-      if (m.seat === -1) startWatching(m.delay, m.code, cleanCfg(m.cfg), m.names);
-      else startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.names);
+      tourney.fight = tourney.bracket?.current ?? null; tourney.backAt = 0;
+      if (m.seat === -1) startWatching(m.delay, m.code, cleanCfg(m.cfg), m.names, m.looks);
+      else startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.names, m.looks);
       break;
-    case 'gone': if (mode.kind === 'online' && !tourney) toMenu('error', { msg: 'Your rival left the fight.' }); break;
+    case 'gone':
+      if (mode.kind === 'online' && !tourney) {
+        const ranked = hud.ranks && mode.lock.state.phase !== 'over' ? ` The ranked win is yours. ${hud.rankNote}` : '';
+        if (hud.ranks && mode.lock.state.phase === 'over') break; // the match was already decided: stay on the result
+        toMenu('error', { msg: 'Your rival left the fight.' + ranked });
+      }
+      break;
     case 'err': toMenu('error', { msg: m.msg }); break;
   }
 };
 
-/** Which music fits the moment: calm on menus, drums for "Round N", the full fight, silence from a K.O. to the next round. */
-function musicFor(m: Mode, s: State): [MusicMode, Tension] {
-  if (m.kind === 'menu') return ['menu', 0];
-  if (s.phase === 'intro') return ['intro', 0];
-  if (s.phase === 'over') return s.phaseT > 240 ? ['menu', 0] : ['off', 0];
-  if (s.phase !== 'fight') return ['off', 0];
+/** Which music fits the moment. Each spread, the menu, Endless, tournaments and the back cover have their own
+ *  track; within a track: drums for "Round N", the full fight, busier when close, silence from a K.O. to the next round. */
+function musicFor(m: Mode, s: State): [MusicMode, Tension, TrackKey, number] {
+  if (m.kind === 'menu') return ['menu', 0, tourney ? 'tourney' : 'menu', 1];
+  const endless = m.kind === 'practice' && m.endless;
+  const track: TrackKey = tourney ? 'tourney' : endless ? 'endless' : PAGE_TRACKS[s.page] ?? 'dojo';
+  const level = endless ? botLevel(s.f[0].wins) : 1;
+  if (s.phase === 'intro') return ['intro', 0, track, level];
+  if (s.phase === 'over') return s.phaseT > 240 ? ['menu', 0, 'cover', 1] : ['off', 0, track, level];
+  if (s.phase !== 'fight') return ['off', 0, track, level];
+  const final = !!tourney?.bracket && !!tourney.fight && tourney.fight[0] === tourney.bracket.rounds.length - 1;
   const deciding = s.cfg.wins > 0 && s.f.every((f) => f.wins === s.cfg.wins - 1);
   const close = s.f.some((f) => f.hp <= s.cfg.maxHp * 0.3) || (s.cfg.roundSecs > 0 && s.clock <= 10 * 60);
-  return ['fight', deciding || close ? 1 : 0];
+  return ['fight', final || deciding || close ? 1 : 0, track, level];
+}
+
+/** Steam rich presence: what friends see you doing (tokens in steam/rich_presence.vdf). Desktop app only. */
+let presenceShown = '';
+function showPresence(m: Mode, s: State) {
+  const steam = desktop?.steam;
+  if (!steam) return;
+  const [token, vars]: [string, Record<string, string>] =
+    m.kind === 'menu' ? [tourney ? '#Tournament' : '#Menu', {}]
+    : m.kind === 'tutorial' ? ['#Tutorial', {}]
+    : m.kind === 'practice' ? (m.endless ? ['#Endless', { level: String(botLevel(s.f[0].wins)) }] : ['#Practice', {}])
+    : m.kind === 'watch' ? ['#Watching', {}]
+    : tourney ? ['#Tournament', {}]
+    : hud.ranks ? ['#Ranked', { division: myRank?.placed ? myRank.division : 'Placement' }]
+    : ['#Online', {}];
+  const key = token + JSON.stringify(vars);
+  if (key !== presenceShown) { presenceShown = key; steam.presence(token, vars); }
 }
 
 // ---------- the loop ----------
+const menuHint = () => controls.device === 'pad' ? 'Menu button for the menu' : 'Esc for the menu';
 let last = performance.now(), acc = 0;
 const statusEl = $('#status');
 let lastStatus = '';
 function frame(now: number) {
   requestAnimationFrame(frame);
+  if (skipFrame(display.fps, now - last)) return; // frame cap: the time is counted on the next drawn frame
   const real = Math.min(0.05, (now - last) / 1000); last = now;
   const m = mode;
   const seat = seatOf(m);
-  if (m.kind === 'practice') {
+  controls.pollPad(now);
+  if (m.kind === 'practice' && tuner.open) acc = 0; // paused while tuning
+  else if (m.kind === 'practice') {
     acc += real;
     while (acc >= STEP) {
       const s = m.s;
-      if (m.endless) m.dummy.level = botLevel(s.f[0].wins);
-      const ev = step(s, [controls.sample(view.waistY(s, 0)), m.dummy.think(s)]);
-      if (m.endless && ev.some((e) => e.k === 'over')) saveBest(s.f[0].wins);
+      const mine = controls.sample(view.waistY(s, 0), s.f[0].facing);
+      // Endless: the bot's level follows your score, and your inputs are kept so the server can re-play the run.
+      if (m.endless) m.inputs.add(s.frame, mine);
+      const ev = step(s, [mine, m.endless ? botInput(m.dummy, s) : m.dummy.think(s)]);
+      const done = m.tally.feed(s, ev);
+      // Achievements: never with the tuning panel's numbers changed.
+      if (m.endless) unlock([...fromEvents(s, ev, 0, false), ...forEndless(s.f[0].wins)]);
+      else if (!isTuned()) unlock(fromEvents(s, ev, 0, false));
+      if (m.endless && done) { saveBest(s.f[0].wins); reportRun(m.seed, m.inputs.list, s.f[0].wins); }
       view.onStep(s, ev);
+      acc -= STEP;
+    }
+  } else if (m.kind === 'tutorial') {
+    acc += real;
+    while (acc >= STEP) {
+      const ev = step(m.s, [controls.sample(view.waistY(m.s, 0)), m.tut.think(m.s)]);
+      m.tut.after(m.s, ev);
+      unlock(fromEvents(m.s, ev, 0, false));
+      view.onStep(m.s, ev);
+      if (m.tut.resetDue(m.s)) { m.s = freshFight(); view.reset(m.s); }
       acc -= STEP;
     }
   } else if (m.kind === 'online') {
@@ -364,15 +776,11 @@ function frame(now: number) {
     if (lock.backlog > lock.delay + 3) acc += STEP;
     let n = 0;
     while (acc >= STEP && n < 5) {
-      const ev = lock.tick(() => controls.sample(view.waistY(lock.state, seat)));
+      const ev = lock.tick(() => controls.sample(view.waistY(lock.state, seat), lock.state.f[seat].facing));
       if (!ev) { acc = Math.min(acc, STEP); break; }
+      unlock(fromEvents(lock.state, ev, seat, true));
       view.onStep(lock.state, ev);
       acc -= STEP; n++;
-    }
-    // A tournament fight: once the match is over, tell the server who won.
-    if (tourney && !tourney.reported && lock.state.phase === 'over') {
-      tourney.reported = true;
-      net.send({ t: 'result', winner: matchWinner(lock.state) });
     }
   } else if (m.kind === 'watch') {
     const spec = m.spec;
@@ -392,43 +800,60 @@ function frame(now: number) {
     if (stateOf(m).phase === 'over' && !tourney.backAt) tourney.backAt = performance.now() + 2500;
     if (tourney.backAt && performance.now() > tourney.backAt) toBracket();
   }
+  if (m.kind === 'tutorial' && m.tut.finished) {
+    markTutorial('done');
+    unlock(['TUTORIAL_DONE']);
+    toMenu('tutdone');
+    return;
+  }
+  showTut(m.kind === 'tutorial' ? m.tut : null);
   const s = stateOf(m);
   if (m.kind !== 'menu') {
     hud.update(s, m.kind === 'online' ? seat : m.kind === 'watch' ? null : 0);
     // Hold the mouse while fighting; let it go when the match is over so Rematch and Leave can be clicked.
-    controls.lockWanted = m.kind !== 'watch' && s.phase !== 'over';
+    controls.lockWanted = m.kind !== 'watch' && s.phase !== 'over' && !tuner.open;
     if (!controls.lockWanted) controls.unlock();
   }
   music.set(...musicFor(m, s));
-  view.draw(s, real, m.kind === 'practice' ? { seat: 1, k: m.dummy.tell / m.dummy.tellFrames } : undefined);
+  showPresence(m, s);
+  const glint = m.kind === 'practice' ? m.dummy.tell / m.dummy.tellFrames : m.kind === 'tutorial' ? m.tut.tell / m.tut.tellFrames : -1;
+  view.draw(s, real, glint >= 0 ? { seat: 1, k: glint } : undefined);
   stage.style.background = view.sky;
 
   let status = '';
-  if (m.kind === 'practice') status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · Esc for the menu` : 'Practice: Sumi is a dummy · Esc for the menu';
+  if (m.kind === 'tutorial') status = `Tutorial · ${menuHint()}`;
+  else if (m.kind === 'practice') {
+    const tune = keysFor(controls, 'tune')[0];
+    status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · ${menuHint()}`
+      : `Practice: Sumi is a dummy · ${tune ? `${tune} to tune${isTuned() ? ' (tuned numbers)' : ''} · ` : ''}${menuHint()}`;
+  }
   else if (m.kind === 'online') {
     const l = m.lock;
     status = l.desynced ? `Out of sync at frame ${l.frame}. Please tell Marz.`
       : l.waiting > 20 ? "Waiting for your rival's connection…"
       : `${tourney ? 'Tournament' : 'Online'} · room ${m.code} · ${rulesLabel(l.state.cfg)} · ${l.delay}-frame delay`;
   } else if (m.kind === 'watch') {
-    status = `Watching ${m.names[0]} vs ${m.names[1]} · tournament ${m.code} · Esc to leave`;
+    status = `Watching ${m.names[0]} vs ${m.names[1]} · tournament ${m.code} · ${controls.device === 'pad' ? 'Menu' : 'Esc'} for the bracket`;
   }
-  if (m.kind !== 'menu' && controls.lockWanted && !controls.locked && matchMedia('(hover: hover) and (pointer: fine)').matches && !status.startsWith('Out')) {
+  if (m.kind !== 'menu' && controls.lockWanted && !controls.locked && controls.device !== 'pad' && matchMedia('(hover: hover) and (pointer: fine)').matches && !status.startsWith('Out')) {
     status = 'Click the fight to hold the mouse · ' + status;
   }
   if (status !== lastStatus) { statusEl.textContent = status; lastStatus = status; statusEl.classList.toggle('warn', status.startsWith('Out') || status.startsWith('Wait')); }
 }
 
 hud.setNames();
+dress(myPick(), SUMI_PICK);
 view.reset(stateOf(mode));
 stage.classList.add('ready');
 const roomParam = new URLSearchParams(location.search).get('room');
 if (roomParam) {
   const code = normalizeCode(roomParam);
   showMenu('join', { code });
-  ensureNet(() => net.send({ t: 'join', code, name: myName() }));
+  ensureNet(() => net.send({ t: 'join', code, name: myName(), look: myLook() }));
 } else {
-  showMenu('main');
+  // First visit: offer the tutorial once.
+  if (tutorialSeen()) showMenu('main');
+  else { markTutorial('offered'); showMenu('welcome'); }
   net.connect(); // connect early so the server can measure the connection before a fight
 }
 requestAnimationFrame((t) => { last = t; frame(t); });

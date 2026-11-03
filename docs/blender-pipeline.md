@@ -92,9 +92,9 @@ The guide suggests a PNG sequence or texture atlas as the export; Papercut draws
 ## 7. Kami's and Sumi's own pieces (#37: Sumi's straw hat and tied-back sleeves)
 Both fighters share one rig and one set of pieces. A paper piece whose name starts with **`kami_`** is worn by Kami only, and one starting with **`sumi_`** by Sumi only. Pieces with any other name are worn by both. Sumi's colour swap (cream robe, indigo kimono) still applies to Sumi's own pieces.
 
-**Already in the file** (built by Claude from these steps on 2026-11-02, at Marz's request; the red cord is a little thicker than in 7d: corners (0.64, 2.34), (0.915, 2.375), (0.935, 2.48), (0.605, 2.45), and the forearms a little wider). The steps stay here so you can see how each piece is made and change any corner. Marz's picks:
+**Already in the file** (built by Claude from these steps on 2026-11-02, at Marz's request; the cord is a little thicker than in 7d: corners (0.64, 2.34), (0.915, 2.375), (0.935, 2.48), (0.605, 2.45), and the forearms a little wider). The steps stay here so you can see how each piece is made and change any corner. Marz's picks:
 - **Kami** keeps the topknot and the wide hanging sleeves.
-- **Sumi** gets a wide straw hat over short hair, and sleeves tied back above the elbow with a red cord, with bare forearms.
+- **Sumi** gets a wide straw hat over short hair, and sleeves tied back above the elbow with a cord, with bare forearms.
 
 **Stay inside the H box:** the game hits a box 0.9 m wide and 2.15 m tall. In Blender units that's X −0.86 to +0.86 and Z up to 4.10. The hat below peaks at Z 4.00 and is 1.24 wide.
 
@@ -144,7 +144,7 @@ Work in your usual `papercut` folder (`art/fighters/samurai.blend`), not in Clau
 | bottom, inner (0.64, 1.78) | 0.64 | 2.30 |
 | armpit (0.52, 2.50) | 0.52 | 2.62 |
 
-5. The cuff band becomes the red cord. Move its 4 corners to (0.66, 2.36), (0.93, 2.40), (0.94, 2.46), (0.66, 2.42). Then, with those 4 still selected, open the Material tab and make a new material `pc_cord` with hex `C8102E`. **Assign** it to the band only.
+5. The cuff band becomes the cord. Move its 4 corners to (0.66, 2.36), (0.93, 2.40), (0.94, 2.46), (0.66, 2.42). Then, with those 4 still selected, open the Material tab and make a new material `pc_cord` with hex `C8102E` (any colour works: the game prints the cord in the fighter's contrast colour, never red, since red is for cuts). **Assign** it to the band only.
 6. **Tab**.
 
 ### 7e. Sumi's bare forearms (left first)

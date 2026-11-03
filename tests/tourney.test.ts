@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { Lobby, type Peer } from '../server/lobby';
 import { BYE } from '../server/tourney';
 import type { ToClient } from '../src/net/protocol';
+import { cleanCfg } from '../src/sim/config';
+import { Dummy } from '../src/sim/dummy';
+import { BTN, hashState, newMatch, step, type State } from '../src/sim/sim';
 
 class FakePeer implements Peer {
   inbox: ToClient[] = [];
@@ -36,6 +39,50 @@ function fighters(ps: FakePeer[]) {
 /** A fight is on for this player: their last 'match' came after their last 'bracket' (a fight's start sends both, in that order). */
 const isLatest = (p: FakePeer) => { const m = p.last('match'); return !!m && p.inbox.lastIndexOf(m) > p.inbox.lastIndexOf(p.last('bracket')!); };
 
+function seeded(seed: number) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+/** A bot that walks in and fights, so a match always ends. */
+function brawler(seed: number, seat: 0 | 1) {
+  const d = new Dummy(seeded(seed), seat);
+  return (s: State) => {
+    const b = d.think(s), me = s.f[seat], you = s.f[1 - seat];
+    if (s.phase === 'fight' && me.state === 'guard' && Math.abs(you.x - me.x) > 1.6) return b | (you.x > me.x ? BTN.right : BTN.left);
+    return b & ~BTN.rematch;
+  };
+}
+
+/**
+ * Play the fight on stage out through the lobby, as two honest games would (plus `extra` before each frame,
+ * for a test to slip in its own messages). `hashFor` lets a test send a fake fingerprint for a seat.
+ * Returns the seat that really won the fight.
+ */
+function playFight(lobby: Lobby, a: FakePeer, b: FakePeer, opts: {
+  seed?: number; hashFor?: (seat: number, real: number) => number; extra?: (f: number, s: State) => void;
+} = {}) {
+  const m = a.last('match')!;
+  const s = newMatch(cleanCfg(m.cfg)), pa = brawler(opts.seed ?? 11, 0), pb = brawler((opts.seed ?? 11) + 1, 1);
+  for (let f = 0; f < m.delay; f++) step(s, [0, 0]);
+  for (let f = m.delay; f < 100000 && s.phase !== 'over'; f++) {
+    opts.extra?.(f, s);
+    const ia = pa(s), ib = pb(s);
+    lobby.message(a, { t: 'in', f, b: ia });
+    lobby.message(b, { t: 'in', f, b: ib });
+    step(s, [ia, ib]);
+    if (s.frame % 60 === 0) {
+      const h = hashState(s);
+      lobby.message(a, { t: 'hash', f: s.frame, h: opts.hashFor ? opts.hashFor(0, h) : h });
+      lobby.message(b, { t: 'hash', f: s.frame, h: opts.hashFor ? opts.hashFor(1, h) : h });
+    }
+  }
+  expect(s.phase).toBe('over');
+  return s.f[0].wins > s.f[1].wins ? 0 : 1;
+}
+
+/** The bracket's winner (a player index) of the fight that just ended between these two. */
+const lastWinner = (p: FakePeer) => p.last('bracket')!.rounds.flat().filter((m) => m.winner !== null && m.b !== BYE && !m.forfeit).pop()!;
+
 describe('tournament', () => {
   it('a lobby lists the players; only the host can start, and only with 3 or more', () => {
     const { lobby, ps } = setup(2);
@@ -69,11 +116,12 @@ describe('tournament', () => {
       // Everyone else gets a 'match' to watch.
       expect(ps.filter((p) => p.last('match')?.seat === -1 && isLatest(p))).toHaveLength(3);
       // Inputs go to the rival, and to the watchers tagged with the seat.
-      lobby.message(a, { t: 'in', f: 7, b: 3 });
-      expect(b.last('in')).toEqual({ t: 'in', f: 7, b: 3 });
-      expect(ps.find((p) => p !== a && p !== b)!.last('in')).toEqual({ t: 'in', f: 7, b: 3, s: 0 });
-      lobby.message(a, { t: 'result', winner: 0 });
-      lobby.message(b, { t: 'result', winner: 0 });
+      const watcher = ps.find((p) => p !== a && p !== b)!;
+      playFight(lobby, a, b, { seed: guard * 7, extra: (f) => {
+        if (f !== a.last('match')!.delay + 1) return;
+        expect(b.last('in')).toMatchObject({ t: 'in', f: f - 1 });
+        expect(watcher.last('in')).toMatchObject({ t: 'in', f: f - 1, s: 1 });
+      } });
       fights++;
       flush();
     }
@@ -84,13 +132,44 @@ describe('tournament', () => {
     for (const p of ps) expect(p.last('bracket')!.champion).toBe(champ);
   });
 
-  it("a fighter who leaves loses; the games disagreeing replays the fight", () => {
+  it("the server's own re-play decides who goes through: a game claiming the win changes nothing", () => {
+    const real = (() => {
+      const { lobby, ps } = setup(3);
+      lobby.message(ps[0], { t: 'begin' });
+      const [a, b] = fighters(ps);
+      return playFight(lobby, a, b);
+    })();
+    const { lobby, ps } = setup(3);
+    lobby.message(ps[0], { t: 'begin' });
+    const [a, b] = fighters(ps);
+    const loser = [a, b][1 - real];
+    // Every frame, the loser's game claims it won (older games send 'result'): ignored.
+    playFight(lobby, a, b, { extra: () => lobby.message(loser, { t: 'result', winner: 1 - real }) });
+    const m = lastWinner(ps[0]);
+    expect(m.winner).toBe(real === 0 ? m.a : m.b);
+    expect(b.inbox.filter((x) => x.t === 'match')).toHaveLength(1); // no replays
+  });
+
+  it('a modified game loses its tournament fight even when its fight was winning', () => {
+    const real = (() => {
+      const { lobby, ps } = setup(3);
+      lobby.message(ps[0], { t: 'begin' });
+      const [a, b] = fighters(ps);
+      return playFight(lobby, a, b);
+    })();
+    const { lobby, ps } = setup(3);
+    lobby.message(ps[0], { t: 'begin' });
+    const [a, b] = fighters(ps);
+    // The real winner's fingerprints don't match the server's re-play.
+    playFight(lobby, a, b, { hashFor: (seat, h) => (seat === real ? h ^ 1 : h) });
+    const m = lastWinner(ps[0]);
+    expect(m.winner).toBe(real === 0 ? m.b : m.a);
+  });
+
+  it('a fighter who leaves loses', () => {
     const { lobby, ps, flush } = setup(3);
     lobby.message(ps[0], { t: 'begin' });
     let [a, b] = fighters(ps);
-    lobby.message(a, { t: 'result', winner: 0 });
-    lobby.message(b, { t: 'result', winner: 1 });
-    expect(b.inbox.filter((m) => m.t === 'match')).toHaveLength(2); // the fight starts over
     lobby.close(a);
     const br = ps.find((p) => p !== a)!.last('bracket')!;
     const done = br.rounds.flat().find((m) => m.forfeit);
@@ -98,6 +177,45 @@ describe('tournament', () => {
     flush();
     [a, b] = fighters(ps.filter((p) => p !== a));
     expect(a && b).toBeTruthy();
+  });
+
+  it('the host can deal a new, reshuffled bracket between fights, without anyone who left', () => {
+    const { lobby, ps, flush } = setup(5);
+    lobby.message(ps[0], { t: 'begin' });
+    const firstSeeds = ps[0].last('bracket')!.rounds[0].map((m) => `${m.a},${m.b}`).join(' ');
+    // Not during a fight, and never by a guest.
+    expect(ps[0].last('bracket')!.restart).toBe(false);
+    lobby.message(ps[0], { t: 'restart' });
+    expect(ps[0].last('bracket')!.rounds[0].map((m) => `${m.a},${m.b}`).join(' ')).toBe(firstSeeds);
+    // Play the tournament out; one non-host player leaves along the way.
+    for (let guard = 0; guard < 10 && ps[0].last('bracket')!.champion === null; guard++) {
+      const [a, b] = fighters(guard === 0 ? ps : ps.slice(0, 4));
+      playFight(lobby, a, b, { seed: guard });
+      if (guard === 0) lobby.close(ps[4]); // during the first break
+      flush();
+    }
+    expect(ps[0].last('bracket')!.champion).not.toBeNull();
+    expect(ps[0].last('bracket')!.restart).toBe(true);
+    expect(ps[1].last('bracket')!.restart).toBe(false);
+    lobby.message(ps[1], { t: 'restart' }); // a guest can't
+    expect(ps[1].last('bracket')!.champion).not.toBeNull();
+
+    // New brackets: 4 players left, no byes, a fight starts at once; across a few deals the seats change.
+    const deals = new Set<string>();
+    for (let i = 0; i < 6; i++) {
+      lobby.message(ps[0], { t: 'restart' });
+      const br = ps[0].last('bracket')!;
+      expect(br.champion).toBeNull();
+      expect(br.names).toHaveLength(4);
+      expect(br.rounds.map((r) => r.length)).toEqual([2, 1]);
+      expect(br.rounds[0].every((m) => m.b !== BYE && m.winner === null)).toBe(true);
+      deals.add(br.rounds[0].map((m) => [m.a, m.b].sort().join(',')).sort().join(' '));
+      const [a, b] = fighters(ps.slice(0, 4));
+      expect(a && b).toBeTruthy();
+      // Finish this fight so the host can deal again during the break.
+      playFight(lobby, a, b, { seed: 30 + i });
+    }
+    expect(deals.size).toBeGreaterThan(1);
   });
 
   it("can't be joined once it has started", () => {

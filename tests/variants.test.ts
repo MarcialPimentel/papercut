@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { PIECE_NAMES, variantOfName, wornBy, type Puppet, type Shape } from '../src/render/puppet';
 
-const shape = (role: string, only?: Shape['only']): Shape => ({ pts: [[0, 0], [1, 0], [0, 1]], role, color: '#fff', z: 0, paper: true, only });
+const shape = (role: string, only?: Shape['only']): Shape => ({ pts: [[0, 0], [1, 0], [0, 1]], role, color: '#fff', z: 0, paper: true, obj: role, only });
 function puppet(): Puppet {
   const p = {} as Puppet;
   for (const name of PIECE_NAMES) p[name] = { name, rest: new THREE.Vector2(), shapes: [shape('robe')] };

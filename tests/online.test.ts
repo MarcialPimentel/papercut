@@ -21,7 +21,7 @@ describe('lobby', () => {
     expect(room.t).toBe('room');
     if (room.t !== 'room') return;
     lobby.message(b, { t: 'join', code: room.code.toLowerCase() });
-    expect(a.last()).toEqual({ t: 'start', seat: 0, delay: delayFor(40, 60), code: room.code, cfg: DEFAULT_CFG });
+    expect(a.last()).toEqual({ t: 'start', seat: 0, delay: delayFor(40, 60), code: room.code, cfg: DEFAULT_CFG, looks: ['', ''], names: ['Kami', 'Sumi'] });
     expect(b.last()).toMatchObject({ t: 'start', seat: 1 });
     expect(lobby.stats).toMatchObject({ rooms: 1, fighting: 1, players: 2 });
   });
@@ -53,8 +53,9 @@ describe('lobby', () => {
     lobby.message(a, { t: 'quick' });
     lobby.message(b, { t: 'quick' });
     lobby.message(c, { t: 'quick' });
-    lobby.message(a, { t: 'in', f: 5, b: 9 });
-    expect(b.last()).toEqual({ t: 'in', f: 5, b: 9 });
+    const f = (b.last() as Extract<ToClient, { t: 'start' }>).delay; // the first frame with real buttons
+    lobby.message(a, { t: 'in', f, b: 9 });
+    expect(b.last()).toEqual({ t: 'in', f, b: 9 });
     expect(c.inbox).toEqual([{ t: 'waiting' }]);
     lobby.close(a);
     expect(b.last()).toEqual({ t: 'gone' });

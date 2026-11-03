@@ -15,6 +15,8 @@ npm run dev        # game on http://localhost:5173, rooms server on 8790
 npm test           # fight rules, rooms and online sync
 npm run build      # the game into dist/
 npm start          # serve dist/ and the rooms on port 8790
+npm run desktop    # the desktop app (Electron); see docs/desktop.md
+npm run build:desktop  # Windows zip + Linux tar.gz into release/
 ```
 
 TypeScript, Vite, Three.js; a small Node server (`server/`) for rooms. The fight itself is in `src/sim/` (plain, tested, the same on every computer); drawing is in `src/render/`.
