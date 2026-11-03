@@ -64,6 +64,7 @@
           <div class="row2">
             <button class="hbtn" id="bFighter" type="button">Your fighter</button>
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
+            <button class="hbtn" id="bBoard" type="button">Leaderboard</button>
             <button class="hbtn" id="bSettings" type="button">Settings</button>
             <button class="hbtn" id="bControls" type="button">Controls</button>
             <button class="hbtn" id="bQuit" type="button" hidden>Quit</button>
@@ -137,6 +138,18 @@
           <button class="mbtn" data-cancel type="button">Back</button>
         </div>
 
+        <div data-screen="board" class="stack board" hidden>
+          <p class="big">Endless leaderboard</p>
+          <div class="tabs" role="group" aria-label="Time">
+            <button class="hbtn" data-period="day" type="button">24 hours</button>
+            <button class="hbtn" data-period="week" type="button">7 days</button>
+            <button class="hbtn" data-period="all" type="button">All time</button>
+          </div>
+          <ol id="boardList"></ol>
+          <p class="muted" id="boardYou"></p>
+          <p class="muted small">Each player's best run: most bots, then the fastest. The server re-plays every run before it counts.</p>
+          <button class="mbtn" id="bBoardBack" type="button">Back</button>
+        </div>
         <form data-screen="settings" class="stack setup settings" id="settingsForm" hidden>
           <p class="big">Settings</p>
           <label>Window <select id="setWindow"><option value="full">Fullscreen</option><option value="win">Windowed</option></select></label>

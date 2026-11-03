@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { Lobby, type Peer } from '../server/lobby';
 import { Referee, replay, type MatchRecord } from '../server/referee';
-import { cleanEndless } from '../server/endless';
 import { summarize, readFilter, page } from '../server/stats';
 import { MemoryStore, PgStore, KEEP_INPUTS_DAYS, type PgLike } from '../server/store';
 import type { ToClient } from '../src/net/protocol';
-import { DEFAULT_CFG, ENDLESS_CFG, type MatchCfg } from '../src/sim/config';
+import { DEFAULT_CFG, type MatchCfg } from '../src/sim/config';
 import { Dummy } from '../src/sim/dummy';
 import { BTN, hashState, newMatch, step, type State } from '../src/sim/sim';
 import { RULES } from '../src/sim/rules';
@@ -168,29 +167,6 @@ describe('the stats', () => {
     expect(readFilter(new URL('http://x/stats?build=<x>&rules=all&guard=flick'))).toEqual({ build: '', rules: 'all', guard: 'flick' });
     expect(readFilter(new URL('http://x/stats'))).toEqual({ build: '', rules: 'standard', guard: 'any' });
     expect(readFilter(new URL('http://x/stats?guard=pad')).guard).toBe('pad');
-  });
-});
-
-describe('Endless reports', () => {
-  function endlessRun() {
-    const s = newMatch(ENDLESS_CFG), t = new Tally(), bot = new Dummy(seeded(7), 1), me = brawler(8, 0);
-    for (let f = 0; f < 200000; f++) {
-      bot.level = 1;
-      const done = t.feed(s, step(s, [me(s), bot.think(s)]));
-      if (done) return { bots: s.f[0].wins, tally: done };
-    }
-    throw new Error('the run never ended');
-  }
-
-  it('accepts a real run and rejects one whose numbers do not add up', () => {
-    const run = endlessRun();
-    const ok = cleanEndless(JSON.parse(JSON.stringify({ ...run, guard: 'flick' })));
-    expect(ok).toBeTruthy();
-    expect(ok!.bots).toBe(run.bots);
-    expect(ok!.guard).toBe('flick');
-    expect(cleanEndless({ ...run, bots: run.bots + 5 })).toBeNull();
-    expect(cleanEndless({ bots: -1, tally: run.tally })).toBeNull();
-    expect(cleanEndless('nonsense')).toBeNull();
   });
 });
 

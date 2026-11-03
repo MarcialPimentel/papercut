@@ -6,7 +6,7 @@ import '@fontsource/big-shoulders-stencil-display/800';
 import '@fontsource/atkinson-hyperlegible/400';
 import '@fontsource/atkinson-hyperlegible/700';
 import './style.css';
-import { Hud, botLevel } from './hud';
+import { Hud } from './hud';
 import { Controls, type Command } from './input';
 import { keysFor, navigate, renderPrompts, restartLabel, setupControlsScreen } from './controlsUi';
 import { Net } from './net/client';
@@ -27,7 +27,8 @@ import { Dummy } from './sim/dummy';
 import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
 import { TuningPanel } from './tuning-panel';
 import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
-import { Tally, type MatchTally } from './sim/tally';
+import { Tally } from './sim/tally';
+import { RunInputs, botInput, botLevel, endlessBot } from './sim/endless';
 import { HINT_AFTER, STEPS, TUTORIAL_CFG, Tutorial, freshFight } from './tutorial/tutorial';
 import { STEP_TEXT, TUTORIAL_TEXT, fill, namesFor } from './tutorial/text';
 
@@ -61,7 +62,7 @@ tuner.onClose = () => { controls.clear(); if (mode.kind === 'practice') { contro
 
 type Mode =
   | { kind: 'menu'; s: State }
-  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; tally: Tally }
+  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; tally: Tally; seed: number; inputs: RunInputs }
   | { kind: 'tutorial'; s: State; tut: Tutorial }
   | { kind: 'online'; lock: Lockstep; code: string }
   | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] }; // watching a tournament fight
@@ -99,7 +100,7 @@ const dressOnline = (looks?: [string, string]) => dress(decodePick(looks?.[0], D
 const myLook = () => encodePick(myPick());
 
 // ---------- menus ----------
-type Screen = 'main' | 'fighter' | 'howto' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
+type Screen = 'main' | 'fighter' | 'howto' | 'board' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (screen === 'controls' && to !== 'controls') bindScreen.cancel();
@@ -123,7 +124,11 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (to === 'tlobby' || to === 'bracket') for (const h of soundHints()) h.hidden = !!engine.live;
   // On a controller, put the focus on the screen's first button so A does something straight away.
   if (moved && controls.device === 'pad') requestAnimationFrame(() => navigate('up', $('#menu .card'), () => {}));
-  if (to === 'main') { const b = loadBest(); $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}` : 'How many bots can you cut?'; }
+  if (to === 'main') {
+    showBest();
+    if (loadBest() > 0) fetchBoard('all').then((b) => { myPlace = b?.you?.place ?? null; if (screen === 'main') showBest(); });
+  }
+  if (to === 'board') showBoard('all');
 }
 function hideMenu() { showSound(false); if (screen === 'fighter') fighterScreen.close(); screen = null; stage.classList.remove('in-menu'); $('#menu').hidden = true; }
 
@@ -161,10 +166,57 @@ function showRank() {
     : myRank.placed ? `${myRank.division} · ${myRank.points} points` : `${myRank.division} · your first 5 matches place you`;
 }
 
-/** Send a finished Endless run to the server's balance stats (no personal data; failures are ignored). */
-function reportRun(bots: number, tally: MatchTally) {
-  const body = JSON.stringify({ bots, guard: controls.device === 'pad' ? 'pad' : controls.guardStyle, tally });
-  fetch(`${SITE}/api/endless`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+// ---------- Endless leaderboard ----------
+type Period = 'day' | 'week' | 'all';
+const PERIOD_NAMES: Record<Period, string> = { day: 'today', week: 'this week', all: 'all time' };
+/** Your place on the all-time board (null: not on it, or not known yet). */
+let myPlace: number | null = null;
+
+/** A fresh seed for an Endless run: the bot's dice for this run. */
+const newSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
+
+/**
+ * Send a finished Endless run: its seed and your inputs. The server re-plays it, and only the score
+ * the re-play reaches goes on the leaderboard (and into the stats).
+ */
+function reportRun(seed: number, inputs: number[], bots: number) {
+  hud.placeNote = '';
+  const body = JSON.stringify({ seed, inputs, bots, guard: controls.device === 'pad' ? 'pad' : controls.guardStyle, id: myId(), name: myName() });
+  fetch(`${SITE}/api/endless`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
+    .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
+    .then(({ ok, j }) => {
+      if (!ok) { hud.placeNote = `Not posted to the leaderboard (${j.error ?? 'refused'}).`; return; }
+      const places = (j.places ?? {}) as Partial<Record<Period, number>>;
+      if (places.all) myPlace = places.all;
+      const parts = (['day', 'week', 'all'] as Period[]).filter((p) => places[p]).map((p) => `#${places[p]} ${PERIOD_NAMES[p]}`);
+      hud.placeNote = parts.length ? `Leaderboard: ${parts.join(', ')}.` : '';
+    })
+    .catch(() => { hud.placeNote = 'Not posted to the leaderboard (no connection).'; });
+}
+
+interface BoardReply { period: Period; top: { name: string; bots: number; secs: number; you: boolean }[]; you: { place: number; bots: number } | null }
+async function fetchBoard(period: Period): Promise<BoardReply | null> {
+  try {
+    const r = await fetch(`${SITE}/api/leaderboard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ period, id: myId() }) });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+const clock = (secs: number) => `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+async function showBoard(period: Period) {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-period]')) b.classList.toggle('on', b.dataset.period === period);
+  $('#boardList').innerHTML = '<li class="muted">Loading…</li>';
+  const b = await fetchBoard(period);
+  if (screen !== 'board') return;
+  if (!b) { $('#boardList').innerHTML = '<li class="muted">The leaderboard is not available right now.</li>'; $('#boardYou').textContent = ''; return; }
+  $('#boardList').innerHTML = b.top.length
+    ? b.top.map((r, i) => `<li class="${r.you ? 'you' : ''}"><span>${i + 1}</span><b>${esc(r.name)}</b><span>${r.bots} bot${r.bots === 1 ? '' : 's'}</span><span class="muted">${clock(r.secs)}</span></li>`).join('')
+    : `<li class="muted">No runs ${PERIOD_NAMES[period]} yet. Be the first.</li>`;
+  $('#boardYou').textContent = b.you ? `You: #${b.you.place} ${PERIOD_NAMES[period]} with ${b.you.bots} bot${b.you.bots === 1 ? '' : 's'}.` : `You have no run ${PERIOD_NAMES[period]} yet.`;
+}
+/** The title screen's Endless line: your best run, and your place if you have one. */
+function showBest() {
+  const b = loadBest();
+  $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}${myPlace ? ` · #${myPlace} on the leaderboard` : ''}` : 'How many bots can you cut?';
 }
 
 function startPractice(endless = false) {
@@ -172,7 +224,9 @@ function startPractice(endless = false) {
   const cfg = endless ? ENDLESS_CFG : DEFAULT_CFG;
   // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) never does.
   if (endless) resetTuning(); else applyTuning(loadSaved());
-  mode = { kind: 'practice', s: newMatch(cfg), dummy: new Dummy(), endless, tally: new Tally() };
+  const seed = newSeed();
+  mode = { kind: 'practice', s: newMatch(cfg), dummy: endless ? endlessBot(seed) : new Dummy(), endless, tally: new Tally(), seed, inputs: new RunInputs() };
+  hud.placeNote = '';
   // Practice is against Sumi; in Endless every bot wears a random look.
   const mine = myPick(), botLook = () => lookOf(pairPicks(mine, randomPick(Math.random))[1], LOOKS[1].name);
   view.spawnLook = endless ? botLook : null;
@@ -329,6 +383,9 @@ const fighterScreen = new FighterScreen($<HTMLCanvasElement>('#fCanvas'), $('#fP
 $('#bFighter').addEventListener('click', () => showMenu('fighter'));
 $('#bFighterDone').addEventListener('click', () => showMenu('main'));
 $('#bHowToBack').addEventListener('click', () => showMenu('main'));
+$('#bBoard').addEventListener('click', () => showMenu('board'));
+$('#bBoardBack').addEventListener('click', () => showMenu('main'));
+for (const b of document.querySelectorAll<HTMLButtonElement>('[data-period]')) b.addEventListener('click', () => showBoard(b.dataset.period as Period));
 // Controls: remap keys and controller buttons.
 const bindScreen = setupControlsScreen(controls);
 $('#bControls').addEventListener('click', () => showMenu('controls'));
@@ -345,7 +402,7 @@ controls.onNav = (n) => {
   if (screen) {
     if (n === 'menu') { if (screen !== 'main') command('menu'); return; }
     navigate(n, $('#menu .card'), () => {
-      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
+      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
       back?.click();
     });
     return;
@@ -502,7 +559,7 @@ function command(c: Command) {
     return;
   }
   if (c === 'menu' && tuner.open) { tuner.toggle(false); return; }
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone') showMenu('main'); return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone' || screen === 'board') showMenu('main'); return; }
   if (mode.kind === 'tutorial') {
     if (c === 'skip') mode.tut.skip();
     if (c === 'restart') { mode.s = freshFight(); view.reset(mode.s); }
@@ -510,7 +567,10 @@ function command(c: Command) {
   }
   if (c === 'skip') return;
   if (mode.kind === 'practice') {
-    if (c === 'restart' || mode.s.phase === 'over') { mode.s = newMatch(mode.s.cfg); mode.dummy.reset(); mode.tally = new Tally(); hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
+    if (c === 'restart' || mode.s.phase === 'over') {
+      mode.s = newMatch(mode.s.cfg); mode.tally = new Tally(); mode.inputs = new RunInputs(); hud.placeNote = '';
+      if (mode.endless) { mode.seed = newSeed(); mode.dummy = endlessBot(mode.seed); } else mode.dummy.reset();
+      hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
   } else if (mode.kind === 'online' && !hud.ranks && mode.lock.state.phase === 'over') controls.press('rematch');
 }
 controls.onCommand = command;
@@ -608,10 +668,12 @@ function frame(now: number) {
     acc += real;
     while (acc >= STEP) {
       const s = m.s;
-      if (m.endless) m.dummy.level = botLevel(s.f[0].wins);
-      const ev = step(s, [controls.sample(view.waistY(s, 0), s.f[0].facing), m.dummy.think(s)]);
+      const mine = controls.sample(view.waistY(s, 0), s.f[0].facing);
+      // Endless: the bot's level follows your score, and your inputs are kept so the server can re-play the run.
+      if (m.endless) m.inputs.add(s.frame, mine);
+      const ev = step(s, [mine, m.endless ? botInput(m.dummy, s) : m.dummy.think(s)]);
       const done = m.tally.feed(s, ev);
-      if (m.endless && done) { saveBest(s.f[0].wins); reportRun(s.f[0].wins, done); }
+      if (m.endless && done) { saveBest(s.f[0].wins); reportRun(m.seed, m.inputs.list, s.f[0].wins); }
       view.onStep(s, ev);
       acc -= STEP;
     }

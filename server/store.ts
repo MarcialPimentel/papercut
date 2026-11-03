@@ -14,7 +14,21 @@ export interface EndlessRecord {
   how: string;
   why: '' | 'wind' | 'miss';
   tally: MatchTally;
+  /** How long the run lasted, in frames (the leaderboard's tie-break: faster is better). */
+  frames: number;
+  /** The player's id, when the run counts for the leaderboard. */
+  player?: string;
 }
+
+/** The leaderboard's time windows: the last 24 hours, the last 7 days, or all time. */
+export type Period = 'day' | 'week' | 'all';
+export const PERIODS: Period[] = ['day', 'week', 'all'];
+const periodMs: Record<Period, number> = { day: 86400e3, week: 7 * 86400e3, all: Infinity };
+/** One player's best run in a window. */
+export interface BoardRow { player: string; name: string; bots: number; frames: number }
+/** How many places the leaderboard shows. */
+export const BOARD_SIZE = 100;
+const better = (a: { bots: number; frames: number }, b: { bots: number; frames: number }) => a.bots > b.bots || (a.bots === b.bots && a.frames < b.frames);
 
 /** A ranked player. `id` is a hash of the secret token the browser keeps (the token itself is never stored). */
 export interface Player extends Rating { id: string; name: string; games: number; wins: number }
@@ -41,6 +55,10 @@ export interface Store {
   builds(): Promise<string[]>;
   /** Drop inputs older than KEEP_INPUTS_DAYS. */
   prune(): Promise<void>;
+  /** Each player's best run in the window, best first. */
+  board(period: Period, limit: number): Promise<BoardRow[]>;
+  /** A player's place and best run in the window (null: no run there). */
+  place(player: string, period: Period): Promise<{ place: number; bots: number } | null>;
   player(id: string): Promise<Player | null>;
   savePlayer(p: Player): Promise<void>;
 }
@@ -50,7 +68,7 @@ const guardOk = (f: GuardFilter, g: GuardStyle[]) => f === 'any' || g.every((x) 
 export class MemoryStore implements Store {
   readonly kind = 'memory';
   readonly rows: (MatchRow & { at: number; inputs: MatchRecord['inputs'] | null; players?: [string, string] })[] = [];
-  readonly runs: (EndlessRow & { at: number })[] = [];
+  readonly runs: (EndlessRow & { at: number; frames: number; player?: string })[] = [];
   readonly players = new Map<string, Player>();
   constructor(private now: () => number = Date.now) {}
 
@@ -58,6 +76,20 @@ export class MemoryStore implements Store {
     this.rows.push({ build, mode: r.mode, standard: r.standard, guard: r.guard, winner: r.winner, tally: r.tally, at: this.now(), inputs: r.inputs, players: r.players });
   }
   async addEndless(build: string, r: EndlessRecord) { this.runs.push({ build, ...r, at: this.now() }); }
+  private best(period: Period): BoardRow[] {
+    const since = this.now() - periodMs[period], top = new Map<string, BoardRow>();
+    for (const r of this.runs) {
+      if (!r.player || r.at < since) continue;
+      const cur = top.get(r.player);
+      if (!cur || better(r, cur)) top.set(r.player, { player: r.player, name: this.players.get(r.player)?.name ?? '', bots: r.bots, frames: r.frames });
+    }
+    return [...top.values()].sort((a, b) => (better(a, b) ? -1 : better(b, a) ? 1 : 0));
+  }
+  async board(period: Period, limit: number) { return this.best(period).slice(0, limit); }
+  async place(player: string, period: Period) {
+    const all = this.best(period), i = all.findIndex((r) => r.player === player);
+    return i < 0 ? null : { place: i + 1, bots: all[i].bots };
+  }
   async matches(f: Filter) {
     return this.rows
       .filter((m) => (!f.build || m.build === f.build) && (f.rules === 'all' || m.standard === (f.rules === 'standard')) && guardOk(f.guard, m.guard))
@@ -104,6 +136,9 @@ CREATE TABLE IF NOT EXISTS endless_runs (
 CREATE INDEX IF NOT EXISTS endless_build ON endless_runs (build);
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS player0 text;
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS player1 text;
+ALTER TABLE endless_runs ADD COLUMN IF NOT EXISTS frames integer;
+ALTER TABLE endless_runs ADD COLUMN IF NOT EXISTS player text;
+CREATE INDEX IF NOT EXISTS endless_player ON endless_runs (player, bots DESC, frames) WHERE player IS NOT NULL;
 CREATE TABLE IF NOT EXISTS players (
   id text PRIMARY KEY,
   name text NOT NULL,
@@ -141,8 +176,34 @@ export class PgStore implements Store {
 
   async addEndless(build: string, r: EndlessRecord) {
     await this.init();
-    await this.pool.query('INSERT INTO endless_runs (build, guard, bots, how, why, tally) VALUES ($1,$2,$3,$4,$5,$6)',
-      [build, r.guard, r.bots, r.how, r.why, JSON.stringify(r.tally)]);
+    await this.pool.query('INSERT INTO endless_runs (build, guard, bots, how, why, tally, frames, player) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+      [build, r.guard, r.bots, r.how, r.why, JSON.stringify(r.tally), r.frames, r.player ?? null]);
+  }
+
+  /** Each player's best run since the window opened (SQL shared by board and place). */
+  private static BEST = `
+    SELECT DISTINCT ON (player) player, bots, frames FROM endless_runs
+    WHERE player IS NOT NULL AND frames IS NOT NULL AND at > now() - $1::interval
+    ORDER BY player, bots DESC, frames ASC, id ASC`;
+  private static window = (p: Period) => (p === 'day' ? '1 day' : p === 'week' ? '7 days' : '1000 years');
+
+  async board(period: Period, limit: number): Promise<BoardRow[]> {
+    await this.init();
+    const { rows } = await this.pool.query(
+      `WITH best AS (${PgStore.BEST}) SELECT b.player, coalesce(p.name, '') AS name, b.bots, b.frames
+       FROM best b LEFT JOIN players p ON p.id = b.player ORDER BY b.bots DESC, b.frames ASC LIMIT $2`,
+      [PgStore.window(period), limit]);
+    return rows as unknown as BoardRow[];
+  }
+
+  async place(player: string, period: Period) {
+    await this.init();
+    const { rows } = await this.pool.query(
+      `WITH best AS (${PgStore.BEST})
+       SELECT (SELECT count(*) FROM best o WHERE o.bots > me.bots OR (o.bots = me.bots AND o.frames < me.frames))::int + 1 AS place, me.bots
+       FROM best me WHERE me.player = $2`,
+      [PgStore.window(period), player]);
+    return (rows[0] as { place: number; bots: number } | undefined) ?? null;
   }
 
   async matches(f: Filter): Promise<MatchRow[]> {

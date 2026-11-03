@@ -1,14 +1,15 @@
 // The flat paper HUD over the scene: health strips, the clock, round diamonds and banners.
 
 import type { RankInfo } from './net/protocol';
-import { DEFAULT_CFG, ENDLESS, type MatchCfg } from './sim/config';
+import { botLevel } from './sim/endless';
+import { DEFAULT_CFG, type MatchCfg } from './sim/config';
 import { PAGES, RULES } from './sim/rules';
 import { matchWinner, type State } from './sim/sim';
 import { LOOKS } from './render/common';
 
 const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
 /** Endless: the bot's level (1, 2, 3…) after `cut` bots. */
-export const botLevel = (cut: number) => Math.floor(cut / ENDLESS.healEvery) + 1;
+export { botLevel };
 
 /** The round-end line. A counter cut says why it was an instant K.O., so players learn the rule. */
 function howText(s: State, loser: string) {
@@ -40,6 +41,8 @@ export class Hud {
   best = 0;
   /** A ranked match: both players' divisions (shown beside their names); no rematch. */
   ranks: [RankInfo, RankInfo] | null = null;
+  /** Endless: where the finished run put you on the leaderboard (or why it wasn't posted). */
+  placeNote = '';
   /** Ranked: the result once the server has counted it, e.g. "+18 · Cardstock 1518". */
   rankNote = '';
   /** The key or button that restarts, for "Press R or Rematch" (null if none is bound). Set by main. */
@@ -115,7 +118,7 @@ export class Hud {
       html = s.roundWinner >= 0 ? `${name(s.roundWinner)} takes round ${s.round}<small>${howText(s, this.names?.[1 - s.roundWinner] ?? LOOKS[1 - s.roundWinner].name)}</small>`
         : `Draw<small>${s.how === 'Time' ? 'Time ran out with the strips level.' : s.how} The round is replayed.</small>`;
     } else if (s.phase === 'over' && g) {
-      html = `Run over<small>${cut} bot${cut === 1 ? '' : 's'} cut. ${cut > this.best ? 'A new best!' : `Best: ${this.best}.`} ${this.again('run again')}</small>`;
+      html = `Run over<small>${cut} bot${cut === 1 ? '' : 's'} cut. ${cut > this.best ? 'A new best!' : `Best: ${this.best}.`} ${this.placeNote || 'Checking the leaderboard…'} ${this.again('run again')}</small>`;
     } else if (s.phase === 'over') {
       const w = matchWinner(s);
       const waiting = mySeat !== null && s.rematch[mySeat];

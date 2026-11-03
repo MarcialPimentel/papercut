@@ -208,7 +208,7 @@ ${row("Player's heavies that land", pct(E.heavy.land, E.heavy.thrown), `${E.heav
 </table>
 <h2>Bots reached</h2>
 <table class="grid"><tr>${E.buckets.map(([l]) => `<th>${l}</th>`).join('')}</tr><tr>${E.buckets.map(([, n]) => `<td>${pct(n, E.runs)}</td>`).join('')}</tr></table>
-<p class="hint">Endless numbers are as the browser reports them for now; the leaderboard build has the server re-play each run. Raw numbers: <a href="/api/stats${esc(query(f))}">/api/stats</a>. Live build ${esc(live)}.</p>
+<p class="hint">Endless runs are re-played by the server before they count. Raw numbers: <a href="/api/stats${esc(query(f))}">/api/stats</a>. Live build ${esc(live)}.</p>
 </main></body></html>`;
 }
 
