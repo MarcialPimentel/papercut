@@ -8,6 +8,7 @@ import type { MatchCfg } from '../src/sim/config';
 export interface TPeer {
   send(msg: ToClient): void;
   rtt?: number;
+  look?: string;
 }
 
 interface Player { peer: TPeer; name: string; gone: boolean }
@@ -194,10 +195,11 @@ export class Tourney {
     const fs = this.fighters()!;
     const delay = delayFor(fs[0].peer.rtt ?? 80, fs[1].peer.rtt ?? 80);
     const names: [string, string] = [fs[0].name, fs[1].name];
+    const looks: [string, string] = [fs[0].peer.look ?? '', fs[1].peer.look ?? ''];
     this.sendBracket();
     for (const p of this.live) {
       const seat = p === fs[0] ? 0 : p === fs[1] ? 1 : -1;
-      p.peer.send({ t: 'match', seat, delay, cfg: this.cfg, names, code: this.code });
+      p.peer.send({ t: 'match', seat, delay, cfg: this.cfg, names, code: this.code, looks });
     }
   }
 

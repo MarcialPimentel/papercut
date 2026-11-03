@@ -1,6 +1,6 @@
 // Pairs players into rooms (1v1 or tournament) and relays their inputs. No fight logic lives here.
 
-import { CODE_LENGTH, CODE_LETTERS, delayFor, normalizeCode, type ToClient, type ToServer } from '../src/net/protocol';
+import { CODE_LENGTH, CODE_LETTERS, cleanLook, delayFor, normalizeCode, type ToClient, type ToServer } from '../src/net/protocol';
 import { DEFAULT_CFG, cleanCfg, type MatchCfg } from '../src/sim/config';
 import { TOURNEY_MAX, Tourney } from './tourney';
 
@@ -8,6 +8,8 @@ export interface Peer {
   send(msg: ToClient): void;
   /** Latest measured round trip to this player, in ms (undefined until measured). */
   rtt?: number;
+  /** The player's look code (drawn only, never part of the fight). */
+  look?: string;
   /** The fight version this player's game runs (server/fightVersion.ts). */
   v?: string;
 }
@@ -42,6 +44,7 @@ export class Lobby {
   message(p: Peer, m: ToServer) {
     const t = this.tourneyOf.get(p);
     if (this.fight && PAIRING.has(m.t) && p.v !== this.fight) { p.send({ t: 'err', msg: MISMATCH_MSG }); return; }
+    if (PAIRING.has(m.t) && 'look' in m && m.look !== undefined) p.look = cleanLook(m.look);
     switch (m.t) {
       case 'tourney': {
         this.leave(p, false);
@@ -138,8 +141,9 @@ export class Lobby {
     r.guest = guest;
     this.roomOf.set(guest, r);
     const delay = delayFor(r.host.rtt ?? 80, guest.rtt ?? 80);
-    r.host.send({ t: 'start', seat: 0, delay, code: r.code, cfg: r.cfg });
-    guest.send({ t: 'start', seat: 1, delay, code: r.code, cfg: r.cfg });
+    const looks: [string, string] = [r.host.look ?? '', guest.look ?? ''];
+    r.host.send({ t: 'start', seat: 0, delay, code: r.code, cfg: r.cfg, looks });
+    guest.send({ t: 'start', seat: 1, delay, code: r.code, cfg: r.cfg, looks });
   }
 
   private leave(p: Peer, tell: boolean) {

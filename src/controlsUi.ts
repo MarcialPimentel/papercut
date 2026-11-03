@@ -137,6 +137,26 @@ export function navigate(n: Nav, root: HTMLElement, back: () => void) {
   }
   if (n === 'menu') return;
   const d = n === 'down' || n === 'right' ? 1 : -1;
+  // A row of choices (the Fighter screen): left / right picks the next one, up / down moves to the next row's pick.
+  const group = cur!.closest<HTMLElement>('[data-choices]');
+  if (group) {
+    const groups = [...root.querySelectorAll<HTMLElement>('[data-choices]')].filter(visible);
+    if (n === 'left' || n === 'right') {
+      const bs = [...group.querySelectorAll<HTMLButtonElement>('button')];
+      const next = bs[(bs.indexOf(cur as HTMLButtonElement) + d + bs.length) % bs.length];
+      next.click();
+      const again = next.id ? document.getElementById(next.id) : next; // the row may be redrawn by the click
+      if (again) focusOn(again);
+      return;
+    }
+    const g = groups[groups.indexOf(group) + d];
+    if (g) { focusOn(g.querySelector<HTMLElement>('[aria-pressed="true"]') ?? g.querySelector<HTMLElement>(FOCUSABLE)!); return; }
+    // Past the first or last row: carry on to the buttons before or after the rows.
+    const inRow = [...group.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    const i = items.indexOf(d > 0 ? inRow[inRow.length - 1] : inRow[0]);
+    focusOn(items[(i + d + items.length) % items.length]);
+    return;
+  }
   // In a table (the Controls screen), up and down keep the column.
   const td = cur!.closest('td');
   if (td && (n === 'up' || n === 'down')) {

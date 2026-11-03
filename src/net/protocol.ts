@@ -3,15 +3,17 @@
 
 import type { MatchCfg } from '../sim/config';
 
+// `look`: the player's chosen look as a short code (render/looks.ts). It is only drawn, never part of the fight,
+// so it travels once with the request to play and comes back in 'start' / 'match' as `looks` (seat 0, seat 1).
 export type ToServer =
-  | { t: 'host'; cfg?: MatchCfg } // make a private room for an invite link, with its rules
-  | { t: 'join'; code: string; name?: string } // a 1v1 room or a tournament
-  | { t: 'tourney'; cfg?: MatchCfg; name?: string } // make a tournament room (3-8 players)
+  | { t: 'host'; cfg?: MatchCfg; look?: string } // make a private room for an invite link, with its rules
+  | { t: 'join'; code: string; name?: string; look?: string } // a 1v1 room or a tournament
+  | { t: 'tourney'; cfg?: MatchCfg; name?: string; look?: string } // make a tournament room (3-8 players)
   | { t: 'name'; name: string } // rename yourself in a tournament lobby
   | { t: 'begin' } // the tournament's host starts the bracket
   | { t: 'restart' } // the host deals a new, reshuffled bracket with the same players (between fights only)
   | { t: 'result'; winner: number } // a tournament fighter: who won the match that just ended
-  | { t: 'quick' } // pair with whoever is waiting
+  | { t: 'quick'; look?: string } // pair with whoever is waiting
   | { t: 'cancel' } // leave the room or the queue
   | { t: 'in'; f: number; b: number } // my buttons for frame f
   | { t: 'hash'; f: number; h: number }; // my fight's fingerprint at frame f
@@ -19,12 +21,12 @@ export type ToServer =
 export type ToClient =
   | { t: 'room'; code: string } // your invite room is ready
   | { t: 'waiting' } // you're in the quick-match queue
-  | { t: 'start'; seat: 0 | 1; delay: number; code: string; cfg: MatchCfg } // the fight begins: seat 0 is Kami, 1 is Sumi
+  | { t: 'start'; seat: 0 | 1; delay: number; code: string; cfg: MatchCfg; looks?: [string, string] } // the fight begins: seat 0 is Kami, 1 is Sumi
   | { t: 'in'; f: number; b: number; s?: 0 | 1 } // s: whose buttons, for players watching a tournament fight
   | { t: 'hash'; f: number; h: number }
   | { t: 'lobby'; code: string; names: string[]; you: number; host: boolean; cfg: MatchCfg } // a tournament waiting to start
   | { t: 'bracket'; names: string[]; rounds: BracketMatch[][]; current: [number, number] | null; champion: number | null; you: number; restart: boolean } // restart: you're the host and can deal a new bracket now
-  | { t: 'match'; seat: 0 | 1 | -1; delay: number; cfg: MatchCfg; names: [string, string]; code: string } // a tournament fight starts (-1: you watch)
+  | { t: 'match'; seat: 0 | 1 | -1; delay: number; cfg: MatchCfg; names: [string, string]; code: string; looks?: [string, string] } // a tournament fight starts (-1: you watch)
   | { t: 'gone' } // your opponent left
   | { t: 'err'; msg: string };
 
@@ -33,6 +35,9 @@ export interface BracketMatch { a: number | null; b: number | null; winner: numb
 
 /** A free pass in a bracket. */
 export const BYE_SLOT = -1;
+
+/** A look code as the server keeps it: short lowercase letters, digits and dots, or '' (the default look). */
+export const cleanLook = (x: unknown) => (typeof x === 'string' && /^[a-z0-9.]{1,40}$/.test(x) ? x : '');
 
 export const CODE_LETTERS = 'BCDFGHJKLMNPQRSTVWXZ';
 export const CODE_LENGTH = 4;
