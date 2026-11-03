@@ -68,6 +68,8 @@ The script [`deploy/hub/add-stats-db.sh`](../deploy/hub/add-stats-db.sh) does ev
 
 If step 3 prints **ERROR**, nothing was left half-changed. Copy the output to Claude.
 
+The same database holds the ranked ratings (table `players`, since the ranked build). The server creates and updates its tables itself on start, so no extra step is needed for new builds.
+
 ### Backups
 
 Papercut's database is part of the hub's nightly backup (`/opt/hub/backup.sh`: every database, kept 7 days in `/opt/hub/backups`). Inputs older than 90 days are cleared automatically; the match summaries are kept. A match is about 1 KB of summary plus 5-20 KB of inputs.

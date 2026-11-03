@@ -133,7 +133,7 @@ export function page(st: Stats, f: Filter, builds: string[], live: string): stri
     row('Time ran out', pct(e.time, r), `${e.time}`),
     row('Double K.O.', pct(e.double, r), `${e.double}`),
   ].join('');
-  const modes = Object.entries(st.modes).map(([m, n]) => `${n} ${m === 'quick' ? 'quick match' : m === 'room' ? 'invite room' : 'tournament'}`).join(', ') || 'none yet';
+  const modes = Object.entries(st.modes).map(([m, n]) => `${n} ${m === 'quick' ? 'quick match' : m === 'room' ? 'invite room' : m === 'ranked' ? 'ranked' : 'tournament'}`).join(', ') || 'none yet';
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Papercut stats</title>

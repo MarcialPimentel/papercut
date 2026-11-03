@@ -51,7 +51,8 @@
         <div data-screen="main" class="stack">
           <button class="mbtn red" id="bFriend" type="button">Fight a friend<small>Pick the rules, get an invite link to send</small></button>
           <button class="mbtn" id="bTourney" type="button">Tournament<small>3 to 8 friends, knockout bracket, one winner</small></button>
-          <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting</small></button>
+          <button class="mbtn" id="bRanked" type="button">Ranked<small id="rankLine">Rated fights, paper-grade divisions</small></button>
+          <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting (unranked)</small></button>
           <button class="mbtn" id="bEndless" type="button">Endless<small id="bestRun">How many bots can you cut?</small></button>
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
           <div class="row2">
@@ -102,8 +103,8 @@
         </div>
 
         <div data-screen="search" class="stack" hidden>
-          <p class="big">Looking for a rival…</p>
-          <p class="muted">You'll be paired with the next person who presses "Find a fight". Send a friend to papercut.marz.gg to make it quicker.</p>
+          <p class="big" id="searchTitle">Looking for a rival…</p>
+          <p class="muted" id="searchNote">You'll be paired with the next person who presses "Find a fight". Send a friend to papercut.marz.gg to make it quicker.</p>
           <button class="hbtn" data-cancel type="button">Cancel</button>
         </div>
 

@@ -27,6 +27,7 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 .bar.r .row { flex-direction: row-reverse; }
 .bar .nm { font: 800 20px/1 var(--display); text-transform: uppercase; letter-spacing: .04em; color: var(--ink); background: #FFF; border: 2px solid var(--ink); padding: 2px 8px 3px; flex: none; }
 .bar.you .nm { background: var(--legal); }
+.bar .rk { font: 700 12px/1 var(--body); text-transform: uppercase; letter-spacing: .05em; color: #FFF; background: var(--ink); padding: 4px 6px; flex: none; align-self: center; }
 .bar.you .nm::after { content: " · you"; font-size: .7em; }
 .strip { position: relative; flex: 1; height: 20px; min-width: 0; background: rgba(24,23,28,.55); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
 .strip i { position: absolute; top: 0; bottom: 0; left: 0; width: 100%; background-color: var(--paper); background-image: linear-gradient(90deg, #B7D2E7 1px, transparent 1px); background-size: 10px 100%; border-right: 3px solid var(--red); transition: width .12s; }
