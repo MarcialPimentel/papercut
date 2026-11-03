@@ -92,9 +92,12 @@ async function endlessReport(req: IncomingMessage, res: ServerResponse) {
   if (typeof checked === 'string') return json(res, 400, { error: checked });
   const pid = tokenOk(claim.token) ? playerId(claim.token) : undefined;
   if (pid) {
-    const p = await ranked.load(pid);
-    p.name = cleanName(claim.name, p.name);
-    await store.savePlayer(p).catch(saveError('a player'));
+    // If the player can't be loaded, keep the run but leave their name alone (never save over a row we couldn't read).
+    const p = await ranked.load(pid).catch(() => null);
+    if (p) {
+      p.name = cleanName(claim.name, p.name);
+      await store.savePlayer(p).catch(saveError('a player'));
+    }
   }
   await store.addEndless(BUILD, { ...checked.run, player: pid }).catch(saveError('an Endless run'));
   json(res, 200, { ok: true, bots: checked.run.bots, places: pid ? await placesOf(pid).catch(() => ({})) : {} });
@@ -234,6 +237,13 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 
 server.listen(PORT, () => console.log(`Papercut build ${BUILD} (fight ${FIGHT}) on port ${PORT}`));
 
-const stop = () => { wss.clients.forEach((c) => c.close(1001, 'restarting')); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000); };
+// A deploy stops the server: unfinished ranked matches are called off (no one loses rating for it),
+// and rating saves already under way get up to 3 seconds to finish.
+const stop = () => {
+  lobby.shutdown();
+  wss.clients.forEach((c) => c.close(1001, 'restarting'));
+  setTimeout(() => process.exit(0), 3000).unref();
+  ranked.flush().then(() => server.close(() => process.exit(0)));
+};
 process.on('SIGTERM', stop);
 process.on('SIGINT', stop);
