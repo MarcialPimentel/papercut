@@ -3,7 +3,7 @@
 
 import { CODE_LENGTH, CODE_LETTERS, delayFor, normalizeCode, type RankInfo, type ToClient, type ToServer } from '../src/net/protocol';
 import { DEFAULT_CFG, cleanCfg, type MatchCfg } from '../src/sim/config';
-import { Referee, type GuardStyle, type MatchRecord } from './referee';
+import { Referee, cleanGuard, type GuardStyle, type MatchRecord } from './referee';
 import type { Ranked } from './ranked';
 import { TOURNEY_MAX, Tourney } from './tourney';
 
@@ -86,7 +86,7 @@ export class Lobby {
         return;
       }
       case 'hello':
-        p.guard = m.guard === 'flick' || m.guard === 'cursor' ? m.guard : '';
+        p.guard = cleanGuard(m.guard);
         this.ranked?.hello(p, m.id).catch(() => {});
         return;
       case 'ranked': {

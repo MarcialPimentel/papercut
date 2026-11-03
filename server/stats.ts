@@ -3,6 +3,7 @@
 
 import { FPS } from '../src/sim/rules';
 import type { AtkTally, SideTally } from '../src/sim/tally';
+import { GUARDS } from './referee';
 import type { EndlessRow, Filter, MatchRow } from './store';
 
 type Atk = 'light' | 'heavy' | 'riposte';
@@ -15,8 +16,8 @@ export interface Stats {
   rounds: number;
   /** Seat 0 (Kami) match wins / finished matches. */
   kamiWins: number; finished: number;
-  /** Matches where the two players used different guard styles, and how many the Flick player won. */
-  guardMixed: number; flickWins: number;
+  /** For each guard style: finished matches against a player using a different style, and how many it won. */
+  styles: Record<(typeof GUARDS)[number], { mixed: number; wins: number }>;
   /** How rounds ended, as counts. */
   ends: { ko: number; counterWind: number; counterMiss: number; time: number; double: number };
   avgRoundSecs: number;
@@ -41,7 +42,7 @@ function addSlash(to: SlashStats, a: AtkTally) {
 
 export function summarize(matches: readonly MatchRow[], runs: readonly EndlessRow[]): Stats {
   const st: Stats = {
-    matches: matches.length, rounds: 0, kamiWins: 0, finished: 0, guardMixed: 0, flickWins: 0,
+    matches: matches.length, rounds: 0, kamiWins: 0, finished: 0, styles: { flick: { mixed: 0, wins: 0 }, cursor: { mixed: 0, wins: 0 }, pad: { mixed: 0, wins: 0 } },
     ends: { ko: 0, counterWind: 0, counterMiss: 0, time: 0, double: 0 }, avgRoundSecs: 0,
     perPlayer: { light: 0, heavy: 0, riposte: 0, feint: 0, parries: 0, blocks: 0, jumps: 0, dashes: 0, counters: 0 },
     clashesPerMatch: 0, slashes: { light: slash(), heavy: slash(), riposte: slash() }, staggers: 0, staggerFollow: 0, modes: {},
@@ -54,7 +55,7 @@ export function summarize(matches: readonly MatchRow[], runs: readonly EndlessRo
       st.finished++;
       if (m.winner === 0) st.kamiWins++;
       const [g0, g1] = m.guard;
-      if (g0 && g1 && g0 !== g1) { st.guardMixed++; if (m.guard[m.winner] === 'flick') st.flickWins++; }
+      if (g0 && g1 && g0 !== g1) for (const [i, g] of [g0, g1].entries()) { st.styles[g].mixed++; if (m.winner === i) st.styles[g].wins++; }
     }
     for (const r of m.tally.rounds) {
       st.rounds++; frames += r.frames;
@@ -158,7 +159,7 @@ td{font-variant-numeric:tabular-nums}.note{color:var(--soft)}.grid td,.grid th{t
 <form method="get">
 ${select('build', f.build, buildOpts)}
 ${select('rules', f.rules, [['standard', 'Standard rules'], ['custom', 'Custom rules'], ['all', 'All rules']])}
-${select('guard', f.guard, [['any', 'Any guard style'], ['flick', 'Both on Flick guard'], ['cursor', 'Both on Cursor guard']])}
+${select('guard', f.guard, [['any', 'Any guard style'], ['flick', 'Both on Flick guard'], ['cursor', 'Both on Cursor guard'], ['pad', 'Both on a controller']])}
 <noscript><button>Show</button></noscript>
 </form>
 <script>document.querySelectorAll('select').forEach(s=>s.addEventListener('change',()=>s.form.submit()))</script>
@@ -179,7 +180,9 @@ ${select('guard', f.guard, [['any', 'Any guard style'], ['flick', 'Both on Flick
 <p class="hint">Counter cuts are counted on their own, not as "landed". A clash counts for both slashes.</p>
 <table>
 ${row('Blocked heavy, then a cut lands', pct(st.staggerFollow, st.staggers), `${st.staggerFollow} of ${st.staggers} staggers`)}
-${row('Flick guard beats Cursor guard', pct(st.flickWins, st.guardMixed), `${st.guardMixed} matches with one of each`)}
+${row('Flick guard wins against other styles', pct(st.styles.flick.wins, st.styles.flick.mixed), `${st.styles.flick.mixed} matches`)}
+${row('Cursor guard wins against other styles', pct(st.styles.cursor.wins, st.styles.cursor.mixed), `${st.styles.cursor.mixed} matches`)}
+${row('Controller wins against the mouse', pct(st.styles.pad.wins, st.styles.pad.mixed), `${st.styles.pad.mixed} matches`)}
 </table>
 
 <h2>Per player, per match</h2>
@@ -226,6 +229,6 @@ export function readFilter(url: URL): Filter {
   return {
     build: /^[0-9a-z]{1,12}$/.test(b) ? b : '',
     rules: rules === 'custom' || rules === 'all' ? rules : 'standard',
-    guard: guard === 'flick' || guard === 'cursor' ? guard : 'any',
+    guard: guard === 'flick' || guard === 'cursor' || guard === 'pad' ? guard : 'any',
   };
 }

@@ -153,8 +153,9 @@ describe('the stats', () => {
     expect(st.rounds).toBe(4);
     expect(st.ends).toEqual({ ko: 1, counterWind: 1, counterMiss: 1, time: 1, double: 0 });
     expect(st.kamiWins).toBe(3);
-    expect(st.guardMixed).toBe(4);
-    expect(st.flickWins).toBe(3); // Kami was on Line in all four
+    expect(st.styles.flick).toEqual({ mixed: 4, wins: 3 }); // Kami was on Flick in all four
+    expect(st.styles.cursor).toEqual({ mixed: 4, wins: 1 });
+    expect(st.styles.pad).toEqual({ mixed: 0, wins: 0 });
     expect(st.slashes.heavy.thrown).toBe(16);
     expect(st.staggerFollow / st.staggers).toBe(0.5);
     expect(st.avgRoundSecs).toBe(10);
@@ -166,6 +167,7 @@ describe('the stats', () => {
   it('reads filters safely', () => {
     expect(readFilter(new URL('http://x/stats?build=<x>&rules=all&guard=flick'))).toEqual({ build: '', rules: 'all', guard: 'flick' });
     expect(readFilter(new URL('http://x/stats'))).toEqual({ build: '', rules: 'standard', guard: 'any' });
+    expect(readFilter(new URL('http://x/stats?guard=pad')).guard).toBe('pad');
   });
 });
 

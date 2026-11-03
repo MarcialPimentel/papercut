@@ -40,6 +40,9 @@ export class Hud {
   ranks: [RankInfo, RankInfo] | null = null;
   /** Ranked: the result once the server has counted it, e.g. "+18 · Cardstock 1518". */
   rankNote = '';
+  /** The key or button that restarts, for "Press R or Rematch" (null if none is bound). Set by main. */
+  restartKey: string | null = 'R';
+  private again(what: string) { return this.restartKey ? `Press ${this.restartKey} or Rematch to ${what}.` : `Rematch to ${what}.`; }
   private cfg: MatchCfg = DEFAULT_CFG;
   private lastTally = '';
 
@@ -107,11 +110,11 @@ export class Hud {
       html = s.roundWinner >= 0 ? `${name(s.roundWinner)} takes round ${s.round}<small>${howText(s, this.names?.[1 - s.roundWinner] ?? LOOKS[1 - s.roundWinner].name)}</small>`
         : `Draw<small>${s.how === 'Time' ? 'Time ran out with the strips level.' : s.how} The round is replayed.</small>`;
     } else if (s.phase === 'over' && g) {
-      html = `Run over<small>${cut} bot${cut === 1 ? '' : 's'} cut. ${cut > this.best ? 'A new best!' : `Best: ${this.best}.`} Press R or Rematch to run again.</small>`;
+      html = `Run over<small>${cut} bot${cut === 1 ? '' : 's'} cut. ${cut > this.best ? 'A new best!' : `Best: ${this.best}.`} ${this.again('run again')}</small>`;
     } else if (s.phase === 'over') {
       const w = matchWinner(s);
       const waiting = mySeat !== null && s.rematch[mySeat];
-      const hint = this.ranks ? `${this.rankNote || 'Counting the result…'} Esc for the menu.` : this.tourney ? 'Back to the bracket in a moment…' : !this.online ? 'Press R or Rematch for a new match.' : waiting ? 'Waiting for your rival to say yes…' : 'Press R or Rematch to fight again.';
+      const hint = this.ranks ? `${this.rankNote || 'Counting the result…'} Esc for the menu.` : this.tourney ? 'Back to the bracket in a moment…' : !this.online ? this.again('start a new match') : waiting ? 'Waiting for your rival to say yes…' : this.again('fight again');
       html = `${name(w)} wins<small>${s.f[w].wins}-${s.f[1 - w].wins}. ${hint}</small>`;
     }
     if (html !== this.lastBanner) {
