@@ -24,6 +24,14 @@
     </div>
     <div class="hud banner fight-only" id="banner" hidden><div id="bannerText"></div></div>
     <div class="hud rematch fight-only"><button class="mbtn red" id="rematch" type="button" hidden>Rematch</button></div>
+    <div class="hud tut fight-only" id="tut" hidden aria-live="polite">
+      <div class="tut-card">
+        <p class="tut-step" id="tutStep"></p>
+        <p class="tut-line" id="tutLine"></p>
+        <p class="tut-sub" id="tutSub"></p>
+        <button class="hbtn" id="tutSkip" type="button"></button>
+      </div>
+    </div>
     <div class="hud status fight-only" id="status" role="status"></div>
     <div class="aim" id="aim" hidden><i></i></div>
 
@@ -48,12 +56,17 @@
         <div data-screen="main" class="stack">
           <button class="mbtn red" id="bFriend" type="button">Fight a friend<small>Pick the rules, get an invite link to send</small></button>
           <button class="mbtn" id="bTourney" type="button">Tournament<small>3 to 8 friends, knockout bracket, one winner</small></button>
-          <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting</small></button>
+          <button class="mbtn" id="bRanked" type="button">Ranked<small id="rankLine">Rated fights, paper-grade divisions</small></button>
+          <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting (unranked)</small></button>
           <button class="mbtn" id="bEndless" type="button">Endless<small id="bestRun">How many bots can you cut?</small></button>
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
+          <button class="mbtn" id="bTutorial" type="button">Tutorial<small>Learn every move against Sumi, step by step (3 minutes)</small></button>
           <div class="row2">
+            <button class="hbtn" id="bFighter" type="button">Your fighter</button>
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
+            <button class="hbtn" id="bBoard" type="button">Leaderboard</button>
             <button class="hbtn" id="bSettings" type="button">Settings</button>
+            <button class="hbtn" id="bControls" type="button">Controls</button>
             <button class="hbtn" id="bQuit" type="button" hidden>Quit</button>
           </div>
           <form id="joinForm" class="join">
@@ -61,6 +74,17 @@
             <input id="joinCode" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD">
             <button class="hbtn" type="submit">Join</button>
           </form>
+        </div>
+
+       <div data-screen="fighter" class="stack fighter" hidden>
+          <p class="big">Your fighter</p>
+          <div class="fprev" data-paper="graph"><canvas id="fCanvas" aria-label="Your fighter, turning its guard high and low"></canvas><span class="fname" id="fNameTag"></span></div>
+          <div class="fpicks">
+            <label class="frow"><b>Name</b><input class="fname-in" id="fName" maxlength="14" autocomplete="off" spellcheck="false"></label>
+            <div class="fpicks" id="fPicks"></div>
+          </div>
+          <p class="fnote">Looks never change the fight: every sword has the same reach. Online, your rival sees your name and look. One fighter always wears a dark robe and the other a light one, so if you both pick the same, player 2's robe flips.</p>
+          <button class="mbtn" id="bFighterDone" type="button">Done</button>
         </div>
 
         <form data-screen="setup" class="stack setup" id="setupForm" hidden>
@@ -96,14 +120,15 @@
           <p class="big" id="bTitle">Bracket</p>
           <div class="bracket" id="bracket"></div>
           <p class="muted" id="bNext"></p>
+          <button class="mbtn red" id="bWatch" type="button" hidden>Back to the fight<small>Esc also takes you back</small></button>
           <button class="mbtn red" id="bAgain" type="button" hidden>New bracket<small>Same players, seats shuffled again</small></button>
           <p class="muted" data-sound-hint hidden>Click anywhere or press a key to turn the sound on.</p>
           <button class="hbtn" data-cancel type="button" id="bLeaveT">Leave tournament</button>
         </div>
 
         <div data-screen="search" class="stack" hidden>
-          <p class="big">Looking for a rival…</p>
-          <p class="muted">You'll be paired with the next person who presses "Find a fight". Send a friend to papercut.marz.gg to make it quicker.</p>
+          <p class="big" id="searchTitle">Looking for a rival…</p>
+          <p class="muted" id="searchNote">You'll be paired with the next person who presses "Find a fight". Send a friend to papercut.marz.gg to make it quicker.</p>
           <button class="hbtn" data-cancel type="button">Cancel</button>
         </div>
 
@@ -117,6 +142,18 @@
           <button class="mbtn" data-cancel type="button">Back</button>
         </div>
 
+        <div data-screen="board" class="stack board" hidden>
+          <p class="big">Endless leaderboard</p>
+          <div class="tabs" role="group" aria-label="Time">
+            <button class="hbtn" data-period="day" type="button">24 hours</button>
+            <button class="hbtn" data-period="week" type="button">7 days</button>
+            <button class="hbtn" data-period="all" type="button">All time</button>
+          </div>
+          <ol id="boardList"></ol>
+          <p class="muted" id="boardYou"></p>
+          <p class="muted small">Each player's best run: most bots, then the fastest. The server re-plays every run before it counts.</p>
+          <button class="mbtn" id="bBoardBack" type="button">Back</button>
+        </div>
         <form data-screen="settings" class="stack setup settings" id="settingsForm" hidden>
           <p class="big">Settings</p>
           <label>Window <select id="setWindow"><option value="full">Fullscreen</option><option value="win">Windowed</option></select></label>
@@ -130,18 +167,52 @@
           <button class="mbtn" type="submit">Done</button>
         </form>
 
+        <div data-screen="controls" class="stack binds" hidden>
+          <p class="big">Controls</p>
+          <p class="muted">Pick a box, then press the key, mouse button or controller button you want there. Press the same one again (or <kbd>Delete</kbd>) to empty it; <kbd>Esc</kbd> or <kbd>Menu</kbd> cancels.</p>
+          <div class="bind-table">
+            <table>
+              <thead><tr><th scope="col">Action</th><th scope="col" colspan="2">Keyboard and mouse</th><th scope="col" colspan="2">Controller</th></tr></thead>
+              <tbody id="bindRows"></tbody>
+            </table>
+          </div>
+          <p class="muted">Always: <kbd>Esc</kbd> frees the mouse and opens the menu. On a controller the left stick or d-pad moves (left / right) and guards (up / down), and <kbd>Menu</kbd> opens the menu.</p>
+          <p class="bind-msg" id="bindMsg" role="status"></p>
+          <div class="row2">
+            <button class="hbtn" id="bindReset" type="button">Reset to defaults</button>
+          </div>
+          <button class="mbtn" id="bindBack" type="button">Done</button>
+        </div>
+
+        <div data-screen="welcome" class="stack" hidden>
+          <p class="big">New here?</p>
+          <p class="muted">Learn to fight in about 3 minutes: guard, slash, parry, and the counter cut that ends a round in one hit.</p>
+          <button class="mbtn red" id="bWelcomeGo" type="button">Start the tutorial<small>A guided fight against Sumi</small></button>
+          <button class="hbtn" id="bWelcomeSkip" type="button">Skip, I know how to fight</button>
+          <p class="muted small">The tutorial is always on the title screen.</p>
+        </div>
+
+        <div data-screen="tutdone" class="stack" hidden>
+          <p class="big">You're ready</p>
+          <p class="muted">Read your rival, punish greed, and never swing at the air. One counter cut ends any round.</p>
+          <button class="mbtn red" id="bTutPractice" type="button">Practice vs Sumi<small>Try it all against the dummy</small></button>
+          <button class="mbtn" id="bTutEndless" type="button">Endless<small>How many bots can you cut?</small></button>
+          <button class="hbtn" id="bTutMenu" type="button">Title screen</button>
+        </div>
+
         <div data-screen="howto" class="stack howto" hidden>
           <p class="big">How to play</p>
           <dl class="controls">
             <dt>Guard</dt><dd id="howGuard">Flick the mouse <b>up</b> to guard high, <b>down</b> to guard low.</dd>
-            <dt><kbd>Left click</kbd></dt><dd>Light slash: quick, small cut.</dd>
-            <dt><kbd>Right click</kbd></dt><dd>Heavy slash: slower, steps in, big cut. Blocked, it <b>staggers</b> their guard and you keep the turn. Click again (or <kbd>Q</kbd>) early in the wind-up to feint.</dd>
-            <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Walk. Double-tap to dash.</dd>
-            <dt><kbd>Space</kbd></dt><dd>Jump over low slashes. A slash in the air always comes in <b>high</b>: swing on the way down, or it sails over their head.</dd>
-            <dt><kbd>Esc</kbd></dt><dd>Free the mouse (the game holds it during a fight). Press again for the menu.</dd>
+            <dt data-keys="light"></dt><dd>Light slash: quick, small cut.</dd>
+            <dt data-keys="heavy"></dt><dd>Heavy slash: slower, steps in, big cut. Blocked, it <b>staggers</b> their guard and you keep the turn. Press light again (or <span data-keys="feint"></span>) early in the wind-up to feint.</dd>
+            <dt data-keys="left,right"></dt><dd>Walk. Double-tap to dash<span class="dash-key"> (or <span data-keys="dash"></span>)</span>.</dd>
+            <dt data-keys="jump"></dt><dd>Jump over low slashes. A slash in the air always comes in <b>high</b>: swing on the way down, or it sails over their head.</dd>
+            <dt class="kb-only"><kbd>Esc</kbd></dt><dd class="kb-only">Free the mouse (the game holds it during a fight). Press again for the menu.</dd>
+            <dt class="pad-only"><kbd>Menu</kbd></dt><dd class="pad-only">The menu. In menus, <kbd>A</kbd> picks and <kbd>B</kbd> goes back.</dd>
           </dl>
           <div class="help">
-            <p><b>Hit where they aren't guarding.</b> A slash at the height they guard is blocked. Press <kbd>H</kbd> to see the hitboxes.</p>
+            <p><b>Hit where they aren't guarding.</b> A slash at the height they guard is blocked. <span class="hit-key">Press <span data-keys="hitboxes"></span> to see the hitboxes.</span> Change any key or button in <b>Controls</b>.</p>
             <p><b>Counter cut = instant K.O.</b> While a heavy winds up, and for a moment right after a missed slash, you're open. Land any hit then and the round is over, however much strip is left. So don't throw heavies they can see coming, and don't swing at air.</p>
             <p><b>Jumpers:</b> guard high to block a jump-in, or slash high to cut them out of the air (no one can block mid-air). Landing after an air slash leaves you stuck for a moment.</p>
             <p><b>Parry:</b> switch your guard to the right height just before a hit lands, then slash back for a big riposte.</p>
@@ -150,6 +221,17 @@
           <button class="mbtn" id="bHowToBack" type="button">Got it</button>
         </div>
       </div>
+
+      <aside class="card side" id="sideBoard" aria-label="Leaderboard" hidden>
+        <p class="big">Leaderboard</p>
+        <div class="tabs" role="group" aria-label="Which leaderboard">
+          <button class="hbtn" data-side="ranked" type="button" aria-pressed="false">Ranked</button>
+          <button class="hbtn" data-side="endless" type="button" aria-pressed="false">Endless</button>
+        </div>
+        <ol id="sideList"></ol>
+        <p class="muted" id="sideYou"></p>
+        <button class="hbtn" id="sideMore" type="button">All Endless runs</button>
+      </aside>
     </div>
     <div class="hud soundbox" id="soundBox" hidden>
       <label>Music <input type="range" id="volMusic" min="0" max="100" step="5"></label>

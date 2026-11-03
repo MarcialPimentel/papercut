@@ -37,7 +37,7 @@ All made in code (`src/audio/music.ts`), from the same paper-theatre band: taiko
 
 | Track | Plays on | Feel | Tempo (normal / tense), scale | Lead and extras |
 |---|---|---|---|---|
-| Menu | Title screen and menus | Open and unhurried | 72, yo scale on D | Koto, soft wind |
+| Menu | Title screen and menus | Bright and eager, "the show is about to start" | 96, yo scale on D | A rolling taiko groove (don, do-don), clappers on the backbeat, a walking bass, a full koto line. A little quieter than the fight tracks, so the first fight still feels like a step up |
 | Dojo | Graph Paper Dojo (rounds 1 and 4) | Steady, the original track | 100 / 112, miyako-bushi on D | Koto |
 | Courtyard | Ruled Courtyard (rounds 2 and 5) | Brighter and lighter | 108 / 120, yo scale on E | Bamboo flute, clappers on the offbeat |
 | Grove | Legal Pad Grove (round 3) | Darker and slower | 84 / 96, in-sen scale on A | Sparse koto, a low drone, the temple bell every 4 bars, wind |

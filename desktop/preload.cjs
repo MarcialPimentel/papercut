@@ -12,4 +12,10 @@ contextBridge.exposeInMainWorld('papercutDesktop', {
   isFullscreen: () => ipcRenderer.sendSync('fullscreen:get'),
   onFullscreen: (cb) => ipcRenderer.on('fullscreen', (_e, on) => cb(!!on)),
   quit: () => ipcRenderer.send('quit'),
+  // Steam: null when Steam isn't running.
+  steam: ipcRenderer.sendSync('steam') ? {
+    name: ipcRenderer.sendSync('steam:name'),
+    unlock: (id) => ipcRenderer.send('steam:unlock', String(id)),
+    presence: (token, vars) => ipcRenderer.send('steam:presence', String(token), vars || {}),
+  } : null,
 });

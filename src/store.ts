@@ -16,6 +16,17 @@ export interface DesktopBridge {
   /** Called when the window enters or leaves fullscreen (F11, Alt+Enter, the Settings screen). */
   onFullscreen(cb: (on: boolean) => void): void;
   quit(): void;
+  /** Steam (desktop/steam.cjs). null when Steam isn't running. */
+  steam?: SteamBridge | null;
+}
+
+export interface SteamBridge {
+  /** The player's Steam name, or '' if unknown. */
+  name: string;
+  /** Unlock an achievement by its id in src/achievements.ts. */
+  unlock(id: string): void;
+  /** Rich presence: a token from steam/rich_presence.vdf (e.g. '#Endless') and the values it shows. */
+  presence(token: string, vars?: Record<string, string>): void;
 }
 
 export const desktop: DesktopBridge | null = (globalThis as { papercutDesktop?: DesktopBridge }).papercutDesktop ?? null;
