@@ -64,11 +64,10 @@ describe('music tracks', () => {
     expect(arrangement('endless', 'fight', 0, 3).bpm).toBe(endlessLayers(3, 0).bpm);
   });
 
-  it('plays the recorded songs on the title screen and in regular fights only', () => {
+  it('plays the recorded songs on the title screen and in every fight except tournaments', () => {
     expect(songFor('menu', 'menu')).toBe('title');
-    for (const k of ['dojo', 'courtyard', 'grove'] as const) expect(songFor(k, 'fight')).toBe('fight');
+    for (const k of ['dojo', 'courtyard', 'grove', 'endless'] as const) expect(songFor(k, 'fight')).toBe('fight');
     for (const k of keys) expect(songFor(k, 'intro')).toBe(null); // "Round N" keeps its drums
-    expect(songFor('endless', 'fight')).toBe(null);
     expect(songFor('tourney', 'fight')).toBe(null);
     expect(songFor('tourney', 'menu')).toBe(null);
     expect(songFor('cover', 'menu')).toBe(null);

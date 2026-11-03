@@ -2,7 +2,7 @@
 
 _Added in the sound pass (2026-11-01). Code: `src/audio/`._
 
-Papercut's sound is a mix: **free recordings** (CC0, from Kenney) for clashes, blocks and clicks, **paper recordings Marz picked on Freesound** for cuts, tears and the menus, **two recorded songs** Marz made with Suno (the title screen and regular fights), and **sounds made in code** for everything else, including the rest of the music. Every sound has a code-made version, so the game always has sound even before (or without) any recordings.
+Papercut's sound is a mix: **free recordings** (CC0, from Kenney) for clashes, blocks and clicks, **paper recordings Marz picked on Freesound** for cuts, tears and the menus, **two recorded songs** Marz made with Suno (the title screen and every fight but tournaments), and **sounds made in code** for everything else, including the rest of the music. Every sound has a code-made version, so the game always has sound even before (or without) any recordings.
 
 Sound never touches the fight rules (`src/sim/`), so it can't affect online sync.
 
@@ -41,14 +41,14 @@ Two songs Marz made with Suno (2026-11-03) replace the code-made music where it 
 | Song | File | Plays on | Tempo | Loop |
 |---|---|---|---|---|
 | 刀の合戦 (title) | `title.ogg`, 136 s, 2.1 MB | The title screen and main menus | ~141 bpm | Plays from the top once, then loops 66.8 s to 136.4 s. Restarts from the top each time you come back to the menu |
-| 祭りの合図 (fight) | `fight.ogg`, 154 s, 2.4 MB | Every fight on the notebook's pages: practice, online, invite rooms, Ranked | ~131 bpm | Plays from the top once, then loops 57.0 s to 154.2 s. Carries on from round to round within a match, and starts from the top for a new match |
+| 祭りの合図 (fight) | `fight.ogg`, 154 s, 2.4 MB | Every fight except tournaments: practice, Endless, online, invite rooms, Ranked | ~131 bpm | Plays from the top once, then loops 57.0 s to 154.2 s. Carries on from round to round within a match, and starts from the top for a new match |
 
 How the songs fit the fight:
 - "Round N" still plays the page's code-made drums; the fight song comes in on "Cut!".
 - From a K.O. to the next round the music is silent, as before; the song picks up where it stopped.
 - A tense round (low strip, last 10 seconds, deciding round) doesn't change a recorded song. The code-made tracks still speed up.
-- **Endless** keeps its build-up track, **tournaments** keep their festival theme (fights and bracket), and the **back cover** keeps its quiet piece. To move any of them to a song, change `songFor()` in `src/audio/music.ts`.
-- Until a file has loaded (a second or two after the first click), or if it fails to load, the code-made track plays instead.
+- **Tournaments** keep their festival theme (fights and bracket), and the **back cover** keeps its quiet piece. **Endless** plays the fight song too (Marz expected the new music there); its code-made build-up (below) now only plays if the song can't load. To move any of them to a song, change `songFor()` in `src/audio/music.ts`.
+- The song files start downloading as soon as the page opens, before the first click. If a song still isn't ready when it's needed, the music waits silently for up to 6 seconds rather than starting the old code-made track and crossing over (Marz heard the old title music first at launch). Only if it still hasn't arrived, or fails to load, does the code-made track play.
 
 **Licence.** Made by Marz with Suno. Songs made on a paid Suno plan (Pro or Premier) may be used commercially, including in a game sold on Steam; songs made on the free plan may not. Check that the plan was active when each song was made before release. Not CC0, so these files must not be copied into the shared `_audio` library.
 
