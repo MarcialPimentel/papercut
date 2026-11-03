@@ -17,6 +17,12 @@ const RECORDINGS: Record<string, string[]> = {
   tick: f('tick_001', 'tick_002'),
   clack: f('impactWood_light_000', 'impactWood_light_002'),
   bell: f('impactBell_heavy_000', 'impactBell_heavy_001'), // the temple bell in the music
+  // Marz's Freesound paper recordings (docs/sound.md): cuts, tears and the menus' newspaper pages.
+  paperCut: f('paperCut_000'), // light hits; the random pitch keeps repeats apart
+  paperTear: f('paperTear_000', 'paperTear_001'), // heavy hits and ripostes
+  paperTearLong: f('paperTearLong_000', 'paperTearLong_001'), // K.O.s
+  menuFlick: f('menuFlick_000', 'menuFlick_001'), // moving between menu buttons
+  menuPage: f('menuPage_000'), // pressing a menu button
 };
 E.want(RECORDINGS);
 
@@ -50,6 +56,8 @@ function arpeggio(degrees: number[], gap: number, gain: number, base?: number) {
   const t = later(0);
   degrees.forEach((d, i) => E.pluck({ freq: note(d, base), gain, at: t + i * gap }));
 }
+
+let lastNav = 0;
 
 export const sfx = {
   /** The blade cutting the air, when a slash becomes active. */
@@ -89,15 +97,17 @@ export const sfx = {
   },
   /** A light hit: a quick paper slice. */
   hit(pan: number) {
-    // A quick blade pass with a soft paper snip; no high pitched tones (they squeak).
+    // A short paper cut (recording) with a faint blade pass on top; no high pitched tones (they squeak).
+    if (E.sample('paperCut', { gain: 0.75, rate: 1.1, pan })) { E.sample('slice', { gain: 0.15, rate: 1.3, pan }); return; }
     if (!E.sample('slice', { gain: 0.45, rate: 1.3, pan })) E.hiss({ dur: 0.1, type: 'bandpass', freq: 2600, sweep: 1600, q: 0.9, gain: 0.35, pan });
     E.hiss({ dur: 0.06, type: 'bandpass', freq: 1800, q: 0.8, gain: 0.25, pan });
   },
   /** A heavy hit or riposte: a long paper tear with a body thump. */
   cut(pan: number) {
-    // The blade (recording) plus a lower, softer paper tear in code: weight without squeak.
-    const rec = E.sample('slice', { gain: 0.8, rate: 0.85, pan });
-    E.hiss({ dur: 0.34, type: 'bandpass', freq: 1900, sweep: 700, q: 0.6, gain: rec ? 0.3 : 0.5, attack: 0.01, pan });
+    // A paper tear (recording), the blade on top for a sharp start, and a body thump for weight.
+    const tear = E.sample('paperTear', { gain: 0.85, pan });
+    const rec = E.sample('slice', { gain: tear ? 0.35 : 0.8, rate: 0.85, pan });
+    if (!tear) E.hiss({ dur: 0.34, type: 'bandpass', freq: 1900, sweep: 700, q: 0.6, gain: rec ? 0.3 : 0.5, attack: 0.01, pan });
     E.tone({ f0: 150, f1: 60, dur: 0.22, gain: 0.45, pan });
     E.duck(0.4, 0.1);
   },
@@ -105,7 +115,9 @@ export const sfx = {
   ko(counter: boolean, pan: number) {
     const t = later(0);
     taiko(t, 1.1);
-    if (!E.sample('slice', { gain: 0.9, rate: 0.8, pan })) E.hiss({ dur: 0.6, type: 'bandpass', freq: 2800, sweep: 700, q: 0.7, gain: 0.7, pan });
+    // The long tear, a little slower and lower than a heavy's, with the blade for the edge.
+    const tear = E.sample('paperTearLong', { gain: 1.0, rate: 0.9, pan });
+    if (!E.sample('slice', { gain: tear ? 0.45 : 0.9, rate: 0.8, pan }) && !tear) E.hiss({ dur: 0.6, type: 'bandpass', freq: 2800, sweep: 700, q: 0.7, gain: 0.7, pan });
     if (counter) {
       if (!E.sample('shing', { gain: 2.5, pan })) E.ring({ base: 1980, dur: 1.8, gain: 0.12, at: t + 0.02, pan });
       E.hiss({ dur: 0.5, type: 'highpass', freq: 6000, gain: 0.2, attack: 0.01, at: t, pan });
@@ -162,9 +174,15 @@ export const sfx = {
       arpeggio([5, 4, 3, 1, 0], 0.24, 0.4, 146.83);
     }
   },
-  /** A menu button: a soft paper tap. */
+  /** Moving between menu buttons (stick, d-pad, keys or the mouse): a quick newspaper flick. */
+  nav() {
+    const a = E.live; if (!a || a.currentTime - lastNav < 0.06) return; // sweeping the mouse over a list stays quiet
+    lastNav = a.currentTime;
+    if (!E.sample('menuFlick', { gain: 0.3 })) E.hiss({ dur: 0.04, type: 'bandpass', freq: 3000, q: 1.2, gain: 0.08 });
+  },
+  /** A menu button: a newspaper page turning. */
   ui() {
-    if (E.sample('ui', { gain: 0.4 })) return;
+    if (E.sample('menuPage', { gain: 0.45 }) || E.sample('ui', { gain: 0.4 })) return;
     E.hiss({ dur: 0.04, type: 'bandpass', freq: 2200, q: 1.5, gain: 0.25 });
     E.tone({ f0: 880, f1: 700, dur: 0.04, type: 'triangle', gain: 0.06 });
   },

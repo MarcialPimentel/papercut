@@ -2,7 +2,7 @@
 
 _Added in the sound pass (2026-11-01). Code: `src/audio/`._
 
-Papercut's sound is a mix: **free recordings** (CC0, from Kenney) for hits, clashes, paper and clicks, **two recorded songs** Marz made with Suno (the title screen and regular fights), and **sounds made in code** for everything else, including the rest of the music. Every sound has a code-made version, so the game always has sound even before (or without) any recordings.
+Papercut's sound is a mix: **free recordings** (CC0, from Kenney) for clashes, blocks and clicks, **paper recordings Marz picked on Freesound** for cuts, tears and the menus, **two recorded songs** Marz made with Suno (the title screen and regular fights), and **sounds made in code** for everything else, including the rest of the music. Every sound has a code-made version, so the game always has sound even before (or without) any recordings.
 
 Sound never touches the fight rules (`src/sim/`), so it can't affect online sync.
 
@@ -17,9 +17,9 @@ Sound never touches the fight rules (`src/sim/`), so it can't affect online sync
 | Clash (two slashes meet) | Bright double blade ring + paper snap | Its own sound now; used to share the block sound |
 | Block | A duller, shorter knock | |
 | Parry | A clean high ring + rising chime | |
-| Light hit | A quick paper slice | |
-| Heavy hit / riposte | A long paper tear + thump | |
-| K.O. | Taiko boom + full tear | |
+| Light hit | A short paper cut | A real paper cut recording, a faint blade pass on top |
+| Heavy hit / riposte | A paper tear + blade + thump | Two tear recordings, picked at random |
+| K.O. | Taiko boom + a long tear | A longer tear than a heavy's, played a little lower |
 | Counter cut | The K.O. plus a long blade ring | |
 | Jump, dash, landing | Hop, soft thud | The feint's cancel is silent (#29) |
 | Last 10 seconds | A wood tick each second, sharper for the last 3 | |
@@ -27,7 +27,8 @@ Sound never touches the fight rules (`src/sim/`), so it can't affect online sync
 | Round won / lost | A rising / falling pluck | "Won" means you won (seat 0 in practice) |
 | Match won / lost | Drum roll + climbing run / a slow fall | |
 | Page turn | Paper page | |
-| Menu buttons | A soft paper tap | |
+| Menu: moving between buttons | A quick newspaper flick | Stick, d-pad, keys or the mouse moving onto a button; at most one every 60 ms, so sweeping the mouse over a list stays quiet |
+| Menu: pressing a button | A newspaper page turning | |
 
 Sounds pan left and right with where they happen on the page, and each play varies a little in pitch so repeats don't grate. Big hits briefly lower the music.
 
@@ -98,22 +99,34 @@ The **Sound** button (on the title screen next to "How to play", and top-right d
 
 ## Recordings in the game
 
-21 files in `public/sfx/`, from three free Kenney packs, downloaded 2026-11-01. All Kenney packs are CC0 (public domain): no credit is required, but we credit Kenney (www.kenney.nl) anyway. Several files for one sound = one is picked at random each time.
+21 files in `public/sfx/` from three free Kenney packs (downloaded 2026-11-01), plus 8 paper recordings from Freesound (below). All Kenney packs are CC0 (public domain): no credit is required, but we credit Kenney (www.kenney.nl) anyway. Several files for one sound = one is picked at random each time.
 
 | Sound | Files | Pack | How it's used |
 |---|---|---|---|
 | Clash | impactMetal_light_000, _001, _003 | Impact Sounds | The hit; a quieter code-made ring adds the sword tail |
 | Block | impactPlate_light_000, _002, _003 | Impact Sounds | Slowed a little for heavies |
-| Light hit | knifeSlice2 | RPG Audio | Played faster and quieter, with a soft code-made paper snip |
-| Heavy hit, K.O. | knifeSlice2 | RPG Audio | Played slower, with a soft code-made paper tear and thump. The Interface pack's scratch sounds were dropped after the #19 playtest: they squeaked |
+| Light hit | knifeSlice2 | RPG Audio | Now only a faint blade pass under the paper cut (below); the full light-hit sound if the paper cut is missing |
+| Heavy hit, K.O. | knifeSlice2 | RPG Audio | Played slower, quieter, as the blade's edge on top of the paper tears (below), with a code-made thump. The Interface pack's scratch sounds were dropped after the #19 playtest: they squeaked |
 | Counter cut | drawKnife3 | RPG Audio | A sword-draw "shing" on top of the K.O. |
 | Page turn | bookFlip2, bookFlip3 | RPG Audio | |
 | Feint | cloth4 | RPG Audio | |
 | Landing | impactSoft_medium_000, _001, _002 | Impact Sounds | |
-| Menu buttons | select_002 | Interface Sounds | |
+| Menu buttons | select_002 | Interface Sounds | Only if the newspaper page (below) is missing |
 | Last-10-seconds tick | tick_001, tick_002 | Interface Sounds | Higher for the last 3 seconds |
 | Round clappers | impactWood_light_000, _002 | Impact Sounds | Sped up, with a code-made crack on top. Also the music's clappers (Courtyard, Tournament, Endless level 4+) |
 | Temple bell (music) | impactBell_heavy_000, _001 | Impact Sounds | Grove, the back cover and Endless level 6. Code-made bell if missing |
+
+**Paper recordings from Freesound** (2026-11-03). Marz downloaded these from freesound.org. The originals are kept outside the repo in `GameDev/_freesound/Papercut/`; the game ships trimmed, high-passed (200 Hz, to cut handling rumble) mono OGGs, levelled to match each other.
+
+| Sound | Files | From (original file, part used) | Licence |
+|---|---|---|---|
+| Light hit | paperCut_000 | ["180081 Paper Tearing 03 SHORT.WAV"](https://freesound.org/people/FST180081/sounds/441804/) by FST180081 (saved as "Short paper cut"): the clean snip at 2.93 s. The two earlier sounds in the file have a pitched buzz (squeak risk) and aren't used | CC BY 4.0 |
+| Heavy hit, riposte | paperTear_000, paperTear_001 | ["Tearing Paper 01"](https://freesound.org/people/Aiwha/sounds/496140/) by Aiwha (saved as "Paper tear"; from 0.38 s, 0.36 s long) and ["Paper Tear.MP3"](https://freesound.org/people/FunWithSound/sounds/367684/) by FunWithSound (saved as "paper tear 2"; the first tear, from 0.27 s, 0.42 s long) | CC BY 4.0; CC0 |
+| K.O. | paperTearLong_000, paperTearLong_001 | The same two tears, played longer (0.70 s and 0.60 s) | CC BY 4.0; CC0 |
+| Menu: move | menuFlick_000, menuFlick_001 | ["Turning newspaper page (SoundAction 281)"](https://freesound.org/people/alexarje/sounds/863259/) by alexarje (saved as "Newspaper turn page"): two short crinkles (1.80 s, 2.73 s) | CC BY 4.0 |
+| Menu: press | menuPage_000 | The same newspaper recording: the turn itself (2.33 s, 0.32 s long) | CC BY 4.0 |
+
+Freesound sounds each carry their own licence: CC0 (no credit needed), CC BY (credit the author, the sound's title and the licence where players can see it) or CC BY-NC (**not allowed**: Papercut will be sold on Steam). All four here allow commercial use (checked 2026-11-03). The CC BY credits, with a note that the sounds were trimmed and levelled, are on the **How to play** screen (`index.html`); keep them there, and add the Steam store page's credits when it lists any. Any new CC BY sound gets added to that line.
 
 Still code-made: whooshes, parry, jump/dash hop, taiko drums, the gong, all stings, and all music apart from the two songs, the clappers and the bell.
 
@@ -121,6 +134,6 @@ Still code-made: whooshes, parry, jump/dash hop, taiko drums, the gong, all stin
 
 1. Put the new `.ogg` (or `.mp3`) file in `public/sfx/`.
 2. In `src/audio/sounds.ts`, change the file names for that sound in `RECORDINGS`.
-3. Add it to the table above with its pack and licence. Only use CC0 or clearly free-to-use sounds.
+3. Add it to the table above with its pack and licence. Only use CC0 or sounds whose licence allows commercial use (CC BY is fine with a credit; CC BY-NC is not).
 
 If a file is missing or won't load, the code-made version plays instead, so a bad file never makes the game silent.
