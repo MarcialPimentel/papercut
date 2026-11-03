@@ -87,9 +87,8 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 .menu { inset: 0; display: grid; place-items: center; padding: 16px; overflow-y: auto; background: rgba(233, 228, 218, .35); }
 .menu .card { pointer-events: auto; width: min(520px, 100%); background: var(--paper); border: 2px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); padding: 22px 22px 18px; display: grid; gap: 16px;
   background-image: linear-gradient(rgba(42,95,143,.09) 1px, transparent 1px), linear-gradient(90deg, rgba(42,95,143,.09) 1px, transparent 1px); background-size: 22px 22px; }
-.menu h1 { font: 800 clamp(56px, 12vw, 92px)/.9 var(--display); text-transform: uppercase; margin: 0; position: relative; width: fit-content; }
-.menu h1 .slip { display: inline-block; transform: translate(.05em, -.04em); }
-.menu h1::after { content: ""; position: absolute; left: -3%; right: -3%; top: 48%; height: 3px; background: var(--red); transform: rotate(-4deg); }
+.menu h1 { margin: -6px 0 0 -8px; line-height: 0; } /* the store logo (tools/store), cut paper with the red inside showing */
+.menu h1 img { display: block; width: min(450px, 100%); height: auto; }
 .menu .tag { margin: -6px 0 0; font-weight: 700; color: var(--muted); }
 .stack { display: grid; gap: 12px; }
 .stack > .hbtn { justify-self: start; }

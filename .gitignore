@@ -19,3 +19,6 @@ playwright-report/
 Thumbs.db
 .vscode/
 .idea/
+
+# store-art renders (made by npm run store:art)
+tools/store/cache/
