@@ -18,7 +18,7 @@ On GitHub this is the milestone "M1 Feel test: mouse vs dummy" with issues #2–
 | #6 | Sumi as a practice dummy | Switches guard with a glint tell, swings back now and then and sometimes feints a heavy, so one person can practise everything alone. |
 | #7 | Hits, cuts and the K.O. split | Red slashes cut into the paper, the paper health strip, the K.O. split with a red edge, halves as Rapier physics bodies (cosmetic). Done 2026-11-02. |
 | #8 | Hit feel | Hitstop, shake, slash lines, paper sounds, K.O. camera with slow motion. Sounds and music done in the sound pass (see [sound.md](sound.md)). |
-| #9 | Tuning panel and restart | On-screen sliders for every move's frames, damage, chip and stun, the parry, riposte, feint and counter windows, the cursor waist line; save as defaults; R restarts. |
+| #9 | Tuning panel and restart | On-screen sliders for every move's frames, damage, chip and stun, the parry, riposte, feint and counter windows, the guard line, hitstop, shake and slow motion; save as defaults; R restarts. Done 2026-11-02: T in Practice; "Copy numbers" hands the changes to Claude for a PR. |
 | #10 | Playtest guide | `docs/playtest.md`: how to open the build, the mouse controls, what to try, what to report. |
 | #11 | Mouse controls | Cursor guard (waist line, small dead zone, a visible guard cue), left and right click, feint, keyboard movement, on-screen buttons on touch screens only. |
 | #12 | Rounds, timer and page turns | 60-second rounds, best of 5 (was 3), round banners, the page-turn animation to the next spread, the back-cover win, the Ruled Courtyard and Legal Pad Grove pop-ups. |

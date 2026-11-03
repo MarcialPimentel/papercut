@@ -7,6 +7,7 @@
 //   No cursor is drawn, and mouse travel is kept to a short band around the line so a flick always switches.
 // - 'cursor': the original. A drawn crosshair, compared with your fighter's waist on screen.
 
+import { GUARD } from './feel';
 import { BTN } from './sim/sim';
 import { store } from './store';
 
@@ -17,12 +18,9 @@ const KEYS: Record<string, 'left' | 'right' | 'jump' | 'feint'> = {
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+export type Command = 'restart' | 'menu' | 'rematch' | 'hitboxes' | 'tune';
 export type GuardStyle = 'line' | 'cursor';
 const GUARD_KEY = 'papercut.guard';
-/** Line style: how far (pixels) the hidden mouse can go above or below the line. Small, so a short flick switches. */
-const LINE_BAND = 60;
-/** Ignore tiny wobbles across the line (pixels). */
-const DEAD_ZONE = 4;
 function loadStyle(): GuardStyle { return store.get(GUARD_KEY) === 'cursor' ? 'cursor' : 'line'; }
 
 export class Controls {
@@ -40,7 +38,7 @@ export class Controls {
   touchLow: boolean | null = null;
   /** True while a fight is on screen: Space and arrows don't scroll the page. */
   active = false;
-  onCommand: (c: 'restart' | 'menu' | 'rematch' | 'hitboxes') => void = () => {};
+  onCommand: (c: Command) => void = () => {};
   onAnyInput: () => void = () => {};
   /** How the mouse sets the guard. See the top of this file. */
   guardStyle: GuardStyle = loadStyle();
@@ -48,12 +46,14 @@ export class Controls {
   constructor(canvas: HTMLCanvasElement, chips: HTMLElement, aim: HTMLElement) {
     this.canvas = canvas; this.aim = aim;
     this.setGuardStyle(this.guardStyle);
-    const typing = (e: Event) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+    // Typing in a text box doesn't fight; a focused slider (the tuning panel) still lets R, T and Esc through.
+    const typing = (e: Event) => (e.target instanceof HTMLInputElement && e.target.type !== 'range') || e.target instanceof HTMLTextAreaElement;
     addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || typing(e)) return;
       if (e.code === 'Escape') { this.onCommand('menu'); return; }
       if (e.code === 'KeyR' && !e.repeat) { this.onCommand('restart'); return; }
       if (e.code === 'KeyH' && !e.repeat) { this.onCommand('hitboxes'); return; }
+      if (e.code === 'KeyT' && !e.repeat) { this.onCommand('tune'); return; }
       const k = KEYS[e.code];
       if (!k || !this.active) return;
       e.preventDefault();
@@ -76,7 +76,7 @@ export class Controls {
         // Locked: the real cursor is hidden and doesn't move, so steer our own one, kept inside the window.
         this.mouseX = clamp(this.mouseX + e.movementX, 0, canvas.clientWidth);
         const y = (this.mouseY ?? canvas.clientHeight / 2) + e.movementY;
-        if (this.guardStyle === 'line') this.mouseY = clamp(y, this.lineY() - LINE_BAND, this.lineY() + LINE_BAND);
+        if (this.guardStyle === 'line') this.mouseY = clamp(y, this.lineY() - GUARD.band, this.lineY() + GUARD.band);
         else this.mouseY = clamp(y, 0, canvas.clientHeight);
         this.drawAim();
       } else this.track(e);
@@ -145,8 +145,8 @@ export class Controls {
     const line = this.guardStyle === 'line' ? this.lineY() : waistY;
     if (this.touchLow !== null) this.low = this.touchLow;
     else if (this.mouseY !== null && line !== null) {
-      if (this.mouseY > line + DEAD_ZONE) this.low = true;
-      else if (this.mouseY < line - DEAD_ZONE) this.low = false;
+      if (this.mouseY > line + GUARD.deadZone) this.low = true;
+      else if (this.mouseY < line - GUARD.deadZone) this.low = false;
     }
     return this.low;
   }

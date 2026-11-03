@@ -24,11 +24,12 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 | Rematch (when the match ends) | R or the Rematch button |
 | Hitbox view on / off | H |
 | Fullscreen on / off (desktop app) | F11 or Alt+Enter |
+| Tuning panel (Practice only) | T (the fight pauses while it's open) |
 | Free the mouse / back to the menu | Esc frees the mouse (held during a fight), Esc again or Leave for the menu |
 
 ## Ways to play
 
-1. **Practice vs Sumi:** Sumi is a dummy. Watch for the yellow glint on the blade: Sumi is about to switch guard. R restarts.
+1. **Practice vs Sumi:** Sumi is a dummy. Watch for the yellow glint on the blade: Sumi is about to switch guard. R restarts. T opens the tuning panel (below).
 2. **Endless:** one bot after another, one round each, on one page (no page turns): each new bot steps in on your left or right. Your strip carries over and refills by half every 5 bots, and the bots get smarter every 5. One lost round ends the run; your best run shows on the title screen.
 3. **Fight a friend:** first pick the room's rules (rounds, health, timer), then you get a link and a 4-letter room code. Send the link; the fight starts as soon as they open it. You are Kami (left, indigo sash), they are Sumi (right, gold sash). Your name has a yellow "you" tag.
 4. **Tournament:** 3 to 8 friends. Pick the rules, type your name, send the link; the host presses *Start tournament*. One fight at a time, everyone else watches it live; the bracket shows between fights.
@@ -55,6 +56,16 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 
 ## What to report
 
+## Tuning the fight (T in Practice)
+
+1. In Practice, press **T**. A yellow legal-pad sheet opens on the right, the fight pauses and the mouse is freed.
+2. Drag any slider. The new number shows in red, with the game's own number in a small box next to it: click that box to put one number back. **Reset all** puts every number back.
+3. Press **T** (or Esc, or Close) to fight with the new numbers. **R** restarts the match, even with the panel open.
+4. Your numbers stay in this browser for Practice, so they're still there next time. The bottom-left line says "(tuned numbers)" while any are changed.
+5. When you like a set, click **Copy numbers** and paste it to Claude: it lists each changed number as "game value -> your value", and Claude makes them the game's numbers in a PR.
+
+Online fights, tournament fights and Endless always use the game's own numbers, whatever the panel says. Frames are 1/60 of a second.
+
 - **Feel:** do the slashes, blocks and parries feel crisp? Is anything too fast or too slow to react to?
 - **Reading:** can you tell the rival's guard height and when a heavy is coming?
 - **Line vs Cursor guard:** play a few rounds with each (Settings → Guard on the main menu). Which is easier to read and switch? With Line, does the guard ever switch when you didn't mean it, or not switch when you flicked? Keep Line, or go back to Cursor?
@@ -63,5 +74,5 @@ Use a desktop browser with a mouse. Phones get on-screen buttons, but the game i
 ## Known limits of this build
 
 - Online fights wait for the slower player: if either player's tab is hidden or their connection hiccups, the fight pauses for both.
-- The fight numbers are the mock-up's placeholders; the tuning panel comes next.
+- The fight numbers are still being tuned: use the tuning panel (T in Practice) and send Claude the numbers you like.
 - The K.O. halves use paper physics once it has loaded (a couple of seconds after the page opens); a K.O. before that uses a simpler scripted fall.
