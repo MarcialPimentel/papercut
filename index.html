@@ -88,6 +88,7 @@
           <ol class="tplayers" id="tPlayers"></ol>
           <button class="mbtn red" id="tBegin" type="button" hidden>Start tournament</button>
           <p class="muted" id="tWait"></p>
+          <p class="muted" data-sound-hint hidden>Click anywhere or press a key to turn the sound on.</p>
           <button class="hbtn" data-cancel type="button">Leave</button>
         </div>
 
@@ -95,6 +96,8 @@
           <p class="big" id="bTitle">Bracket</p>
           <div class="bracket" id="bracket"></div>
           <p class="muted" id="bNext"></p>
+          <button class="mbtn red" id="bAgain" type="button" hidden>New bracket<small>Same players, seats shuffled again</small></button>
+          <p class="muted" data-sound-hint hidden>Click anywhere or press a key to turn the sound on.</p>
           <button class="hbtn" data-cancel type="button" id="bLeaveT">Leave tournament</button>
         </div>
 
@@ -122,7 +125,7 @@
           <label data-desktop-only hidden>Vsync <select id="setVsync"><option value="on">On</option><option value="off">Off</option></select></label>
           <label>Music <input type="range" id="setMusic" min="0" max="100" step="5"></label>
           <label>Effects <input type="range" id="setSfx" min="0" max="100" step="5"></label>
-          <label>Guard <select id="setGuard"><option value="line">Line: mouse up / down</option><option value="cursor">Cursor: crosshair vs your waist</option></select></label>
+          <label>Guard <select id="setGuard"><option value="flick">Flick: mouse up / down</option><option value="cursor">Cursor: crosshair vs your waist</option></select></label>
           <p class="muted" id="setNote"></p>
           <button class="mbtn" type="submit">Done</button>
         </form>
@@ -130,7 +133,7 @@
         <div data-screen="howto" class="stack howto" hidden>
           <p class="big">How to play</p>
           <dl class="controls">
-            <dt>Guard</dt><dd id="howGuard">Move the mouse <b>up</b> to guard high, <b>down</b> to guard low.</dd>
+            <dt>Guard</dt><dd id="howGuard">Flick the mouse <b>up</b> to guard high, <b>down</b> to guard low.</dd>
             <dt><kbd>Left click</kbd></dt><dd>Light slash: quick, small cut.</dd>
             <dt><kbd>Right click</kbd></dt><dd>Heavy slash: slower, steps in, big cut. Blocked, it <b>staggers</b> their guard and you keep the turn. Click again (or <kbd>Q</kbd>) early in the wind-up to feint.</dd>
             <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Walk. Double-tap to dash.</dd>

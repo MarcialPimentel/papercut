@@ -16,7 +16,7 @@ export interface EndlessRecord {
 }
 
 export type RulesFilter = 'standard' | 'custom' | 'all';
-export type GuardFilter = 'any' | 'line' | 'cursor';
+export type GuardFilter = 'any' | 'flick' | 'cursor';
 export interface Filter { build: string; rules: RulesFilter; guard: GuardFilter }
 
 /** A match as the stats page reads it (no inputs). */

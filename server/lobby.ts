@@ -65,10 +65,11 @@ export class Lobby {
         return;
       }
       case 'hello':
-        p.guard = m.guard === 'line' || m.guard === 'cursor' ? m.guard : '';
+        p.guard = m.guard === 'flick' || m.guard === 'cursor' ? m.guard : '';
         return;
       case 'name': t?.rename(p, m.name); return;
       case 'begin': t?.begin(p); return;
+      case 'restart': t?.restart(p); return;
       case 'result': t?.report(p, m.winner); return;
       case 'host': {
         this.leave(p, false);
