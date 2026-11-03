@@ -4,9 +4,9 @@
 // Presses are kept until the fight reads them, so a click is never lost between frames.
 // During a fight the mouse is locked to the game (Pointer Lock), so it can't wander out of the window;
 // the game then draws its own cursor and moves it by the mouse's movement.
-// Two guard styles (a playtest A/B, picked in the menu):
-// - 'line' (default): an invisible line across the middle of the screen. Mouse above it = high, below = low.
-//   No cursor is drawn, and mouse travel is kept to a short band around the line so a flick always switches.
+// Two guard styles (a playtest A/B, picked in Settings):
+// - 'flick' (default): flick the mouse up to guard high, down to guard low. Where the mouse is doesn't matter,
+//   only which way it last moved (a short, quick movement; see GUARD in feel.ts). No cursor is drawn.
 // - 'cursor': the original. A drawn crosshair, compared with your fighter's waist on screen.
 // On a controller the left stick (or d-pad) moves left / right and sets the guard up / down (see pad.ts).
 
@@ -25,19 +25,40 @@ export type Device = 'mouse' | 'pad' | 'touch';
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export type Command = 'restart' | 'menu' | 'rematch' | 'hitboxes' | 'tune';
-export type GuardStyle = 'line' | 'cursor';
+export type GuardStyle = 'flick' | 'cursor';
 const GUARD_KEY = 'papercut.guard';
-function loadStyle(): GuardStyle { return store.get(GUARD_KEY) === 'cursor' ? 'cursor' : 'line'; }
+// Anything but 'cursor' (including the old 'line' trial) plays as flick.
+function loadStyle(): GuardStyle { return store.get(GUARD_KEY) === 'cursor' ? 'cursor' : 'flick'; }
+
+/** Flick style: vertical movement added up in one direction. Kept apart from the DOM so it can be tested. */
+export class Flick {
+  private sum = 0;
+  private last = -Infinity;
+  /** Mouse moved dy pixels (down is +) at time t (seconds). Returns true (low), false (high) or null (no switch). */
+  move(dy: number, t: number): boolean | null {
+    if (dy === 0) return null;
+    // A change of direction or a pause starts the count again.
+    if (Math.sign(dy) !== Math.sign(this.sum) || t - this.last > GUARD.flickReset) this.sum = 0;
+    this.sum += dy; this.last = t;
+    if (this.sum >= GUARD.flick) { this.sum = 0; return true; }
+    if (this.sum <= -GUARD.flick) { this.sum = 0; return false; }
+    return null;
+  }
+}
 
 export class Controls {
   private held: Record<Hold, number> = { left: 0, right: 0, guardLow: 0 };
   private presses = 0;
   private lastTap = { left: 0, right: 0 };
   private low = false;
+  private flick = new Flick();
   mouseY: number | null = null;
   private mouseX = 0;
-  /** Hold the mouse while fighting. Main turns it off when the match is over, so the buttons can be clicked. */
-  lockWanted = false;
+  /** Hold the mouse while fighting. Main turns it off when the match is over, so the buttons can be clicked.
+   *  It also hides the pointer in Flick style, so menus and the Rematch screen keep a visible pointer. */
+  private wantLock = false;
+  get lockWanted() { return this.wantLock; }
+  set lockWanted(v: boolean) { this.wantLock = v; this.showPointer(); }
   private aim: HTMLElement;
   private canvas: HTMLCanvasElement;
   /** Set by the on-screen High / Low buttons on touch screens. */
@@ -91,16 +112,17 @@ export class Controls {
 
     canvas.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'mouse') return;
+      if (!e.movementX && !e.movementY && this.locked) return;
+      if (this.guardStyle === 'flick') {
+        const low = this.flick.move(e.movementY, e.timeStamp / 1000);
+        if (low !== null) { this.low = low; this.touchLow = null; this.guardSrc = 'mouse'; }
+      } else this.guardSrc = 'mouse';
       if (this.locked) {
-        if (!e.movementX && !e.movementY) return;
         // Locked: the real cursor is hidden and doesn't move, so steer our own one, kept inside the window.
         this.mouseX = clamp(this.mouseX + e.movementX, 0, canvas.clientWidth);
-        const y = (this.mouseY ?? canvas.clientHeight / 2) + e.movementY;
-        if (this.guardStyle === 'line') this.mouseY = clamp(y, this.lineY() - GUARD.band, this.lineY() + GUARD.band);
-        else this.mouseY = clamp(y, 0, canvas.clientHeight);
+        this.mouseY = clamp((this.mouseY ?? canvas.clientHeight / 2) + e.movementY, 0, canvas.clientHeight);
         this.drawAim();
       } else this.track(e);
-      this.guardSrc = 'mouse';
       this.setDevice('mouse');
     });
     document.addEventListener('pointerlockchange', () => { this.showAim(); this.drawAim(); });
@@ -201,14 +223,14 @@ export class Controls {
   setGuardStyle(g: GuardStyle) {
     this.guardStyle = g;
     store.set(GUARD_KEY, g);
-    this.canvas.classList.toggle('no-cursor', g === 'line');
+    this.showPointer();
     this.showAim();
   }
 
-  /** The line style's invisible line: across the middle of the screen. */
-  private lineY() { return this.canvas.clientHeight / 2; }
+  /** Flick style draws no pointer during a fight; everywhere else (menus, match over, tuning) the normal one shows. */
+  private showPointer() { this.canvas.classList.toggle('no-cursor', this.guardStyle === 'flick' && this.wantLock); }
 
-  private showAim() { this.aim.hidden = !this.locked || this.guardStyle === 'line'; }
+  private showAim() { this.aim.hidden = !this.locked || this.guardStyle === 'flick'; }
 
   press(p: PressName) { this.presses |= BTN[p]; }
 
@@ -231,16 +253,16 @@ export class Controls {
 
   /**
    * Guard low? A held "guard low" key or button wins; then the touch buttons; then whichever of the mouse and
-   * the controller stick moved last (the mouse against its line with a small dead zone, the stick where it was last pushed).
+   * the controller stick set it last: the stick where it was last pushed, the last mouse flick (set as the mouse
+   * moves), or in cursor style the crosshair against the fighter's waist with a small dead zone.
    */
   guardLow(waistY: number | null) {
     if (this.held.guardLow) return true;
-    const line = this.guardStyle === 'line' ? this.lineY() : waistY;
     if (this.touchLow !== null) this.low = this.touchLow;
     else if (this.guardSrc === 'pad') this.low = this.padLow;
-    else if (this.mouseY !== null && line !== null) {
-      if (this.mouseY > line + GUARD.deadZone) this.low = true;
-      else if (this.mouseY < line - GUARD.deadZone) this.low = false;
+    else if (this.guardStyle === 'cursor' && this.mouseY !== null && waistY !== null) {
+      if (this.mouseY > waistY + GUARD.deadZone) this.low = true;
+      else if (this.mouseY < waistY - GUARD.deadZone) this.low = false;
     }
     return this.low;
   }

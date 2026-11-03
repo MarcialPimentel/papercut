@@ -40,6 +40,12 @@ const hud = new Hud();
 const controls = new Controls(canvas, $('#chips'), $('#aim'));
 const net = new Net();
 const wakeAudio = () => { engine.wake(); };
+// Browsers only allow sound after the player presses something. Tournament guests arrive by link and their
+// fights start from the server, so any press anywhere counts, not just fight keys and menu buttons.
+const soundHints = () => document.querySelectorAll<HTMLElement>('[data-sound-hint]');
+for (const ev of ['pointerdown', 'keydown', 'touchend'] as const) {
+  addEventListener(ev, () => { wakeAudio(); for (const h of soundHints()) h.hidden = true; }, { capture: true, passive: true });
+}
 $('#build').textContent = `build ${__BUILD__}`;
 /** Where invite links point: this site, or the live site from the desktop app. */
 const SITE = desktop ? desktop.server : location.origin;
@@ -94,6 +100,7 @@ function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (to === 'join') $('#joinWait').textContent = `Joining room ${opts.code}…`;
   if (to === 'error') $('#errorMsg').textContent = opts.msg ?? 'Something went wrong.';
   if (to === 'settings') fillSettings();
+  if (to === 'tlobby' || to === 'bracket') for (const h of soundHints()) h.hidden = !!engine.live;
   // On a controller, put the focus on the screen's first button so A does something straight away.
   if (moved && controls.device === 'pad') requestAnimationFrame(() => navigate('up', $('#menu .card'), () => {}));
   if (to === 'main') { const b = loadBest(); $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}` : 'How many bots can you cut?'; }
@@ -193,6 +200,7 @@ function renderBracket() {
   }).join('')}</div>`).join('');
   const cur = b.current && b.rounds[b.current[0]][b.current[1]];
   $('#bTitle').textContent = b.champion !== null ? `${b.names[b.champion]} wins!` : 'Bracket';
+  $('#bAgain').hidden = !b.restart;
   $('#bNext').textContent = b.champion !== null ? (b.champion === b.you ? 'You won the tournament!' : 'The tournament is over.')
     : cur ? `Now: ${nm(cur.a)} vs ${nm(cur.b)}` : 'Next fight in a few seconds…';
   $('#bLeaveT').textContent = b.champion !== null ? 'Back to the menu' : 'Leave tournament';
@@ -281,7 +289,7 @@ function readSettings() {
 }
 $('#setWindow').addEventListener('change', () => { readSettings(); setFullscreen(display.fullscreen); });
 for (const id of ['#setScale', '#setFps', '#setVsync']) $(id).addEventListener('change', readSettings);
-$('#setGuard').addEventListener('change', () => { controls.setGuardStyle($<HTMLSelectElement>('#setGuard').value === 'cursor' ? 'cursor' : 'line'); showGuardStyle(); });
+$('#setGuard').addEventListener('change', () => { controls.setGuardStyle($<HTMLSelectElement>('#setGuard').value === 'cursor' ? 'cursor' : 'flick'); showGuardStyle(); });
 $('#settingsForm').addEventListener('submit', (e) => { e.preventDefault(); showMenu('main'); });
 $('#bSettings').addEventListener('click', () => showMenu('settings'));
 for (const el of document.querySelectorAll<HTMLElement>('[data-desktop-only]')) el.hidden = !desktop;
@@ -320,6 +328,7 @@ $('#tName').addEventListener('change', () => {
   if (n) { saveName(n); net.send({ t: 'name', name: n }); }
 });
 $('#tBegin').addEventListener('click', () => net.send({ t: 'begin' }));
+$('#bAgain').addEventListener('click', () => net.send({ t: 'restart' }));
 $('#tCopy').addEventListener('click', async () => {
   const input = $<HTMLInputElement>('#tLink');
   try { await navigator.clipboard.writeText(input.value); $('#tCopy').textContent = 'Copied'; }

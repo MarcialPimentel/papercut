@@ -30,7 +30,8 @@ export interface PadFrame {
   left: boolean; right: boolean; guardLowHeld: boolean;
   /** The guard the stick last set (null until it is first pushed up or down). */
   low: boolean | null;
-  /** True when the guard changed this frame. */
+  /** True when the stick was pushed up or down this frame (a fresh push, even to the same height), so it takes
+   *  the guard back from the mouse. */
   guardChanged: boolean;
   /** Menu moves this frame. */
   nav: Nav[];
@@ -45,10 +46,11 @@ export class PadReader {
   private prevSide: -1 | 0 | 1 = 0;
   private lastTap = { side: 0, at: -1e9 };
   private low: boolean | null = null;
+  private pushed = false;
   private navHeld: Nav | null = null;
   private navNext = 0;
 
-  reset() { this.prev = []; this.prevSide = 0; this.navHeld = null; }
+  reset() { this.prev = []; this.prevSide = 0; this.navHeld = null; this.pushed = false; }
 
   update(s: PadSnap, now: number, b: Bindings): PadFrame {
     const btn = (i: number) => !!s.buttons[i];
@@ -64,7 +66,9 @@ export class PadReader {
 
     // Guard: latched on the last push.
     let guardChanged = false;
-    if (up !== dn) { const l = dn; if (l !== this.low) { this.low = l; guardChanged = true; } }
+    const push = up !== dn;
+    if (push && (dn !== this.low || !this.pushed)) { this.low = dn; guardChanged = true; }
+    this.pushed = push;
 
     // Double-tap a side to dash.
     const atRest = Math.abs(x) < REST && !btn(PAD.Left) && !btn(PAD.Right) && !b.pad.left.some(btn) && !b.pad.right.some(btn);

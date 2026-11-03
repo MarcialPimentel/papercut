@@ -91,6 +91,14 @@ describe('controller reader', () => {
     expect(f.low).toBe(false);
   });
 
+  it('a fresh push to the same height counts again (so the stick can take the guard back from the mouse)', () => {
+    const r = new PadReader(), b = defaults();
+    expect(r.update(snap({ y: 0.9 }), 0, b).guardChanged).toBe(true);
+    expect(r.update(snap({ y: 0.9 }), 16, b).guardChanged).toBe(false); // still held
+    r.update(snap(), 32, b);
+    expect(r.update(snap({ y: 0.9 }), 48, b).guardChanged).toBe(true);
+  });
+
   it('walking with the stick a little off level does not flip the guard', () => {
     const r = new PadReader(), b = defaults();
     r.update(snap({ y: -0.9 }), 0, b); // guard high

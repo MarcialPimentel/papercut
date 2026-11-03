@@ -14,7 +14,7 @@ export function keysFor(c: Controls, a: Action, pad = c.device === 'pad'): strin
 }
 
 const GUARD_HOW = {
-  line: 'Move the mouse <b>up</b> to guard high, <b>down</b> to guard low. No cursor: just flick.',
+  flick: 'Flick the mouse <b>up</b> to guard high, <b>down</b> to guard low. Only the direction counts, not where the mouse is.',
   cursor: "Move the crosshair <b>above</b> your fighter's waist to guard high, <b>below</b> to guard low.",
   pad: 'Push the left stick <b>up</b> to guard high, <b>down</b> to guard low. It stays where you last pushed it.',
 };
