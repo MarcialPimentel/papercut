@@ -25,6 +25,7 @@ import { desktop, store } from './store';
 import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
 import { Dummy } from './sim/dummy';
 import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
+import { forDivision, forEndless, fromEvents, unlock } from './achievements';
 import { TuningPanel } from './tuning-panel';
 import { hashState, matchWinner, newMatch, step, type State } from './sim/sim';
 import { Tally } from './sim/tally';
@@ -642,9 +643,10 @@ net.onMessage = (m: ToClient) => {
       startOnline(m.seat, m.delay, m.code, cleanCfg(m.cfg), m.ranks ? [m.ranks[0].name, m.ranks[1].name] : null, m.looks);
       hud.ranks = m.ranks ?? null; hud.rankNote = ''; hud.setNames();
       break;
-    case 'rank': myRank = m.you; showRank(); break;
+    case 'rank': myRank = m.you; showRank(); if (m.you.placed) unlock(forDivision(m.you.division)); break;
     case 'ranked': {
       myRank = m.you; showRank();
+      if (m.you.placed) unlock(forDivision(m.you.division));
       const pts = `${m.delta >= 0 ? '+' : ''}${m.delta}`;
       hud.rankNote = `${m.won ? 'Win' : 'Loss'} ${pts}: ${m.you.placed ? `${m.you.division} ${m.you.points}` : m.you.division}.`;
       break;
@@ -662,6 +664,7 @@ net.onMessage = (m: ToClient) => {
     case 'bracket':
       if (!tourney) break;
       tourney.bracket = m;
+      if (m.champion !== null && m.champion === m.you) unlock(['TOURNEY_WIN']);
       if (mode.kind === 'menu') { if (screen !== 'bracket') showMenu('bracket'); renderBracket(); break; }
       if (tourney.fight && !(m.current && m.current[0] === tourney.fight[0] && m.current[1] === tourney.fight[1])) {
         // The fight on screen is decided. A walkover (someone left) goes straight back; otherwise let the end play out.
@@ -702,6 +705,23 @@ function musicFor(m: Mode, s: State): [MusicMode, Tension, TrackKey, number] {
   return ['fight', final || deciding || close ? 1 : 0, track, level];
 }
 
+/** Steam rich presence: what friends see you doing (tokens in steam/rich_presence.vdf). Desktop app only. */
+let presenceShown = '';
+function showPresence(m: Mode, s: State) {
+  const steam = desktop?.steam;
+  if (!steam) return;
+  const [token, vars]: [string, Record<string, string>] =
+    m.kind === 'menu' ? [tourney ? '#Tournament' : '#Menu', {}]
+    : m.kind === 'tutorial' ? ['#Tutorial', {}]
+    : m.kind === 'practice' ? (m.endless ? ['#Endless', { level: String(botLevel(s.f[0].wins)) }] : ['#Practice', {}])
+    : m.kind === 'watch' ? ['#Watching', {}]
+    : tourney ? ['#Tournament', {}]
+    : hud.ranks ? ['#Ranked', { division: myRank?.placed ? myRank.division : 'Placement' }]
+    : ['#Online', {}];
+  const key = token + JSON.stringify(vars);
+  if (key !== presenceShown) { presenceShown = key; steam.presence(token, vars); }
+}
+
 // ---------- the loop ----------
 const menuHint = () => controls.device === 'pad' ? 'Menu button for the menu' : 'Esc for the menu';
 let last = performance.now(), acc = 0;
@@ -724,6 +744,9 @@ function frame(now: number) {
       if (m.endless) m.inputs.add(s.frame, mine);
       const ev = step(s, [mine, m.endless ? botInput(m.dummy, s) : m.dummy.think(s)]);
       const done = m.tally.feed(s, ev);
+      // Achievements: never with the tuning panel's numbers changed.
+      if (m.endless) unlock([...fromEvents(s, ev, 0, false), ...forEndless(s.f[0].wins)]);
+      else if (!isTuned()) unlock(fromEvents(s, ev, 0, false));
       if (m.endless && done) { saveBest(s.f[0].wins); reportRun(m.seed, m.inputs.list, s.f[0].wins); }
       view.onStep(s, ev);
       acc -= STEP;
@@ -733,6 +756,7 @@ function frame(now: number) {
     while (acc >= STEP) {
       const ev = step(m.s, [controls.sample(view.waistY(m.s, 0)), m.tut.think(m.s)]);
       m.tut.after(m.s, ev);
+      unlock(fromEvents(m.s, ev, 0, false));
       view.onStep(m.s, ev);
       if (m.tut.resetDue(m.s)) { m.s = freshFight(); view.reset(m.s); }
       acc -= STEP;
@@ -746,6 +770,7 @@ function frame(now: number) {
     while (acc >= STEP && n < 5) {
       const ev = lock.tick(() => controls.sample(view.waistY(lock.state, seat), lock.state.f[seat].facing));
       if (!ev) { acc = Math.min(acc, STEP); break; }
+      unlock(fromEvents(lock.state, ev, seat, true));
       view.onStep(lock.state, ev);
       acc -= STEP; n++;
     }
@@ -774,6 +799,7 @@ function frame(now: number) {
   }
   if (m.kind === 'tutorial' && m.tut.finished) {
     markTutorial('done');
+    unlock(['TUTORIAL_DONE']);
     toMenu('tutdone');
     return;
   }
@@ -786,6 +812,7 @@ function frame(now: number) {
     if (!controls.lockWanted) controls.unlock();
   }
   music.set(...musicFor(m, s));
+  showPresence(m, s);
   const glint = m.kind === 'practice' ? m.dummy.tell / m.dummy.tellFrames : m.kind === 'tutorial' ? m.tut.tell / m.tut.tellFrames : -1;
   view.draw(s, real, glint >= 0 ? { seat: 1, k: glint } : undefined);
   stage.style.background = view.sky;

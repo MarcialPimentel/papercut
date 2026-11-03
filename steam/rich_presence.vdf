@@ -1,0 +1,15 @@
+"lang"
+{
+	"Language"	"english"
+	"Tokens"
+	{
+		"#Menu"	"In the menus"
+		"#Tutorial"	"Learning the cuts"
+		"#Practice"	"Practicing on the dummy"
+		"#Endless"	"Endless: level %level%"
+		"#Online"	"Dueling online"
+		"#Ranked"	"Ranked: %division%"
+		"#Tournament"	"In a tournament"
+		"#Watching"	"Watching a tournament fight"
+	}
+}

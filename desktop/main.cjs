@@ -7,6 +7,8 @@ const { app, BrowserWindow, Menu, ipcMain, net, protocol, session } = require('e
 const { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } = require('node:fs');
 const { extname, join, normalize, sep } = require('node:path');
 const { pathToFileURL } = require('node:url');
+const steamworks = require('./steam.cjs');
+const cloud = require('./cloud.cjs');
 
 /** The rooms server. PAPERCUT_SERVER=http://localhost:8790 points a local build at a local server. */
 const SERVER = (process.env.PAPERCUT_SERVER || 'https://papercut.marz.gg').replace(/\/+$/, '');
@@ -31,6 +33,18 @@ function loadSaved() {
   return {};
 }
 let saved = loadSaved();
+
+// Steam (achievements, cloud, overlay, rich presence). null when Steam isn't running: the game works the same.
+const steam = steamworks.start();
+// Steam Cloud: your progress from another PC (or the Deck) is laid over this PC's saved values at start.
+const cloudOn = !!steam && steam.cloud.enabled();
+let cloudText = '';
+if (cloudOn) {
+  try {
+    const text = steam.cloud.read(cloud.CLOUD_FILE);
+    if (text) { saved = cloud.merge(saved, JSON.parse(text)); cloudText = JSON.stringify(cloud.pick(saved)); }
+  } catch (err) { console.log('Steam Cloud file not read:', err); }
+}
 /** The Settings screen's display choices (src/settings.ts writes them under this key). */
 function display() {
   try { return JSON.parse(saved['papercut.settings'] || '{}') || {}; } catch { return {}; }
@@ -122,10 +136,18 @@ app.whenReady().then(() => {
       writeFileSync(FILE + '.tmp', JSON.stringify(saved, null, 2));
       renameSync(FILE + '.tmp', FILE);
     } catch (err) { console.error('Could not save settings:', err); }
+    // Steam uploads the cloud file when the game closes; only write it when what it carries changed.
+    if (cloudOn) {
+      const text = JSON.stringify(cloud.pick(saved));
+      if (text !== cloudText && steam.cloud.write(cloud.CLOUD_FILE, text)) cloudText = text;
+    }
   });
   ipcMain.on('fullscreen:set', (_e, on) => win?.setFullScreen(!!on));
   ipcMain.on('fullscreen:get', (e) => { e.returnValue = !!win?.isFullScreen(); });
   ipcMain.on('quit', () => app.quit());
+  ipcMain.on('steam', (e) => { e.returnValue = !!steam; });
+  ipcMain.on('steam:unlock', (_e, id) => steam?.unlock(id));
+  ipcMain.on('steam:presence', (_e, token, vars) => steam?.presence(token, vars));
 
   createWindow();
 });

@@ -22,6 +22,7 @@
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",
     "pg": "^8.23.1",
+    "steamworks.js": "0.4.0",
     "tsx": "^4.19.2",
     "ws": "^8.18.0"
   },
@@ -51,8 +52,15 @@
     "files": [
       "desktop/main.cjs",
       "desktop/preload.cjs",
+      "desktop/steam.cjs",
+      "desktop/cloud.cjs",
       "dist/**/*",
-      "!node_modules/**/*"
+      "!node_modules/**/*",
+      "node_modules/steamworks.js/package.json",
+      "node_modules/steamworks.js/index.js",
+      "node_modules/steamworks.js/dist/win64/steam_api64.dll",
+      "node_modules/steamworks.js/dist/win64/*.node",
+      "node_modules/steamworks.js/dist/linux64/*"
     ],
     "asar": true,
     "artifactName": "Papercut-${version}-${os}-${arch}.${ext}",
@@ -65,7 +73,10 @@
           ]
         }
       ],
-      "icon": "desktop/icon.png"
+      "icon": "desktop/icon.png",
+      "files": [
+        "!node_modules/steamworks.js/dist/linux64/*"
+      ]
     },
     "linux": {
       "target": [
@@ -78,7 +89,13 @@
       ],
       "icon": "desktop/icon.png",
       "category": "Game",
-      "executableName": "papercut"
-    }
+      "executableName": "papercut",
+      "files": [
+        "!node_modules/steamworks.js/dist/win64/*"
+      ]
+    },
+    "asarUnpack": [
+      "node_modules/steamworks.js/dist/**"
+    ]
   }
 }
