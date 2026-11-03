@@ -6,9 +6,9 @@ export const C = {
   marble: '#141316', white: '#FFFFFF',
 } as const;
 
-/** A fighter's look: colours by Blender material role (robe, kimono, hakama, accent...).
- *  The samurai is painted as Kami in Blender; a look only lists what it changes. */
-export interface Look { name: string; colors: Record<string, string> }
+/** A fighter's look: colours by Blender material role (robe, kimono, hakama, accent...), plus the outfit print
+ *  and sword style (see looks.ts). The samurai is painted as Kami in Blender; a look only lists what it changes. */
+export interface Look { name: string; colors: Record<string, string>; key?: string; outfit?: string; sword?: string }
 export const KAMI: Look = { name: 'Kami', colors: {} };
 // Sumi wears Kami's robes inverted: a cream robe over an indigo kimono, indigo prints (Marz's pick).
 export const SUMI: Look = { name: 'Sumi', colors: { robe: '#F2E3C0', kimono: '#3C3A7E' } };

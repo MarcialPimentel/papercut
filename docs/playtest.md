@@ -35,10 +35,14 @@ Use a desktop browser with a mouse, or plug in a controller (Xbox-style, PlaySta
 
 1. **Practice vs Sumi:** Sumi is a dummy. Watch for the yellow glint on the blade: Sumi is about to switch guard. R restarts. T opens the tuning panel (below).
 2. **Endless:** one bot after another, one round each, on one page (no page turns): each new bot steps in on your left or right. Your strip carries over and refills by half every 5 bots, and the bots get smarter every 5. One lost round ends the run; your best run shows on the title screen.
-3. **Fight a friend:** first pick the room's rules (rounds, health, timer), then you get a link and a 4-letter room code. Send the link; the fight starts as soon as they open it. You are Kami (left, indigo sash), they are Sumi (right, gold sash). Your name has a yellow "you" tag.
+3. **Fight a friend:** first pick the room's rules (rounds, health, timer), then you get a link and a 4-letter room code. Send the link; the fight starts as soon as they open it. You are Kami (left), they are Sumi (right), each in the look you picked on the "Your fighter" screen. Your name has a yellow "you" tag.
 4. **Tournament:** 3 to 8 friends. Pick the rules, type your name, send the link; the host presses *Start tournament*. One fight at a time, everyone else watches it live; the bracket shows between fights.
 5. **Find a fight:** pairs you with the next person who presses it (standard rules: best of 5, 80 health, 60 seconds).
 6. **Ranked:** rated fights with standard rules. You're paired with someone close to your rating; the search widens the longer you wait. Your first 5 matches are placement, then you get a division: Tissue, Newsprint, Cardstock, Washi, Gold Leaf. Your division and points show under the Ranked button, and a badge sits next to each name in the fight. At the end you see your points change. There's no rematch, and leaving before the end counts as a loss. The server decides the result by re-playing the fight itself. Your ranked identity lives in this browser: a private window, another browser or another PC is a new player.
+
+## Your fighter
+
+On the main menu, **Your fighter** opens the look picker: 6 colour sets, dark or light robe, 3 outfit prints and 4 sword styles, with a 3D preview that turns its guard high and low. **Page** only changes the preview's background, to check the look on each spread. Your pick is saved in this browser and sent to your rival when an online fight starts. One fighter always wears a dark robe and the other a light one: if you both pick the same side, player 2's robe flips. Looks never change the fight (every sword has the same reach). Endless bots wear random looks.
 
 ## What to try
 

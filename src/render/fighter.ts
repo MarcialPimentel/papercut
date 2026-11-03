@@ -11,6 +11,7 @@ import { MOVES } from '../sim/rules';
 import type { Fighter } from '../sim/sim';
 import { C, D, clamp, easeIn, lerp, type Look } from './common';
 import { ccw, clipConvex, clipHalf, offset, slashLens, type Line, type Pt } from './paper2d';
+import { dressPiece } from './looks';
 import { PIECE_NAMES, SCALE, loadPuppet, type Piece, type PieceName, type Puppet } from './puppet';
 import type { PaperPhysics } from './physics';
 import { spawnNudge } from './page';
@@ -55,8 +56,8 @@ function pieceGeo(piece: Piece, look: Look, marks: Pt[][], cut: Line | null): Pi
   const keep = (p: Pt[], gap: number) => (cut ? clipHalf(p, cut, gap) : p);
   const add = (list: THREE.BufferGeometry[], p: Pt[], depth: number, col: THREE.Color, z: number) => { if (p.length >= 3) list.push(slab(p, depth, col, z)); };
   const ink = new THREE.Color(C.ink), red = new THREE.Color(C.red);
-  const papers = piece.shapes.filter((s) => s.paper), back = Math.min(...papers.map((s) => s.z));
-  for (const s of piece.shapes) {
+  const papers = dressPiece(piece, look).filter((s) => s.paper), back = Math.min(...papers.map((s) => s.z));
+  for (const s of dressPiece(piece, look)) {
     const col = new THREE.Color(look.colors[s.role] ?? s.color);
     if (!s.paper) { add(out.lit, keep(s.pts, GAP), T, col, s.z); continue; }
     for (const [c, w, z] of sword ? SWORD_EDGE : BODY_EDGE) add(out.flat, keep(offset(s.pts, w), GAP), 0.003, new THREE.Color(c), sword ? back + z : z);
@@ -223,7 +224,7 @@ export class FighterView {
   /** Called when a half lands: shake the camera, throw paper. */
   onLand: (x: number, dir: number) => void = () => {};
 
-  constructor(private scene: THREE.Scene, readonly look: Look, readonly seat: number, private physics: PaperPhysics) {
+  constructor(private scene: THREE.Scene, public look: Look, readonly seat: number, private physics: PaperPhysics) {
     this.pose = copyPose(POSE.guard[seat === 0 ? 'high' : 'low']);
     this.ibFrom = copyPose(this.pose);
     this.yaw = this.yawFrom = this.yawTo = seat === 0 ? 0 : Math.PI;
@@ -245,6 +246,13 @@ export class FighterView {
     for (const c of [...g.children]) { g.remove(c); disposeTree(c); }
     const pg = pieceGeo(this.puppet[name], this.look, this.marks[name] ?? [], null);
     g.add(...meshes(pg.lit, pg.flat));
+  }
+
+  /** Wear another look (between matches or bots). Cut marks and halves already on the page keep theirs. */
+  setLook(look: Look) {
+    if ((look.key ?? look.name) === (this.look.key ?? this.look.name)) return;
+    this.look = look;
+    if (this.rig) for (const name of PIECE_NAMES) this.rebuild(name);
   }
 
   /** Back to a fresh round: whole again, no cuts. With `keep` (Endless), the halves stay on the page. */
