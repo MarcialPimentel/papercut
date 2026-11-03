@@ -92,7 +92,7 @@ The guide suggests a PNG sequence or texture atlas as the export; Papercut draws
 ## 7. Kami's and Sumi's own pieces (#37: Sumi's straw hat and tied-back sleeves)
 Both fighters share one rig and one set of pieces. A paper piece whose name starts with **`kami_`** is worn by Kami only, and one starting with **`sumi_`** by Sumi only. Pieces with any other name are worn by both. Sumi's colour swap (cream robe, indigo kimono) still applies to Sumi's own pieces.
 
-**The plan** (Marz's picks, 2026-11-02):
+**Already in the file** (built by Claude from these steps on 2026-11-02, at Marz's request; the red cord is a little thicker than in 7d: corners (0.64, 2.34), (0.915, 2.375), (0.935, 2.48), (0.605, 2.45), and the forearms a little wider). The steps stay here so you can see how each piece is made and change any corner. Marz's picks:
 - **Kami** keeps the topknot and the wide hanging sleeves.
 - **Sumi** gets a wide straw hat over short hair, and sleeves tied back above the elbow with a red cord, with bare forearms.
 
