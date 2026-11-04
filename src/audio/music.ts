@@ -113,8 +113,9 @@ export const TRACKS: Record<TrackKey, Track> = {
   },
 };
 
-/** The track for each notebook page (PAGES order: Graph, Ruled, Legal Pad, the back cover). */
-export const PAGE_TRACKS: readonly TrackKey[] = ['dojo', 'courtyard', 'grove', 'cover'];
+/** The track for each notebook page (PAGES order: Graph, Ruled, Legal Pad, the back cover, and Dojo Defence's
+ *  front cover, which shares the back cover's track). */
+export const PAGE_TRACKS: readonly TrackKey[] = ['dojo', 'courtyard', 'grove', 'cover', 'cover'];
 
 export const ENDLESS_TOP = 6;
 /** Endless gets denser with each bot level: 1 = drums and bass, then ticks, the high drum, clappers,

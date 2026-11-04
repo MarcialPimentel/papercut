@@ -24,7 +24,7 @@ import { FighterScreen, myPick } from './fighter-screen';
 import { myName, saveName } from './name';
 import { loadDisplay, saveDisplay, skipFrame } from './settings';
 import { desktop, store } from './store';
-import { DEFAULT_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
+import { DEFAULT_CFG, DEFENCE_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
 import { Dummy } from './sim/dummy';
 import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
 import { forDivision, forEndless, fromEvents, unlock } from './achievements';
@@ -65,7 +65,7 @@ tuner.onClose = () => { controls.clear(); if (mode.kind === 'practice') { contro
 
 type Mode =
   | { kind: 'menu'; s: State }
-  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; tally: Tally; seed: number; inputs: RunInputs }
+  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; defence: boolean; tally: Tally; seed: number; inputs: RunInputs }
   | { kind: 'tutorial'; s: State; tut: Tutorial }
   | { kind: 'online'; lock: Lockstep; code: string }
   | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] } // watching a tournament fight
@@ -85,7 +85,7 @@ let tourney: {
   /** When to go back to the bracket after the fight on screen ended (0 = not yet). */
   backAt: number;
 } | null = null;
-const rulesLabel = (c: MatchCfg) => `${roundsLabel(c.wins)}, ${c.maxHp} health, ${c.roundSecs ? c.roundSecs + 's' : 'no timer'}`;
+const rulesLabel = (c: MatchCfg) => c.defence ? 'Dojo Defence' : `${roundsLabel(c.wins)}, ${c.maxHp} health, ${c.roundSecs ? c.roundSecs + 's' : 'no timer'}`;
 const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // ---------- looks (issue #38) ----------
@@ -100,7 +100,7 @@ const dressOnline = (looks?: [string, string]) => dress(decodePick(looks?.[0], D
 const myLook = () => encodePick(myPick());
 
 // ---------- menus ----------
-type Screen = 'main' | 'fighter' | 'howto' | 'board' | 'replays' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
+type Screen = 'main' | 'defence' | 'fighter' | 'howto' | 'board' | 'replays' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (screen === 'controls' && to !== 'controls') bindScreen.cancel();
@@ -271,13 +271,17 @@ function showBest() {
   $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}${myPlace ? ` · #${myPlace} on the leaderboard` : ''}` : 'How many bots can you cut?';
 }
 
-function startPractice(endless = false) {
+/** The Dojo Defence bot: the Endless bot's reads at a fixed level. */
+const DEFENCE_BOT_LEVEL = 2;
+function defenceBot() { const d = new Dummy(); d.level = DEFENCE_BOT_LEVEL; return d; }
+
+function startPractice(endless = false, defence = false) {
   wakeAudio();
-  const cfg = endless ? ENDLESS_CFG : DEFAULT_CFG;
-  // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) never does.
-  if (endless) resetTuning(); else applyTuning(loadSaved());
+  const cfg = endless ? ENDLESS_CFG : defence ? DEFENCE_CFG : DEFAULT_CFG;
+  // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) and Dojo Defence never do.
+  if (endless || defence) resetTuning(); else applyTuning(loadSaved());
   const seed = newSeed();
-  mode = { kind: 'practice', s: newMatch(cfg), dummy: endless ? endlessBot(seed) : new Dummy(), endless, tally: new Tally(), seed, inputs: new RunInputs() };
+  mode = { kind: 'practice', s: newMatch(cfg), dummy: endless ? endlessBot(seed) : defence ? defenceBot() : new Dummy(), endless, defence, tally: new Tally(), seed, inputs: new RunInputs() };
   hud.placeNote = '';
   // Practice is against Sumi; in Endless every bot wears a random look.
   const mine = myPick(), botLook = () => lookOf(pairPicks(mine, randomPick(Math.random))[1], LOOKS[1].name);
@@ -522,6 +526,10 @@ $('#bTutPractice').addEventListener('click', () => startPractice());
 $('#bTutEndless').addEventListener('click', () => startPractice(true));
 $('#bTutMenu').addEventListener('click', () => showMenu('main'));
 $('#bEndless').addEventListener('click', () => startPractice(true));
+$('#bDefence').addEventListener('click', () => showMenu('defence'));
+$('#bDefSolo').addEventListener('click', () => startPractice(false, true));
+$('#bDefRoom').addEventListener('click', () => { showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg: DEFENCE_CFG, name: myName(), look: myLook() })); });
+$('#bDefBack').addEventListener('click', () => showMenu('main'));
 $('#bHowTo').addEventListener('click', () => showMenu('howto'));
 const fighterScreen = new FighterScreen($<HTMLCanvasElement>('#fCanvas'), $('#fPicks'), $<HTMLInputElement>('#fName'), $('#fNameTag'), view.physics, (p) => { if (mode.kind === 'menu') dress(p, SUMI_PICK); });
 $('#bFighter').addEventListener('click', () => showMenu('fighter'));
@@ -548,7 +556,7 @@ controls.onNav = (n) => {
     navigate(n, $('#menu'), () => {
       // B on the bracket never leaves the tournament: it goes back to the fight being watched, or does nothing.
       if (screen === 'bracket') { if (mode.kind === 'watch') hideMenu(); return; }
-      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #bReplaysBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
+      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bDefBack, #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #bReplaysBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
       back?.click();
     });
     return;
@@ -708,7 +716,7 @@ $('#rematch').addEventListener('click', () => command('rematch'));
 function command(c: Command) {
   if (c === 'hitboxes') { view.hitboxes.toggle(); return; }
   if (c === 'tune') {
-    if (mode.kind !== 'practice' || mode.endless) return;
+    if (mode.kind !== 'practice' || mode.endless || mode.defence) return;
     tuner.toggle();
     if (tuner.open) { controls.clear(); controls.active = false; controls.lockWanted = false; controls.unlock(); }
     return;
@@ -718,7 +726,7 @@ function command(c: Command) {
   if (c === 'menu' && mode.kind === 'watch') { if (screen === 'bracket') hideMenu(); else { showMenu('bracket'); renderBracket(); } return; }
   if (c === 'menu' && mode.kind === 'replay') { toMenu('replays'); return; }
   if (mode.kind === 'replay') { if (c === 'restart') replayCmd('restart'); return; }
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'replays' || screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone' || screen === 'board') showMenu('main'); return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'defence' || screen === 'replays' || screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone' || screen === 'board') showMenu('main'); return; }
   if (mode.kind === 'tutorial') {
     if (c === 'skip') mode.tut.skip();
     if (c === 'restart') { mode.s = freshFight(); view.reset(mode.s); }
@@ -728,7 +736,7 @@ function command(c: Command) {
   if (mode.kind === 'practice') {
     if (c === 'restart' || mode.s.phase === 'over') {
       mode.s = newMatch(mode.s.cfg); mode.tally = new Tally(); mode.inputs = new RunInputs(); hud.placeNote = '';
-      if (mode.endless) { mode.seed = newSeed(); mode.dummy = endlessBot(mode.seed); } else mode.dummy.reset();
+      if (mode.endless) { mode.seed = newSeed(); mode.dummy = endlessBot(mode.seed); } else if (mode.defence) mode.dummy = defenceBot(); else mode.dummy.reset();
       hud.best = loadBest(); view.reset(mode.s); if (!tuner.open) { controls.lockWanted = true; controls.lock(); } }
   } else if (mode.kind === 'online' && !hud.ranks && mode.lock.state.phase === 'over') controls.press('rematch');
 }
@@ -937,6 +945,7 @@ function frame(now: number) {
   else if (m.kind === 'practice') {
     const tune = keysFor(controls, 'tune')[0];
     status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · ${menuHint()}`
+      : m.defence ? `Dojo Defence · solo against a bot · ${menuHint()}`
       : `Practice: Sumi is a dummy · ${tune ? `${tune} to tune${isTuned() ? ' (tuned numbers)' : ''} · ` : ''}${menuHint()}`;
   }
   else if (m.kind === 'online') {

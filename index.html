@@ -67,6 +67,7 @@
           <button class="mbtn" id="bRanked" type="button">Ranked<small id="rankLine">Rated fights, paper-grade divisions</small></button>
           <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting (unranked)</small></button>
           <button class="mbtn" id="bEndless" type="button">Endless<small id="bestRun">How many bots can you cut?</small></button>
+          <button class="mbtn" id="bDefence" type="button">Dojo Defence<small>Cut them down, then run for their cover</small></button>
           <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
           <button class="mbtn" id="bTutorial" type="button">Tutorial<small>Learn every move against Sumi, step by step (3 minutes)</small></button>
           <div class="row2">
@@ -94,6 +95,14 @@
           </div>
           <p class="fnote">Looks never change the fight: every sword has the same reach. Online, your rival sees your name and look. One fighter always wears a dark robe and the other a light one, so if you both pick the same, player 2's robe flips.</p>
           <button class="mbtn" id="bFighterDone" type="button">Done</button>
+        </div>
+
+        <div data-screen="defence" class="stack" hidden>
+          <p class="big">Dojo Defence</p>
+          <p class="muted defence-rules">A tug-of-war across the notebook. One heavy empties the strip. Cut your rival down and you have the way: run for their cover while they unfold again in your path. Nobody can get past a living rival, so the only way through is to cut them down. Kami runs right to the back cover, Sumi runs left to the front cover.</p>
+          <button class="mbtn red" id="bDefSolo" type="button">Play solo<small>Push against a bot</small></button>
+          <button class="mbtn" id="bDefRoom" type="button">Room with a friend<small>Get an invite link to send</small></button>
+          <button class="mbtn" id="bDefBack" type="button">Back</button>
         </div>
 
         <form data-screen="setup" class="stack setup" id="setupForm" hidden>

@@ -35,6 +35,7 @@ export class View {
   private killCam = 0;
   private koSeat = -1;
   private turnFrom = 0;
+  private turnBack = false;
   private clock = 0;
   private cam = { x: 0, y: 1.1, dist: 11, yaw: 0.16, pitch: 0.2 };
   private _w = new THREE.Vector3();
@@ -164,7 +165,7 @@ export class View {
         break;
       }
       case 'heal': fx.label(`Strip +${e.amt}`, s.f[e.p].x, s.f[e.p].y + 2.3, 'gold'); break;
-      case 'turn': sfx.page(); this.turnFrom = s.page; break;
+      case 'turn': sfx.page(); this.turnFrom = s.page; this.turnBack = !!e.back; break;
       case 'swap':
         this.fx.clearFlecks();
         this.setPage(e.page);
@@ -193,11 +194,13 @@ export class View {
     if (this.slowmo > 0) { this.slowmo -= real; scale = this.slowmo > 0.25 ? FEEL.slowSpeed : lerp(1, FEEL.slowSpeed, this.slowmo / 0.25); }
     this.killCam = Math.max(0, this.killCam - real);
     this.shake = Math.max(0, this.shake - real * 0.9);
-    if (s.phase === 'turn') this.book.turn(s.phaseT / 60, this.turnFrom, s.turnTo);
+    if (s.phase === 'turn') this.book.turn(s.phaseT / 60, this.turnFrom, s.turnTo, this.turnBack);
     else if (this.book.fold !== 1) { this.book.endTurn(); this.book.setFold(1); }
     const fold = this.book.fold;
     this.physics.step(real * scale);
-    s.f.forEach((f, i) => { this.fighters[i].draw(f, real, fold, this.clock); this.fighters[i].updateHalves(real * scale, fold); });
+    // Dojo Defence: a fighter coming back after a cut pops up from the page like a pop-up card.
+    const rise = (u: number) => { const k = 1 - u / RULES.unfoldFrames; return 1 - (1 - k) * (1 - k); };
+    s.f.forEach((f, i) => { this.fighters[i].draw(f, real, f.unfold > 0 ? fold * rise(f.unfold) : fold, this.clock); this.fighters[i].updateHalves(real * scale, fold); });
     this.fx.update(real, real * scale, fold);
     this.hitboxes.update(s);
     const g = this.fx.glint;
@@ -227,7 +230,8 @@ export class View {
       cx = h.base.x + h.dir * 0.4; cy = 0.95; dist *= 0.82; yaw = 0.72 * h.dir; pitch = 0.18;
     }
     if (s.phase === 'turn') { cx = 0; cy = 0.4; dist = Math.max(dist, portrait ? 26 : 17); pitch = 0.62; yaw = 0.12; }
-    if (s.phase === 'over') { cx = 0; cy = 1.2; yaw = 0.5; pitch = 0.25; dist = Math.max(dist * 0.8, 8); }
+    // Dojo Defence ends at the cover's far edge: stay on the winner there.
+    if (s.phase === 'over') { cx = s.cfg.defence ? cx : 0; cy = 1.2; yaw = 0.5; pitch = 0.25; dist = Math.max(dist * 0.8, 8); }
     const k = 1 - Math.exp(-real * (this.killCam > 0 || s.phase === 'turn' ? 5 : 4));
     const c = this.cam;
     if (!Number.isFinite(dist)) return;
