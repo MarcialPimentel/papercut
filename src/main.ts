@@ -10,7 +10,7 @@ import { Hud } from './hud';
 import { Controls, type Command } from './input';
 import { keysFor, navigate, renderPrompts, restartLabel, setupControlsScreen } from './controlsUi';
 import { Net } from './net/client';
-import { Lockstep } from './net/lockstep';
+import { Rollback, type RollbackSink } from './net/rollback';
 import { BYE_SLOT, cleanName, normalizeCode, type RankInfo, type ToClient } from './net/protocol';
 import { Spectator } from './net/spectator';
 import { ReplayPlayer, type ReplayInputs } from './net/replay';
@@ -67,7 +67,7 @@ type Mode =
   | { kind: 'menu'; s: State }
   | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; defence: boolean; tally: Tally; seed: number; inputs: RunInputs }
   | { kind: 'tutorial'; s: State; tut: Tutorial }
-  | { kind: 'online'; lock: Lockstep; code: string }
+  | { kind: 'online'; lock: Rollback; code: string; sink: RollbackSink }
   | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] } // watching a tournament fight
   | { kind: 'replay'; rp: ReplayPlayer; names: [string, string]; paused: boolean; speed: number }; // a saved online fight
 let mode: Mode = { kind: 'menu', s: newMatch() };
@@ -431,9 +431,18 @@ function startOnline(seat: 0 | 1, delay: number, code: string, cfg: MatchCfg, na
   wakeAudio();
   view.spawnLook = null; dressOnline(looks);
   tuner.toggle(false); resetTuning();
-  const lock = new Lockstep(seat, delay, (m) => net.send(m), cfg);
+  const lock = new Rollback(seat, delay, (m) => net.send(m), cfg);
+  // Guessed frames are drawn at once; a K.O. and achievements wait until the frame is confirmed.
+  const sink: RollbackSink = {
+    show: (s, ev, replay) => view.onStep(s, ev, replay),
+    confirm: (s, ev) => {
+      unlock(fromEvents(s, ev, seat, true));
+      const ko = ev.filter((e) => e.k === 'ko');
+      if (ko.length) view.onEvents(s, ko);
+    },
+  };
   hud.setRules(cfg);
-  mode = { kind: 'online', lock, code };
+  mode = { kind: 'online', lock, code, sink };
   begin();
   hud.you = seat; hud.online = true; hud.tourney = !!tourney; hud.names = names; hud.setNames(); view.you = seat;
   if (new URLSearchParams(location.search).has('room')) history.replaceState(null, '', location.pathname);
@@ -886,14 +895,9 @@ function frame(now: number) {
   } else if (m.kind === 'online') {
     const lock = m.lock;
     acc += real;
-    // A little faster when the rival's inputs pile up (we fell behind), so both stay close in time.
-    if (lock.backlog > lock.delay + 3) acc += STEP;
     let n = 0;
     while (acc >= STEP && n < 5) {
-      const ev = lock.tick(() => controls.sample(view.waistY(lock.state, seat), lock.state.f[seat].facing));
-      if (!ev) { acc = Math.min(acc, STEP); break; }
-      unlock(fromEvents(lock.state, ev, seat, true));
-      view.onStep(lock.state, ev);
+      if (!lock.tick(() => controls.sample(view.waistY(lock.state, seat), lock.state.f[seat].facing), m.sink)) { acc = Math.min(acc, STEP); break; }
       acc -= STEP; n++;
     }
   } else if (m.kind === 'watch') {
@@ -956,7 +960,7 @@ function frame(now: number) {
     const l = m.lock;
     status = l.desynced ? `Out of sync at frame ${l.frame}. Please tell Marz.`
       : l.waiting > 20 ? "Waiting for your rival's connection…"
-      : `${tourney ? 'Tournament' : 'Online'} · room ${m.code} · ${rulesLabel(l.state.cfg)} · ${l.delay}-frame delay`;
+      : `${tourney ? 'Tournament' : 'Online'} · room ${m.code} · ${rulesLabel(l.state.cfg)} · ${l.delay}-frame delay, ${l.guessing} guessed`;
   } else if (m.kind === 'watch') {
     status = `Watching ${m.names[0]} vs ${m.names[1]} · tournament ${m.code} · ${controls.device === 'pad' ? 'Menu' : 'Esc'} for the bracket`;
   } else if (m.kind === 'replay') {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { Lockstep } from '../src/net/lockstep';
+import { Rollback } from '../src/net/rollback';
 import { Spectator } from '../src/net/spectator';
 import { MOVES, RULES } from '../src/sim/rules';
 import { FEEL, GUARD } from '../src/feel';
@@ -53,7 +53,7 @@ describe('tuning panel numbers', () => {
   it('online fights and watching always run the game numbers, whatever Practice was tuned to', () => {
     setValue('moves.light.dmg', 40);
     setValue('rules.parryWindow', 15);
-    new Lockstep(0, 2, () => {});
+    new Rollback(0, 2, () => {});
     expect(MOVES.light.dmg).toBe(DEFAULTS['moves.light.dmg']);
     expect(RULES.parryWindow).toBe(DEFAULTS['rules.parryWindow']);
     setValue('moves.heavy.dmg', 70);

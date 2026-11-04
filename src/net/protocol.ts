@@ -18,7 +18,7 @@ export type ToServer =
   | { t: 'result'; winner: number } // sent by older games after a tournament fight; ignored (the server's own re-play decides)
   | { t: 'quick'; name?: string; look?: string } // pair with whoever is waiting
   | { t: 'cancel' } // leave the room or the queue
-  | { t: 'in'; f: number; b: number } // my buttons for frame f
+  | { t: 'in'; f: number; b: number; a?: number } // my buttons for frame f; a: how far ahead I run (rollback time sync)
   | { t: 'hash'; f: number; h: number }; // my fight's fingerprint at frame f
 
 export type ToClient =
@@ -27,7 +27,7 @@ export type ToClient =
   | { t: 'start'; seat: 0 | 1; delay: number; code: string; cfg: MatchCfg; looks?: [string, string]; names?: [string, string]; ranks?: [RankInfo, RankInfo] } // the fight begins: seat 0 is Kami, 1 is Sumi (ranks: a ranked match)
   | { t: 'rank'; you: RankInfo } // your ranked standing
   | { t: 'ranked'; won: boolean; why: 'match' | 'left'; delta: number; you: RankInfo } // a ranked match was decided
-  | { t: 'in'; f: number; b: number; s?: 0 | 1 } // s: whose buttons, for players watching a tournament fight
+  | { t: 'in'; f: number; b: number; a?: number; s?: 0 | 1 } // s: whose buttons, for players watching a tournament fight
   | { t: 'hash'; f: number; h: number }
   | { t: 'lobby'; code: string; names: string[]; you: number; host: boolean; cfg: MatchCfg } // a tournament waiting to start
   | { t: 'bracket'; names: string[]; rounds: BracketMatch[][]; current: [number, number] | null; champion: number | null; you: number; restart: boolean } // restart: you're the host and can deal a new bracket now
@@ -59,8 +59,13 @@ export const CODE_LETTERS = 'BCDFGHJKLMNPQRSTVWXZ';
 export const CODE_LENGTH = 4;
 export const normalizeCode = (c: string) => c.toUpperCase().replace(/[^A-Z]/g, '').slice(0, CODE_LENGTH);
 
-/** Frames of input delay for a pair of players, from each one's round trip to the server (ms). */
+/**
+ * Frames of input delay for a pair of players, from each one's round trip to the server (ms).
+ * Rollback guesses the rest, so the delay only covers about half the lag: 2 frames on a good
+ * connection, never more than 6.
+ */
 export function delayFor(rttA: number, rttB: number): number {
   const oneWay = (rttA + rttB) / 2; // A -> server -> B
-  return Math.max(2, Math.min(8, Math.ceil(oneWay / (1000 / 60)) + 1));
+  const lag = Math.ceil(oneWay / (1000 / 60)) + 1;
+  return Math.max(2, Math.min(6, Math.ceil(lag / 2)));
 }

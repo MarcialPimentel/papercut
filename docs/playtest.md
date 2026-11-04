@@ -101,7 +101,7 @@ Online fights, tournament fights and Endless always use the game's own numbers, 
 - **Feel:** do the slashes, blocks and parries feel crisp? Is anything too fast or too slow to react to?
 - **Reading:** can you tell the rival's guard height and when a heavy is coming?
 - **Flick vs Cursor guard:** play a few rounds with each (Settings → Guard on the main menu). Is Flick snappy? Does the guard ever switch when you didn't mean it (while clicking or walking), or not switch when you flicked? If it's close, try the Flick sliders in the tuning panel (T in Practice) and tell me the numbers. Keep Flick, or go back to Cursor?
-- **Online:** the bottom-left line shows the room and the input delay in frames (2 is great, 8 is the most). Did it feel laggy? Did you ever see "Waiting for your rival's connection" or "Out of sync"? If "Out of sync" shows up, note the frame number and tell Claude.
+- **Online:** the bottom-left line shows the room, the input delay in frames (2 is great, 6 is the most) and how many frames are being guessed right now (rollback: 0-3 is normal on a good connection, 8 is the most before the game waits). Did it feel laggy? Did you ever see "Waiting for your rival's connection" or "Out of sync"? If "Out of sync" shows up, note the frame number and tell Claude.
 
 ## Steam (desktop app)
 

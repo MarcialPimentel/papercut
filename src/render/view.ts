@@ -99,26 +99,29 @@ export class View {
     return ((1 - this._w.y) / 2) * this.renderer.domElement.clientHeight;
   }
 
-  /** One fight frame happened. */
-  onStep(s: State, events: FightEvent[]) {
-    for (const e of events) this.event(s, e);
+  /** One fight frame happened. `replay`: it's being re-run online after a wrong guess, so state-change sounds stay quiet. */
+  onStep(s: State, events: FightEvent[], replay = false) {
+    this.onEvents(s, events);
     s.f.forEach((f, i) => { if (f.alive) this.fighters[i].stepPose(f); });
-    this.listen(s);
+    this.listen(s, replay);
   }
 
+  /** Show events on their own (online, a K.O. is shown once its frame is confirmed). */
+  onEvents(s: State, events: FightEvent[]) { for (const e of events) this.event(s, e); }
+
   /** Sounds that come from state changes rather than events. */
-  private listen(s: State) {
+  private listen(s: State, quiet = false) {
     s.f.forEach((f, i) => {
       const w = this.was[i];
-      if (f.alive && w.state === 'wind' && f.state === 'active') sfx.whoosh(f.atk !== 'light', pan(f.x));
-      if (f.alive && w.y > 0 && f.y <= 0) sfx.land(pan(f.x));
+      if (!quiet && f.alive && w.state === 'wind' && f.state === 'active') sfx.whoosh(f.atk !== 'light', pan(f.x));
+      if (!quiet && f.alive && w.y > 0 && f.y <= 0) sfx.land(pan(f.x));
       w.state = f.state; w.y = f.y;
     });
     const sec = Math.ceil(s.clock / 60);
-    if (s.phase === 'fight' && sec !== this.lastSec && sec <= 10 && sec > 0) sfx.tick(sec);
+    if (!quiet && s.phase === 'fight' && sec !== this.lastSec && sec <= 10 && sec > 0) sfx.tick(sec);
     this.lastSec = sec;
     // The round result sounds when its banner appears.
-    if (s.phase === 'ko' && s.phaseT === 54 && s.roundWinner >= 0 && !(s.cfg.wins > 0 && s.f.some((f) => f.wins >= s.cfg.wins))) sfx.roundEnd(s.roundWinner === this.you);
+    if (!quiet && s.phase === 'ko' && s.phaseT === 54 && s.roundWinner >= 0 && !(s.cfg.wins > 0 && s.f.some((f) => f.wins >= s.cfg.wins))) sfx.roundEnd(s.roundWinner === this.you);
   }
 
   private event(s: State, e: FightEvent) {

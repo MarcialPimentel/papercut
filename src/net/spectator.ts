@@ -13,7 +13,7 @@ export class Spectator {
   constructor(cfg: MatchCfg = DEFAULT_CFG, delay = 0) {
     resetTuning(); // the tuning panel is Practice only: every online fight runs the game's own numbers
     this.state = newMatch(cfg);
-    // The fighters start with `delay` empty frames of input, like Lockstep does.
+    // The fighters start with `delay` empty frames of input, like Rollback does.
     for (let f = 0; f < delay; f++) { this.inputs[0].set(f, 0); this.inputs[1].set(f, 0); }
   }
 

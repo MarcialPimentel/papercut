@@ -42,7 +42,7 @@ export interface MatchRecord {
 
 /** How far ahead of the fight a player's inputs may run before the server ignores them. */
 const AHEAD = 600;
-/** Browsers send their fight's fingerprint every this many frames (src/net/lockstep.ts). */
+/** Browsers send their fight's fingerprint every this many frames (src/net/rollback.ts). */
 const HASH_EVERY = 60;
 
 export const isStandard = (c: MatchCfg) =>
@@ -72,7 +72,7 @@ export class Referee {
     private onRecord: (r: MatchRecord) => void,
   ) {
     this.state = newMatch(cfg);
-    // The first `delay` frames have no buttons on either side (see Lockstep).
+    // The first `delay` frames have no buttons on either side (see Rollback).
     for (let f = 0; f < delay; f++) { this.queued[0].set(f, 0); this.queued[1].set(f, 0); }
   }
 
