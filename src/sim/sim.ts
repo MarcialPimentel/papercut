@@ -4,7 +4,7 @@
 // Only + - * / and comparisons here (no Math.random, no trig), so every browser computes the same.
 
 import { DEFAULT_CFG, ENDLESS, type MatchCfg } from './config';
-import { BODY, FINAL_PAGE, FPS, MOVES, RULES, pageForRound, type Move } from './rules';
+import { BODY, DEFENCE, FINAL_PAGE, FPS, MOVES, RULES, defencePage, pageForRound, type Move } from './rules';
 
 /** One player's controls for one frame, packed into a number. */
 export const BTN = {
@@ -51,6 +51,7 @@ export interface Fighter {
   dashDir: number; dashFrom: number; dashLen: number;
   stunT: number;
   walk: number; // -1, 0, 1: walking direction this frame
+  unfold: number; // Dojo Defence: frames left unfolding after coming back (can't act, can't be hit)
 }
 
 export interface State {
@@ -70,6 +71,12 @@ export interface State {
   turnTo: number;
   rematch: [boolean, boolean];
   f: [Fighter, Fighter];
+  // Dojo Defence (cfg.defence) only:
+  zone: number; // which spread the fight is on, -2 (front cover) to 2 (back cover)
+  way: number; // who has the way (made the last kill and may run on): 0, 1, or -1 nobody
+  respawnT: number; // frames until the cut fighter unfolds again (0 = not counting)
+  respawnWho: number; // who comes back: 0, 1, 2 = both (a double K.O.), -1 = nobody
+  turnDir: number; // the way the page is turning: 1 toward the back cover, -1 toward the front
 }
 
 /** What happened this frame, for drawing and sound. Never feeds back into the fight. */
@@ -85,11 +92,11 @@ export type FightEvent =
   | { k: 'hit'; p: number; x: number; y: number; ang: number; heavy: boolean; atk: Atk; dmg: number }
   | { k: 'ko'; p: number; x: number; y: number; ang: number; counter: boolean; dmg: number; why?: 'wind' | 'miss' }
   | { k: 'roundEnd'; winner: number; how: string }
-  | { k: 'turn'; to: number; final: boolean }
+  | { k: 'turn'; to: number; final: boolean; back?: boolean } // back: turning toward the front cover
   | { k: 'swap'; page: number }
   | { k: 'over'; winner: number }
   | { k: 'heal'; p: number; amt: number }
-  | { k: 'spawn'; p: number } // Endless: a fresh bot appears beside you
+  | { k: 'spawn'; p: number } // Endless: a fresh bot appears beside you. Dojo Defence: a cut fighter unfolds again
   | { k: 'restart' };
 
 const DEG = Math.PI / 180;
@@ -101,16 +108,17 @@ function newFighter(side: 0 | 1, maxHp: number): Fighter {
     stance: side === 0 ? 'high' : 'low', stanceAt: -999,
     state: 'guard', t: 0, atk: 'light', slash: 'high', whiffed: false, airSlash: false,
     hp: maxHp, wins: 0, alive: true, riposte: 0, buf: '', bufLeft: 0,
-    dashDir: 0, dashFrom: 0, dashLen: 0, stunT: 0, walk: 0,
+    dashDir: 0, dashFrom: 0, dashLen: 0, stunT: 0, walk: 0, unfold: 0,
   };
 }
 
 export function newMatch(cfg: MatchCfg = DEFAULT_CFG): State {
   const s: State = {
     cfg: { ...cfg },
-    frame: 0, round: 1, page: 0, phase: 'intro', phaseT: 0, clock: cfg.roundSecs * FPS, hitstop: 0,
+    frame: 0, round: 1, page: cfg.defence ? defencePage(0) : 0, phase: 'intro', phaseT: 0, clock: cfg.roundSecs * FPS, hitstop: 0,
     roundWinner: -1, how: '', why: '', final: false, turnTo: 0, rematch: [false, false],
     f: [newFighter(0, cfg.maxHp), newFighter(1, cfg.maxHp)],
+    zone: 0, way: -1, respawnT: 0, respawnWho: -1, turnDir: 1,
   };
   return s;
 }
@@ -194,6 +202,7 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
       }
       break;
     case 'turn':
+      if (s.cfg.defence) { defenceTurn(s, ev); break; }
       if (s.phaseT === RULES.turnSwap) {
         s.page = s.turnTo;
         if (!s.final) { s.round++; const p = s.page; resetForRound(s, ev); s.phase = 'turn'; s.phaseT = RULES.turnSwap; s.page = p; }
@@ -221,15 +230,15 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
         const frame = s.frame;
         Object.assign(s, newMatch(s.cfg));
         s.frame = frame;
-        ev.push({ k: 'restart' }, { k: 'round', round: 1, page: 0 });
+        ev.push({ k: 'restart' }, { k: 'round', round: 1, page: s.page });
       }
       break;
   }
   return ev;
 }
 
-/** Who won the match. In Endless the bot always ends the run. */
-export const matchWinner = (s: State) => (s.cfg.gauntlet ? 1 : s.f[0].wins > s.f[1].wins ? 0 : 1);
+/** Who won the match. In Endless the bot always ends the run; in Dojo Defence, whoever crossed the rival's cover. */
+export const matchWinner = (s: State) => (s.cfg.gauntlet ? 1 : s.cfg.defence ? Math.max(0, s.way) : s.f[0].wins > s.f[1].wins ? 0 : 1);
 
 function trackStances(s: State, inputs: readonly [number, number]) {
   for (const i of [0, 1]) {
@@ -257,6 +266,7 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
   for (const i of [0, 1]) {
     const f = s.f[i], o = s.f[1 - i], b = inputs[i];
     if (f.riposte > 0) f.riposte--;
+    if (f.unfold > 0) { f.unfold--; f.walk = 0; continue; } // still unfolding: no buttons, no moving
     for (const p of PRESSES) if (b & BTN[p]) act(s, i, p, b, ev);
     // The taunt: only from a standing guard. Locked in for its whole length, and it can't block (judge only blocks
     // from 'guard'), so any slash that reaches lands as a clean hit. Presses near its end come out after it.
@@ -329,7 +339,8 @@ function fight(s: State, inputs: readonly [number, number], ev: FightEvent[]) {
       finishKOs(s, ev);
     }
   }
-  if (s.phase === 'fight') {
+  if (s.phase === 'fight' && s.cfg.defence) defenceStep(s, ev);
+  else if (s.phase === 'fight') {
     const [a, b] = s.f;
     if (a.alive && b.alive && a.y < 0.35 && b.y < 0.35) {
       const dx = b.x - a.x;
@@ -380,7 +391,7 @@ type Outcome =
 export function judge(s: State, att: number, def: Snap): Outcome {
   const a = s.f[att], d = s.f[1 - att], M = MOVES[a.atk], y = slashLine(a).y;
   // The blade's tip must pass the front of the body...
-  if (!d.alive || Math.abs(d.x - a.x) - BODY.half > M.reach) return { k: 'whiff', att, over: false };
+  if (!d.alive || d.unfold > 0 || Math.abs(d.x - a.x) - BODY.half > M.reach) return { k: 'whiff', att, over: false };
   // ...and its cut line must cross the body: a low slash passes under a jumper's feet, an air slash can sail overhead.
   if (y < d.y + BODY.feet || y > d.y + BODY.top) return { k: 'whiff', att, over: true };
   // The counter cut: caught winding up a heavy, or just after a miss.
@@ -445,6 +456,7 @@ function finishKOs(s: State, ev: FightEvent[]) {
   if (!down.length) return;
   for (const i of down) s.f[i].alive = false;
   s.hitstop = 0;
+  if (s.cfg.defence) return defenceKO(s, down, ev);
   if (down.length === 2) return endRound(s, -1, 'Double K.O.', ev);
   const w = 1 - down[0];
   s.f[w].wins++;
@@ -466,6 +478,90 @@ function endRound(s: State, winner: number, how: string, ev: FightEvent[]) {
   ev.push({ k: 'roundEnd', winner, how });
 }
 
+// ---------- Dojo Defence ----------
+// A tug-of-war across five spreads. A K.O. doesn't end anything: the killer gets the way and may run on toward the
+// rival's cover, while the cut fighter unfolds again a little way ahead of them, in their path. Nobody can pass a
+// living rival (not even by jumping), so the only way through is to cut them down. Cross the rival's cover to win.
+
+/** Which way a seat runs: Kami (0) toward the back cover, Sumi (1) toward the front cover. */
+export const runDir = (seat: number) => (seat === 0 ? 1 : -1);
+
+function defenceKO(s: State, down: number[], ev: FightEvent[]) {
+  s.respawnT = DEFENCE.respawn;
+  if (down.length === 2) {
+    // Both cut: nobody has the way, and both unfold where the fight began on this spread.
+    s.way = -1; s.respawnWho = 2; s.how = 'Double K.O.'; s.roundWinner = -1; s.why = '';
+    ev.push({ k: 'roundEnd', winner: -1, how: 'Double K.O.' });
+    return;
+  }
+  const w = 1 - down[0];
+  s.f[w].wins++; // cuts landed
+  s.way = w; s.respawnWho = down[0];
+  const counter = ev.find((e) => e.k === 'ko' && e.p === w && e.counter);
+  s.why = counter && counter.k === 'ko' ? counter.why ?? '' : '';
+  s.how = counter ? 'Counter cut' : 'K.O.'; s.roundWinner = w;
+  ev.push({ k: 'roundEnd', winner: w, how: s.how });
+}
+
+/** A fresh fighter for seat i at x, keeping its cut count; it unfolds for a moment first. */
+function unfoldAt(s: State, i: 0 | 1, x: number, ev: FightEvent[]) {
+  const wins = s.f[i].wins;
+  s.f[i] = newFighter(i, s.cfg.maxHp);
+  Object.assign(s.f[i], { wins, x, unfold: RULES.unfoldFrames });
+  ev.push({ k: 'spawn', p: i });
+}
+
+/** Bring the cut fighter back, ahead of the one with the way. False when there's no room before the page's edge
+ *  yet: they come back when the page turns. */
+function respawn(s: State, ev: FightEvent[]): boolean {
+  const who = s.respawnWho;
+  if (who === 2) {
+    unfoldAt(s, 0, -RULES.startX, ev); unfoldAt(s, 1, RULES.startX, ev);
+  } else if (who === 0 || who === 1) {
+    const w = 1 - who, x = s.f[w].x + runDir(w) * DEFENCE.gap;
+    if (Math.abs(x) > RULES.edge - DEFENCE.entry) return false;
+    unfoldAt(s, who, x, ev);
+    s.f[w].hp = s.cfg.maxHp; // the winner's strip refills too: every exchange starts fresh
+  }
+  s.respawnWho = -1; s.respawnT = 0;
+  return true;
+}
+
+function defenceStep(s: State, ev: FightEvent[]) {
+  const [a, b] = s.f, gap = RULES.bodyGap, edge = RULES.edge;
+  // Nobody passes a living rival: Kami always stays left of Sumi, in the air too.
+  if (a.alive && b.alive && b.x - a.x < gap) { const push = (gap - (b.x - a.x)) / 2; a.x -= push; b.x += push; }
+  for (const f of s.f) f.x = Math.max(-edge, Math.min(edge, f.x));
+  if (a.alive && b.alive && b.x - a.x < gap) { if (b.x >= edge) a.x = b.x - gap; else b.x = a.x + gap; }
+  if (s.respawnT > 0 && --s.respawnT === 0) respawn(s, ev);
+  if (s.way < 0) return;
+  const r = s.f[s.way], dir = runDir(s.way);
+  if (!r.alive || r.x * dir < edge) return;
+  if (s.zone === DEFENCE.goal * dir) {
+    // Across the rival's cover: the match is won.
+    s.final = true; s.phase = 'over'; s.phaseT = 0; s.rematch = [false, false];
+    ev.push({ k: 'over', winner: s.way });
+    return;
+  }
+  s.turnDir = dir; s.turnTo = defencePage(s.zone + dir);
+  s.phase = 'turn'; s.phaseT = 0;
+  ev.push({ k: 'turn', to: s.turnTo, final: false, back: dir < 0 });
+}
+
+/** The page turns under the runner: they come in at the near edge of the next spread, and their rival unfolds ahead. */
+function defenceTurn(s: State, ev: FightEvent[]) {
+  if (s.phaseT === RULES.turnSwap) {
+    s.zone += s.turnDir; s.page = s.turnTo;
+    const w = s.way as 0 | 1, r = s.f[w];
+    const keep = { wins: r.wins, hp: r.hp, stance: r.stance };
+    s.f[w] = newFighter(w, s.cfg.maxHp);
+    Object.assign(s.f[w], keep, { x: -s.turnDir * (RULES.edge - DEFENCE.entry) });
+    if (!s.f[1 - w].alive) { s.respawnWho = 1 - w; respawn(s, ev); }
+    ev.push({ k: 'swap', page: s.page });
+  }
+  if (s.phaseT >= RULES.turnFrames) { s.phase = 'fight'; s.phaseT = 0; }
+}
+
 /** A short fingerprint of the fight, so two online players can check they're seeing the same thing. */
 export function hashState(s: State): number {
   let h = 2166136261 >>> 0;
@@ -475,10 +571,11 @@ export function hashState(s: State): number {
     h = Math.imul(h ^ (v >>> 16), 16777619) >>> 0;
   };
   mix(s.frame); mix(s.round); mix(s.page); mix(s.phaseT); mix(s.clock); mix(s.hitstop);
+  mix(s.zone); mix(s.way); mix(s.respawnT); mix(s.respawnWho);
   for (const f of s.f) {
     mix(f.x); mix(f.y); mix(f.vy); mix(f.hp); mix(f.wins); mix(f.t); mix(f.riposte); mix(f.stanceAt);
     mix(FSTATES.indexOf(f.state)); mix(f.airSlash ? 1 : 0);
-    mix(f.stance === 'high' ? 1 : 2); mix(f.alive ? 1 : 0);
+    mix(f.stance === 'high' ? 1 : 2); mix(f.alive ? 1 : 0); mix(f.unfold);
   }
   return h;
 }

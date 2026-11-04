@@ -39,6 +39,13 @@ html, body { margin: 0; height: 100%; background: #E9E4DA; color: var(--ink); fo
 .pips b { width: 12px; height: 12px; border: 2px solid var(--ink); background: #FFF; transform: rotate(45deg); }
 .pips b.on { background: var(--red); }
 .pips .tally { font: 700 13px/1 var(--body); background: #FFF; border: 2px solid var(--ink); padding: 2px 6px; }
+.clock.track { display: grid; gap: 4px; justify-items: center; padding: 6px 8px 5px; }
+.clock.track .cells { display: flex; gap: 4px; }
+.clock.track i { width: 16px; height: 16px; border: 2px solid var(--ink); background: #FFF; }
+.clock.track i.goal { background: #8E8B94; }
+.clock.track i.on { background: var(--red); }
+.clock.track small { font: 700 12px/1 var(--body); letter-spacing: .03em; white-space: nowrap; }
+.defence-rules { max-width: 46ch; }
 .clock { font: 800 34px/1 var(--display); background: #FFF; color: var(--ink); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 4px 10px 6px; min-width: 62px; text-align: center; font-variant-numeric: tabular-nums; }
 
 /* buttons */

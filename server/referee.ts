@@ -4,7 +4,7 @@
 // what happened, for the balance stats.
 
 import { DEFAULT_CFG, type MatchCfg } from '../src/sim/config';
-import { hashState, newMatch, step, type State } from '../src/sim/sim';
+import { hashState, matchWinner, newMatch, step, type State } from '../src/sim/sim';
 import { Tally, type MatchTally } from '../src/sim/tally';
 
 export type MatchMode = 'quick' | 'room' | 'tourney' | 'ranked';
@@ -46,7 +46,7 @@ const AHEAD = 600;
 const HASH_EVERY = 60;
 
 export const isStandard = (c: MatchCfg) =>
-  c.wins === DEFAULT_CFG.wins && c.maxHp === DEFAULT_CFG.maxHp && c.roundSecs === DEFAULT_CFG.roundSecs && !c.gauntlet;
+  c.wins === DEFAULT_CFG.wins && c.maxHp === DEFAULT_CFG.maxHp && c.roundSecs === DEFAULT_CFG.roundSecs && !c.gauntlet && !c.defence;
 
 export class Referee {
   readonly state: State;
@@ -140,7 +140,7 @@ export class Referee {
   }
 
   /** Who the server's own fight says won (null until the match is over). */
-  get winner(): number | null { return this.state.phase === 'over' ? (this.state.f[0].wins > this.state.f[1].wins ? 0 : 1) : null; }
+  get winner(): number | null { return this.state.phase === 'over' ? matchWinner(this.state) : null; }
 
   /** The room closed. An endless-rounds room never reaches 'over', so its rounds so far are kept. */
   close() {

@@ -39,6 +39,7 @@ export const RULES = {
   walk: 3.7 / FPS, // metres per frame
   jumpV: 5.6 / FPS,
   gravity: 15 / (FPS * FPS),
+  unfoldFrames: 30, // Dojo Defence: a cut fighter takes this long to unfold again (can't act, can't be hit)
   emoteFrames: 60, // the "come at me" taunt: locked in and unguarded this long
   landLag: 10, // stuck this long on landing after a slash in the air
   dashFrames: 12,
@@ -71,7 +72,19 @@ export const PAGES = [
   { key: 'lined', name: 'Ruled Courtyard' },
   { key: 'legal', name: 'Legal Pad Grove' },
   { key: 'cover', name: 'The back cover', night: true },
+  { key: 'front', name: 'The front cover' }, // Dojo Defence only: Sumi's goal
 ] as const;
 export const FINAL_PAGE = 3;
+
+/** Dojo Defence: the five spreads you push across, left to right. Sumi runs for the front cover (zone -2),
+ *  Kami for the back cover (zone +2); the fight starts on the Ruled Courtyard (zone 0). */
+export const DEFENCE = {
+  zones: [4, 0, 1, 2, 3], // page index for zones -2..2
+  goal: 2, // Kami's goal zone (Sumi's is -goal)
+  respawn: 90, // frames from a K.O. to the cut fighter unfolding again (1.5 s)
+  gap: 6, // metres ahead of the winner where they unfold
+  entry: 0.5, // how far in from the page's edge the runner stands on a fresh spread
+};
+export const defencePage = (zone: number) => DEFENCE.zones[zone + DEFENCE.goal];
 /** Round pages cycle graph, ruled, legal pad (rounds 4 and 5 reuse the first two). */
 export const pageForRound = (round: number) => (round - 1) % 3;

@@ -3,11 +3,12 @@
 import type { RankInfo } from './net/protocol';
 import { botLevel } from './sim/endless';
 import { DEFAULT_CFG, type MatchCfg } from './sim/config';
-import { PAGES, RULES } from './sim/rules';
+import { DEFENCE, PAGES, RULES } from './sim/rules';
 import { matchWinner, type State } from './sim/sim';
 import { LOOKS } from './render/common';
 
 const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
+const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 /** Endless: the bot's level (1, 2, 3…) after `cut` bots. */
 export { botLevel };
 
@@ -51,6 +52,7 @@ export class Hud {
   restartKey: string | null = 'R';
   private again(what: string) { return this.restartKey ? `Press ${this.restartKey} or Rematch to ${what}.` : `Rematch to ${what}.`; }
   private cfg: MatchCfg = DEFAULT_CFG;
+  private lastTrack = '';
   private lastTally = '';
 
   /** Health as a share of the full strip, in %. */
@@ -92,9 +94,10 @@ export class Hud {
       (this.bars[i].querySelector('.strip i') as HTMLElement).style.width = this.pct(f.hp) + '%';
       this.bars[i].querySelectorAll('.pips b').forEach((b, k) => b.classList.toggle('on', k < f.wins));
     });
-    const g = s.cfg.gauntlet, cut = s.f[0].wins;
+    const g = s.cfg.gauntlet, cut = s.f[0].wins, def = !!s.cfg.defence;
     if (s.cfg.wins === 0) {
-      const t = this.tutorial ? ['', ''] : g ? [`Bots cut: ${cut}`, `Level ${botLevel(cut)}`] : [`Rounds: ${s.f[0].wins}`, `Rounds: ${s.f[1].wins}`];
+      const t = this.tutorial ? ['', ''] : g ? [`Bots cut: ${cut}`, `Level ${botLevel(cut)}`]
+        : def ? [`Cuts: ${s.f[0].wins}`, `Cuts: ${s.f[1].wins}`] : [`Rounds: ${s.f[0].wins}`, `Rounds: ${s.f[1].wins}`];
       const key = t.join('|') + (g ? `|Bot ${cut + 1}` : '');
       if (key !== this.lastTally) {
         this.lastTally = key;
@@ -102,15 +105,33 @@ export class Hud {
         if (g) this.bars[1].querySelector('.nm')!.textContent = `Bot ${cut + 1}`;
       }
     }
-    const secs = s.cfg.roundSecs > 0 ? Math.ceil(s.clock / 60) : -2;
-    if (secs !== this.lastClock) { this.clock.textContent = secs === -2 ? '∞' : String(secs); this.lastClock = secs; }
-
     let html = '';
     const name = (i: number) => (this.names?.[i] ?? LOOKS[i].name) + (this.you === i ? ' (you)' : '');
+    const plain = (i: number) => this.names?.[i] ?? LOOKS[i].name;
+    if (def) {
+      // Dojo Defence: the five spreads instead of a clock, the one being fought on lit, and who has the way.
+      const key = `d${s.zone}|${s.way}|${this.names?.join()}`;
+      if (key !== this.lastTrack) {
+        this.lastTrack = key; this.lastClock = -1;
+        const cells = [-2, -1, 0, 1, 2].map((z) => `<i class="${z === s.zone ? 'on' : ''}${Math.abs(z) === DEFENCE.goal ? ' goal' : ''}"></i>`).join('');
+        const way = s.way === 0 ? `${esc(plain(0))} →` : s.way === 1 ? `← ${esc(plain(1))}` : 'Cut to take the way';
+        this.clock.classList.add('track');
+        this.clock.innerHTML = `<span class="cells">${cells}</span><small>${way}</small>`;
+      }
+    } else {
+      if (this.lastTrack) { this.lastTrack = ''; this.clock.classList.remove('track'); this.lastClock = -1; }
+      const secs = s.cfg.roundSecs > 0 ? Math.ceil(s.clock / 60) : -2;
+      if (secs !== this.lastClock) { this.clock.textContent = secs === -2 ? '∞' : String(secs); this.lastClock = secs; }
+    }
+
     if (s.phase === 'intro') {
       html = s.phaseT >= RULES.introCut ? 'Cut!'
         : g ? `Bot ${cut + 1}<small>Level ${botLevel(cut)} · ${PAGES[s.page].name}</small>`
+        : def ? `Dojo Defence<small>Cut them down, then run for their cover. ${esc(plain(0))} runs right, ${esc(plain(1))} runs left.</small>`
         : `Round ${s.round}<small>${PAGES[s.page].name}</small>`;
+    } else if (def && s.phase === 'fight' && s.respawnT > 30 && s.roundWinner >= 0) {
+      const w = s.roundWinner;
+      html = `${name(w)} has the way<small>${howText(s, plain(1 - w)).replace(/\.$/, '')}. Run ${w === 0 ? 'right' : 'left'} for ${esc(plain(1 - w))}'s cover!</small>`;
     } else if (s.phase === 'ko' && s.phaseT > 30 && this.tutorial && s.roundWinner >= 0) {
       const why = howText(s, s.roundWinner === 0 ? LOOKS[1].name : 'You').replace(/^Counter cut! /, '').replace(/: instant K\.O\.$/, '.');
       html = `Counter cut<small>${why} Instant K.O.</small>`;
@@ -125,7 +146,9 @@ export class Hud {
       const w = matchWinner(s);
       const waiting = mySeat !== null && s.rematch[mySeat];
       const hint = this.replay ? 'End of the replay. Esc for your replays.' : this.ranks ? `${this.rankNote || 'Counting the result…'} Esc for the menu.` : this.tourney ? 'Back to the bracket in a moment…' : !this.online ? this.again('start a new match') : waiting ? 'Waiting for your rival to say yes…' : this.again('fight again');
-      html = `${name(w)} wins<small>${s.f[w].wins}-${s.f[1 - w].wins}. ${hint}</small>`;
+      html = def
+        ? `${name(w)} wins<small>Across ${esc(plain(1 - w))}'s cover with ${s.f[w].wins} cut${s.f[w].wins === 1 ? '' : 's'} to ${s.f[1 - w].wins}. ${hint}</small>`
+        : `${name(w)} wins<small>${s.f[w].wins}-${s.f[1 - w].wins}. ${hint}</small>`;
     }
     if (html !== this.lastBanner) {
       this.lastBanner = html;

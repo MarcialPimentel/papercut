@@ -7,6 +7,9 @@ import { C, coarse, mulberry32 } from './common';
 import { PAGE_SEGS, PD, PW, PZ, pageY } from './page';
 export { PD, PW, PZ };
 
+/** Dojo Defence's front cover is the same marble board as the back cover, in daylight. */
+const texKey = (key: string) => (key === 'front' ? 'cover' : key);
+
 export class Notebook {
   readonly scene = new THREE.Scene();
   private hemi = new THREE.HemisphereLight(0xffffff, 0xe6e0d6, 1.5);
@@ -116,7 +119,7 @@ export class Notebook {
     if (!this.lambertCache.has(k)) this.lambertCache.set(k, new THREE.MeshLambertMaterial({ color, map, flatShading: flat }));
     return this.lambertCache.get(k)!;
   }
-  private paperMat(key: string) { return this.lambert('#FFFFFF', this.texRepeat(key, PW / 2.6, PD / 2.6)); }
+  private paperMat(key: string) { return this.lambert('#FFFFFF', this.texRepeat(texKey(key), PW / 2.6, PD / 2.6)); }
 
   private pageGeo(side: number) {
     const g = new THREE.PlaneGeometry(PW, PD, PAGE_SEGS, 1); g.rotateX(-Math.PI / 2); g.translate((side * PW) / 2, 0, PZ);
@@ -142,7 +145,7 @@ export class Notebook {
     for (const s of [-1, 1]) {
       const g = new THREE.PlaneGeometry(PW * 0.94, 4.6, 1, 1); g.translate(s * PW * 0.47, 2.3, 0);
       const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * PW * 0.94) / 2.6, (uv.getY(i) * 4.6) / 2.6);
-      const m = new THREE.Mesh(g, this.lambert('#FFFFFF', this.tex[key])); m.receiveShadow = true;
+      const m = new THREE.Mesh(g, this.lambert('#FFFFFF', this.tex[texKey(key)])); m.receiveShadow = true;
       const holder = new THREE.Group(); holder.position.set(0, 0, PZ - PD / 2 + 0.25); holder.rotation.y = -s * 0.2; holder.add(m);
       const hairline = new THREE.Mesh(new THREE.PlaneGeometry(PW * 0.94 + 0.06, 4.66), this.lambert(C.ink)); hairline.position.set(s * PW * 0.47, 2.3, -0.01); holder.add(hairline);
       par.add(holder); out.push(holder);
@@ -205,6 +208,11 @@ export class Notebook {
       this.addFlat(mb(1), this.ngon(0.7), new THREE.MeshBasicMaterial({ color: C.ink }), 4.6, 3.6, 0.05, false);
       const r = mulberry32(21);
       for (let i = 0; i < 24; i++) { let x = -8 + r() * 16; if (Math.abs(x) < 2.2) x += x < 0 ? -2.2 : 2.2; this.bamboo(g, x, PZ - 0.9 - r() * 1.7, 3.6 + r() * 2.4, 0.08 + r() * 0.05, r); }
+    } else if (P.key === 'front') {
+      // Dojo Defence: the front cover by day, the back cover's scenery mirrored, with a paper sun.
+      this.addFlat(mb(1), this.ngon(0.85), new THREE.MeshBasicMaterial({ color: C.legal }), 4.0, 3.5, 0.05);
+      this.pyramid(g, 'graph', 4.4, PZ - 1.9, 1.8, 2.6, 0.3); this.pyramid(g, 'graph', -3.8, PZ - 2.1, 2.0, 2.2, 0.6);
+      this.torii(g, -5.2, PZ - 0.6, 1.1, this.lambert(C.ink, null, true));
     } else {
       this.addFlat(mb(-1), this.ngon(0.8), new THREE.MeshBasicMaterial({ color: '#F3F1EA' }), -4.0, 3.5, 0.05);
       this.pyramid(g, 'lined', -4.4, PZ - 1.9, 1.8, 2.6, 0.3); this.pyramid(g, 'lined', 3.8, PZ - 2.1, 2.0, 2.2, 0.6);
@@ -215,10 +223,10 @@ export class Notebook {
     return g;
   }
 
-  private setSpread(p: number, which: 'both' | 'right' = 'both') {
+  private setSpread(p: number, which: 'both' | 'left' | 'right' = 'both') {
     const mat = this.paperMat(PAGES[p].key);
-    if (which === 'both') this.pageL.material = mat;
-    this.pageR.material = mat;
+    if (which !== 'right') this.pageL.material = mat;
+    if (which !== 'left') this.pageR.material = mat;
   }
 
   /** Show a spread with its pop-ups and lighting. */
@@ -263,24 +271,25 @@ export class Notebook {
 
   /**
    * The page turn, driven by seconds since it began: 0-0.35 fold flat, 0.35-1.15 the leaf flips,
-   * then the next spread pops up. `from`/`to` are page indexes.
+   * then the next spread pops up. `from`/`to` are page indexes. `back`: the left leaf flips over to the right
+   * (Dojo Defence, running toward the front cover).
    */
-  turn(t: number, from: number, to: number) {
+  turn(t: number, from: number, to: number, back = false) {
     const easeIn = (k: number) => k * k, easeOut = (k: number) => 1 - (1 - k) * (1 - k);
     const easeIO = (k: number) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
     const fold = t < 0.35 ? 1 - easeIn(t / 0.35) : t < 1.15 ? 0 : easeOut(Math.min(1, (t - 1.15) / 0.45));
     this.setFold(Math.max(0.001, fold));
     if (t >= 0.35 && t < 1.15 && !this.leaf) {
-      const geo = new THREE.PlaneGeometry(PW, PD); geo.rotateX(-Math.PI / 2); geo.translate(PW / 2, 0.02, PZ);
+      const geo = new THREE.PlaneGeometry(PW, PD); geo.rotateX(-Math.PI / 2); geo.translate((back ? -PW : PW) / 2, 0.02, PZ);
       this.leaf = new THREE.Group();
       const top = new THREE.Mesh(geo, this.paperMat(PAGES[from].key));
       const under = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: this.paperMat(PAGES[to].key).map, side: THREE.BackSide }));
       top.castShadow = true; this.leaf.add(top, under); this.scene.add(this.leaf);
-      this.setSpread(to, 'right');
+      this.setSpread(to, back ? 'left' : 'right');
     }
     if (this.leaf) {
       const k = Math.min(1, Math.max(0, (t - 0.35) / 0.8));
-      this.leaf.rotation.z = Math.PI * easeIO(k); this.leaf.position.y = Math.sin(k * Math.PI) * 0.15;
+      this.leaf.rotation.z = (back ? -Math.PI : Math.PI) * easeIO(k); this.leaf.position.y = Math.sin(k * Math.PI) * 0.15;
       if (t >= 1.15) this.endTurn();
     }
   }

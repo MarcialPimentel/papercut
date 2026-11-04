@@ -42,6 +42,8 @@ export class Dummy {
     if (s.phase !== 'fight') { this.tell = 0; return b; }
     const me = s.f[this.seat], you = s.f[1 - this.seat];
     if (!me.alive) return b;
+    // Dojo Defence: with you cut down and the way ours, run for your cover.
+    if (s.cfg.defence && !you.alive) return s.way === this.seat ? b | (this.seat === 1 ? BTN.left : BTN.right) : b;
     if (s.hitstop > 0) return b;
     this.timer--;
     if (this.timer < this.tellFrames && this.tell === 0) this.tell = this.tellFrames;

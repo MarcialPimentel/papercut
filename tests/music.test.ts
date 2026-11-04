@@ -8,8 +8,10 @@ const keys = Object.keys(TRACKS) as TrackKey[];
 describe('music tracks', () => {
   it('has a different track for every page of the notebook', () => {
     expect(PAGE_TRACKS.length).toBe(PAGES.length);
-    expect(new Set(PAGE_TRACKS).size).toBe(PAGES.length);
+    // Every page has its own track, except Dojo Defence's front cover, which shares the back cover's.
+    expect(new Set(PAGE_TRACKS).size).toBe(PAGES.length - 1);
     expect(PAGE_TRACKS[FINAL_PAGE]).toBe('cover');
+    expect(PAGE_TRACKS[PAGES.findIndex((p) => p.key === 'front')]).toBe('cover');
   });
 
   it('gives each track its own sound (scale, key or tempo differ)', () => {
