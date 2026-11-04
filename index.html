@@ -62,14 +62,12 @@
         <p class="tag">Honor. Discipline. Paper.</p>
 
         <div data-screen="main" class="stack">
-          <button class="mbtn red" id="bFriend" type="button">Fight a friend<small>Pick the rules, get an invite link to send</small></button>
-          <button class="mbtn" id="bTourney" type="button">Tournament<small>3 to 8 friends, knockout bracket, one winner</small></button>
-          <button class="mbtn" id="bRanked" type="button">Ranked<small id="rankLine">Rated fights, paper-grade divisions</small></button>
-          <button class="mbtn" id="bQuick" type="button">Find a fight<small>Pair with whoever is waiting (unranked)</small></button>
+          <button class="mbtn red" id="bRanked" type="button">Ranked<small id="rankLine">Rated fights, paper-grade divisions</small></button>
+          <button class="mbtn" id="bFriendMenu" type="button">Fight a friend<small>A room with an invite link, or a tournament</small></button>
           <button class="mbtn" id="bEndless" type="button">Endless<small id="bestRun">How many bots can you cut?</small></button>
           <button class="mbtn" id="bDefence" type="button">Dojo Defence<small>Cut them down, then run for their cover</small></button>
-          <button class="mbtn" id="bPractice" type="button">Practice vs Sumi<small>A dummy that blocks, swings and feints</small></button>
-          <button class="mbtn" id="bTutorial" type="button">Tutorial<small>Learn every move against Sumi, step by step (3 minutes)</small></button>
+          <button class="mbtn" id="bPractice" type="button">Training<small>Sumi blocks, swings and feints; T tunes the numbers</small></button>
+          <button class="mbtn" id="bTutorial" type="button">Tutorial<small>Learn every move, step by step (3 minutes)</small></button>
           <div class="row2">
             <button class="hbtn" id="bFighter" type="button">Your fighter</button>
             <button class="hbtn" id="bHowTo" type="button">How to play</button>
@@ -79,11 +77,19 @@
             <button class="hbtn" id="bControls" type="button">Controls</button>
             <button class="hbtn" id="bQuit" type="button" hidden>Quit</button>
           </div>
+        </div>
+
+        <div data-screen="friend" class="stack" hidden>
+          <p class="big">Fight a friend</p>
+          <button class="mbtn red" id="bFriend" type="button">Duel<small>Pick the rules, get an invite link to send</small></button>
+          <button class="mbtn" id="bTourney" type="button">Tournament<small>3 to 8 friends, knockout bracket, one winner</small></button>
           <form id="joinForm" class="join">
             <label for="joinCode">Have a room code?</label>
             <input id="joinCode" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD">
             <button class="hbtn" type="submit">Join</button>
           </form>
+          <button class="hbtn" id="bQuick" type="button">Or fight whoever is waiting (unranked)</button>
+          <button class="mbtn" id="bFriendBack" type="button">Back</button>
         </div>
 
        <div data-screen="fighter" class="stack fighter" hidden>
@@ -146,7 +152,7 @@
 
         <div data-screen="search" class="stack" hidden>
           <p class="big" id="searchTitle">Looking for a rival…</p>
-          <p class="muted" id="searchNote">You'll be paired with the next person who presses "Find a fight". Send a friend to papercut.marz.gg to make it quicker.</p>
+          <p class="muted" id="searchNote">You'll be paired with the next person who presses "Fight whoever is waiting" (under Fight a friend). Send a friend to papercut.marz.gg to make it quicker.</p>
           <button class="hbtn" data-cancel type="button">Cancel</button>
         </div>
 
@@ -219,7 +225,7 @@
         <div data-screen="tutdone" class="stack" hidden>
           <p class="big">You're ready</p>
           <p class="muted">Read your rival, punish greed, and never swing at the air. One counter cut ends any round.</p>
-          <button class="mbtn red" id="bTutPractice" type="button">Practice vs Sumi<small>Try it all against the dummy</small></button>
+          <button class="mbtn red" id="bTutPractice" type="button">Training<small>Try it all against the dummy</small></button>
           <button class="mbtn" id="bTutEndless" type="button">Endless<small>How many bots can you cut?</small></button>
           <button class="hbtn" id="bTutMenu" type="button">Title screen</button>
         </div>

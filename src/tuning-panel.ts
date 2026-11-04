@@ -21,7 +21,7 @@ export class TuningPanel {
     el.hidden = true;
     el.setAttribute('aria-label', 'Tuning panel');
     let html = `<header><b>Tuning</b><span class="tcount"></span><button class="tx" data-t="close" aria-label="Close">T</button></header>
-      <p class="tnote">Practice only: online fights always use the game's numbers. Changes apply at once and are kept in this browser. Frames are 1/60 s.</p>
+      <p class="tnote">Training only: online fights always use the game's numbers. Changes apply at once and are kept in this browser. Frames are 1/60 s.</p>
       <div class="tbody">`;
     let group = '';
     for (const k of KNOBS) {
