@@ -15,6 +15,7 @@ Papercut is a simple 3D sword-duel game in a papercraft style, where hits cut an
 
 - Outline → branch → build → test → PR with plain-language playtest steps → Marz says "merge #N" → merge only that PR.
 - Never push to `main` directly.
+- Every shipped version of the fighter model is listed in `docs/model-versions.md`, with its files saved in `art/fighters/versions/`. A PR that changes the model adds the next version there.
 - Any manual step for Marz (e.g. exporting from Blender, GitHub settings) gets click-by-click instructions in `docs/`.
 
 ## Commands
