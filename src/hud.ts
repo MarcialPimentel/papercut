@@ -94,10 +94,10 @@ export class Hud {
       (this.bars[i].querySelector('.strip i') as HTMLElement).style.width = this.pct(f.hp) + '%';
       this.bars[i].querySelectorAll('.pips b').forEach((b, k) => b.classList.toggle('on', k < f.wins));
     });
-    const g = s.cfg.gauntlet, cut = s.f[0].wins, def = !!s.cfg.defence;
+    const g = s.cfg.gauntlet, cut = s.f[0].wins, def = !!s.cfg.defence, cuts = def || !!s.cfg.training;
     if (s.cfg.wins === 0) {
       const t = this.tutorial ? ['', ''] : g ? [`Bots cut: ${cut}`, `Level ${botLevel(cut)}`]
-        : def ? [`Cuts: ${s.f[0].wins}`, `Cuts: ${s.f[1].wins}`] : [`Rounds: ${s.f[0].wins}`, `Rounds: ${s.f[1].wins}`];
+        : cuts ? [`Cuts: ${s.f[0].wins}`, `Cuts: ${s.f[1].wins}`] : [`Rounds: ${s.f[0].wins}`, `Rounds: ${s.f[1].wins}`];
       const key = t.join('|') + (g ? `|Bot ${cut + 1}` : '');
       if (key !== this.lastTally) {
         this.lastTally = key;
@@ -128,6 +128,7 @@ export class Hud {
       html = s.phaseT >= RULES.introCut ? 'Cut!'
         : g ? `Bot ${cut + 1}<small>Level ${botLevel(cut)} · ${PAGES[s.page].name}</small>`
         : def ? `Dojo Defense<small>Cut them down, then run for their cover. ${esc(plain(0))} runs right, ${esc(plain(1))} runs left.</small>`
+        : s.cfg.training ? `Training<small>${PAGES[s.page].name}</small>`
         : `Round ${s.round}<small>${PAGES[s.page].name}</small>`;
     } else if (def && s.phase === 'fight' && s.respawnT > 30 && s.roundWinner >= 0) {
       const w = s.roundWinner;
