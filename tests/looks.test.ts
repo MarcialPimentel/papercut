@@ -104,6 +104,10 @@ describe('rule checks', () => {
       expect(torso.some((s) => !s.paper && s.obj === 'robe_L')).toBe(true);
     }
     const torso = dressPiece(puppet.torso, lookOf({ ...DEFAULT_PICK, outfit: 'stripes' }, 'x'));
+    // The outfit covers the whole body: the coat (robe_L) gets stripes too, not only the sleeves.
+    const coatPrints = (o: (typeof OUTFITS)[number]['id']) => dressPiece(puppet.torso, lookOf({ ...DEFAULT_PICK, outfit: o }, 'x')).filter((s) => s.obj === 'robe_L' && !s.paper).length;
+    expect(coatPrints('stripes')).toBeGreaterThan(coatPrints('plain'));
+    expect(coatPrints('waves')).toBeGreaterThan(coatPrints('plain'));
     const robe = puppet.torso.shapes.find((s) => s.paper && s.obj === 'robe_L')!;
     const xs = robe.pts.map((p) => p[0]), ys = robe.pts.map((p) => p[1]);
     for (const s of torso.filter((s) => s.obj === 'robe_L' && !s.paper)) for (const [x, y] of s.pts) {
