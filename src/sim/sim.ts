@@ -4,7 +4,7 @@
 // Only + - * / and comparisons here (no Math.random, no trig), so every browser computes the same.
 
 import { DEFAULT_CFG, ENDLESS, type MatchCfg } from './config';
-import { BODY, DEFENCE, FINAL_PAGE, FPS, MOVES, RULES, defencePage, pageForRound, type Move } from './rules';
+import { AIR_CUT, BODY, DEFENCE, FINAL_PAGE, FPS, MOVES, RULES, defencePage, pageForRound, type Move } from './rules';
 
 /** One player's controls for one frame, packed into a number. */
 export const BTN = {
@@ -160,8 +160,16 @@ function nextBot(s: State, ev: FightEvent[]) {
 
 export const cloneState = (s: State): State => structuredClone(s);
 
-/** Where and at what angle a slash cuts, in the fight's side-on plane. */
-export function slashLine(a: Fighter) {
+/** Is this slash the downward air cut (thrown in the air, and still in the air)? */
+export const airCut = (a: Fighter) => a.airSlash && a.y > 0;
+
+/** Where and at what angle a slash cuts, in the fight's side-on plane, `at` metres ahead of the attacker's centre.
+ *  A slash on the ground cuts level; the air cut slopes down to its tip (AIR_CUT). */
+export function slashLine(a: Fighter, at = MOVES[a.atk].reach - 0.3) {
+  if (airCut(a)) {
+    const x = Math.max(AIR_CUT.hiltX, Math.min(MOVES[a.atk].reach, at));
+    return { ang: a.facing * -AIR_CUT.deg * DEG, y: a.y + AIR_CUT.hiltY - (x - AIR_CUT.hiltX) * AIR_CUT.slope };
+  }
   const base = a.slash === 'high' ? -22 * DEG : 14 * DEG;
   // Chest and knee height, where the drawn strike poses hold the blade.
   return { ang: a.facing * base, y: (a.slash === 'high' ? 1.45 : 0.62) + a.y };
@@ -389,11 +397,13 @@ type Outcome =
 
 /** Decide what a slash that just came out does, against the defender as they stood this frame. */
 export function judge(s: State, att: number, def: Snap): Outcome {
-  const a = s.f[att], d = s.f[1 - att], M = MOVES[a.atk], y = slashLine(a).y;
+  const a = s.f[att], d = s.f[1 - att], M = MOVES[a.atk], dx = Math.abs(d.x - a.x);
   // The blade's tip must pass the front of the body...
-  if (!d.alive || d.unfold > 0 || Math.abs(d.x - a.x) - BODY.half > M.reach) return { k: 'whiff', att, over: false };
-  // ...and its cut line must cross the body: a low slash passes under a jumper's feet, an air slash can sail overhead.
-  if (y < d.y + BODY.feet || y > d.y + BODY.top) return { k: 'whiff', att, over: true };
+  if (!d.alive || d.unfold > 0 || dx - BODY.half > M.reach) return { k: 'whiff', att, over: false };
+  // ...and the blade inside the body must cross it between the feet and the head: a low slash passes under a
+  // jumper's feet. (A level cut is one height; the air cut is highest at the body's front, lowest at its back.)
+  const hi = slashLine(a, dx - BODY.half).y, lo = slashLine(a, dx + BODY.half).y;
+  if (hi < d.y + BODY.feet || lo > d.y + BODY.top) return { k: 'whiff', att, over: true };
   // The counter cut: caught winding up a heavy, or just after a miss.
   if ((def.state === 'wind' && def.atk === 'heavy') || (def.state === 'recover' && def.whiffed && def.t < RULES.missOpen)) return { k: 'counter', att };
   if (def.state === 'guard' && d.y <= 0.3 && d.stance === a.slash) {
@@ -405,7 +415,9 @@ export function judge(s: State, att: number, def: Snap): Outcome {
 
 function apply(s: State, o: Outcome, ev: FightEvent[]) {
   const a = s.f[o.att], d = s.f[1 - o.att], M: Move = MOVES[a.atk], L = slashLine(a), heavy = a.atk !== 'light';
-  const P = { x: d.x - a.facing * 0.05, y: L.y };
+  // Where the cut crosses the rival's middle (kept on the body, for a sloped air cut that clips a head or shin).
+  const yd = slashLine(a, Math.abs(d.x - a.x)).y;
+  const P = { x: d.x - a.facing * 0.05, y: Math.max(d.y + BODY.feet, Math.min(d.y + BODY.top, yd)) };
   switch (o.k) {
     case 'whiff':
       a.whiffed = true;

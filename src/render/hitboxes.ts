@@ -4,8 +4,8 @@
 // Drawing only: it reads the fight and never changes it.
 
 import * as THREE from 'three';
-import { BODY, MOVES, RULES } from '../sim/rules';
-import { slashLine, type Fighter, type State } from '../sim/sim';
+import { AIR_CUT, BODY, MOVES, RULES } from '../sim/rules';
+import { airCut, slashLine, type Fighter, type State } from '../sim/sim';
 
 const Z = 0; // in the fighters' plane (drawn on top of everything)
 const MAX = 64; // line segments
@@ -53,12 +53,14 @@ export class Hitboxes {
     const body = open ? RED : f.state === 'stagger' || f.state === 'stun' || f.state === 'taunt' ? GOLD : GREEN;
     this.box(f.x - BODY.half, f.y + BODY.feet, f.x + BODY.half, f.y + BODY.top, body);
     if (f.state !== 'wind' && f.state !== 'active') return;
-    const M = MOVES[f.atk], y = slashLine(f).y;
-    // While winding up: where the slash will reach once the step-in is done. While cutting: its reach now.
-    const left = f.state === 'wind' ? M.lunge * Math.min(1, (M.wind - f.t) / Math.min(4, M.wind)) : 0;
-    const tip = f.x + f.facing * (M.reach + left);
+    const M = MOVES[f.atk];
+    // While winding up: where the slash will reach once the step-in is done (none in the air). While cutting: its reach now.
+    const left = f.state === 'wind' && f.y <= 0 ? M.lunge * Math.min(1, (M.wind - f.t) / Math.min(4, M.wind)) : 0;
+    const tip = f.x + f.facing * (M.reach + left), y = slashLine(f, M.reach).y;
     const c = f.state === 'active' ? BLADE : FAINT;
-    this.seg(f.x, y, tip, y, c);
+    // A level cut from the centre; the air cut slopes down from the hilt to the tip.
+    if (airCut(f)) this.seg(f.x + f.facing * (AIR_CUT.hiltX + left), slashLine(f, 0).y, tip, y, c);
+    else this.seg(f.x, y, tip, y, c);
     this.seg(tip, y - 0.12, tip, y + 0.12, c);
   }
 }

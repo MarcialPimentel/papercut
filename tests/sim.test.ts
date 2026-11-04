@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BTN, cloneState, hashState, newMatch, step, type FightEvent, type State } from '../src/sim/sim';
-import { MOVES, RULES, rangeOf } from '../src/sim/rules';
+import { BODY, MOVES, RULES, rangeOf } from '../src/sim/rules';
 import { Dummy } from '../src/sim/dummy';
 import { DEFAULT_CFG, ENDLESS, ENDLESS_CFG, cleanCfg } from '../src/sim/config';
 
@@ -132,13 +132,36 @@ describe('hit areas', () => {
     });
   }
 
-  it('a slash in the air at the top of a jump sails over a grounded head', () => {
+  for (const atk of ['light', 'heavy'] as const) {
+    it(`an air ${atk} cuts down at a grounded rival in reach from anywhere in the jump`, () => {
+      // Press at every frame of the jump (it lasts about 45); the rival guards low, so it can't block a high cut.
+      // In the air a heavy drifts with the jump instead of stepping in, so its reach is the blade's alone.
+      for (const gap of [1.3, 1.8, MOVES[atk].reach + BODY.half - 0.05]) {
+        for (let at = 1; at < 44; at += 3) {
+          const s = fightAt(gap);
+          let airborne = false;
+          const ev = run(s, at + MOVES[atk].wind + 2, (n) => {
+            if (n === at + MOVES[atk].wind + 1) airborne = s.f[0].y > 0;
+            return [(n === 0 ? jump : 0) | (n === at ? BTN[atk] : 0), low];
+          });
+          if (!airborne) continue; // came out after landing: a ground slash
+          expect(kinds(ev).includes('hit') || kinds(ev).includes('ko'), `${atk} pressed at ${at}, gap ${gap.toFixed(2)}`).toBe(true);
+        }
+      }
+    });
+  }
+
+  it('the air cut is still blocked by a high guard', () => {
     const s = fightAt(1.6);
-    // Slash on the way up so it comes out near the top of the jump.
+    const ev = run(s, 20 + MOVES.light.wind, (n) => [(n === 0 ? jump : 0) | (n === 16 ? light : 0), 0]);
+    expect(kinds(ev)).toContain('block');
+  });
+
+  it('the air cut still misses a rival past its reach', () => {
+    const s = fightAt(rangeOf(MOVES.light) + 0.2);
     const ev = run(s, 20 + MOVES.light.wind, (n) => [(n === 0 ? jump : 0) | (n === 16 ? light : 0), 0]);
     const w = ev.find((e) => e.k === 'whiff');
-    expect(w && w.k === 'whiff' && w.over).toBe(true);
-    expect(s.f[1].hp).toBe(DEFAULT_CFG.maxHp);
+    expect(w && w.k === 'whiff' && !w.over).toBe(true);
   });
 
   it('a low slash still cuts a jumper whose feet are below the blade', () => {

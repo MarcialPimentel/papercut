@@ -7,8 +7,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { RigidBody } from '@dimforge/rapier3d-compat';
-import { MOVES } from '../sim/rules';
-import type { Fighter } from '../sim/sim';
+import { AIR_CUT, MOVES } from '../sim/rules';
+import { airCut, type Fighter } from '../sim/sim';
 import { C, D, clamp, easeIn, lerp, type Look } from './common';
 import { ccw, clipConvex, clipHalf, offset, slashLens, type Line, type Pt } from './paper2d';
 import { dressPiece } from './looks';
@@ -167,6 +167,10 @@ const POSE = {
     low: { spreadF: 0.28, spreadB: 0.2, lean: -0.14, head: -0.04, hilt: [0.42, 1.05], sword: 12 * D },
   },
 } as Record<'guard' | 'wind' | 'strike' | 'follow', Record<'high' | 'low', Pose>>;
+// The air cut: chopping down at the rival from above. The blade lies along the fight's sloped cut line (AIR_CUT:
+// hilt 0.74 ahead and 1.3 up, 28 degrees down to the tip at the reach). Check with the hitbox view (H).
+const AIR_STRIKE: Pose = { spreadF: 0.22, spreadB: 0.3, lean: -0.22, head: 0.04, hilt: [AIR_CUT.hiltX, AIR_CUT.hiltY], sword: -AIR_CUT.deg * D };
+const AIR_FOLLOW: Pose = { spreadF: 0.2, spreadB: 0.26, lean: -0.18, head: 0.06, hilt: [0.55, 0.95], sword: -50 * D };
 // How far toward the full wind-up each move's key pose goes (lights are smaller motions). Every move cuts with
 // the same strike pose, so its reach matches what's drawn.
 const MOTION = { light: { windK: 0.45 }, heavy: { windK: 1 }, riposte: { windK: 0.6 } };
@@ -199,8 +203,10 @@ function keyPose(f: Fighter, walkT: number): [Pose, string] {
   const wind = () => lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK);
   switch (f.state) {
     case 'wind': return [wind(), 'w' + f.slash + f.atk];
-    case 'active': return [POSE.strike[f.slash], 'a' + f.slash];
-    case 'recover': return f.t < mv.rec * 0.45 ? [POSE.follow[f.slash], 'r' + f.slash] : [g, 'g' + f.stance];
+    case 'active': return airCut(f) ? [AIR_STRIKE, 'aa'] : [POSE.strike[f.slash], 'a' + f.slash];
+    case 'recover':
+      if (f.t >= mv.rec * 0.45) return [g, 'g' + f.stance];
+      return airCut(f) ? [AIR_FOLLOW, 'ra'] : [POSE.follow[f.slash], 'r' + f.slash];
     case 'stagger': return [STAGGER, 'sg'];
     case 'taunt': { const n = Math.floor(f.t / TAUNT_BEAT) % 2; return [TAUNT[n], 'e' + n]; }
     case 'feint': return [lerpPose(POSE.guard[f.slash], POSE.wind[f.slash], mo.windK * 0.4), 'f' + f.slash];
