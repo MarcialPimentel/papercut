@@ -10,32 +10,33 @@ _2026-11-02. For Blender 5.2. Built from Marz's "Japanese Swordfighter – Blend
 - **Origin:** the character's centre at the feet (X = 0). Front view looks along +Y: the body faces you, the head is in profile toward the rival (+X).
 - **Proportions:** head 0.90 (with topknot), torso 1.00, waist/belt 0.40, hakama 1.50, feet 0.20.
 - **Every paper piece is its own flat object**, low-poly (4 to 12 triangles), flat colours, no smoothing. About 280 triangles in all.
+- **Traced from a drawing (since 2026-11-04):** the body is built from Marz's front view, `art/fighters/reference/kami_front.webp`, by two scripts (see "Rebuild from a drawing" below). Every region the drawing's ink lines enclose is its own paper piece, so the game's ink line round each piece redraws the drawing's lines. Pieces that something sits on run on underneath it (the coat up under the sleeve, the hakama under the apron), like cut paper laid on cut paper.
 - **Layer stack** (front view, back to front; the Y location is only drawing order, more negative is in front):
 
 | Layer | Pieces | Y |
 |---|---|---|
 | 1 | Feet | +0.20 |
-| 2 | Hakama (back panel, left and right halves) | +0.15 to +0.17 |
-| 3 | Outer robe (left and right), then the cream lapels | +0.10, +0.075 |
-| 4 | Sleeves (left and right) | +0.05 |
-| 5 | Inner kimono, collar, obi | 0.00 to −0.02 |
-| 6 | Face | −0.05 |
-| 7 | Hair and topknot | −0.10 |
+| 2 | Hakama: dark back panel, then the three strips | +0.17, +0.15 |
+| 3 | Dark neck, apron, inner kimono pieces, obi (three parts) | +0.13 to +0.10 |
+| 4 | Coat (outer robe, cream, with its tall collar and a thin indigo hem trim) | +0.06 |
+| 5 | Sleeves (indigo, the cream wave cuff printed on) | +0.03 |
+| 6 | Hair and topknot (the head's shape), then the gold tie | −0.04 |
+| 7 | Face, then the eye and brow | −0.05 |
 | Top | Sword, then hands | −0.14, −0.18 |
 
 - **Rig** (empties, the pink pivots in the guide). Each paper piece hangs under the empty it turns with:
 
 ```
 root (feet, X = 0)
-  torso (waist)        hakama_back, robe_L/R, kami_lapel_L/R or sumi_lapel_L/R, kimono, collar, obi
-    head (neck)        face, hair (with the topknot and its gold tie)
-    arm_L (shoulder)   sleeve_L
+  torso (waist)        hakama_back, hakama_mid, neck, apron, kimono (+ kimono_2..4), obi, obi_L/R, robe_L/R (the coat)
+    head (neck)        face, kami_hair (Kami) or sumi_hair (Sumi)
+    arm_L (shoulder)   kami_sleeve_L, or Sumi's sumi_sleeve_L + sumi_forearm_L
       hand_L           hand_L_paper (cream mitten)
-    arm_R (shoulder)   sleeve_R
+    arm_R (shoulder)   kami_sleeve_R / sumi_sleeve_R + sumi_forearm_R
       hand_R           hand_R_paper
         sword (guard)  sword_paper (handle, gold wrap, black guard, blade)
-  skirt_L (hip)        hakama_L, feet_L, kami_panel_L
-  skirt_R (hip)        hakama_R, feet_R, kami_panel_R
+  skirt_L (hip)        hakama_L, feet_L
+  skirt_R (hip)        hakama_R, feet_R
 ```
 
 - **Palette** (materials `pc_<id>`): `kimono` (cream, kimono and trim), `robe` (indigo, primary), `hakama` and `hakamaDark`, `accent` (gold: topknot tie, hilt wrap), plus `skin`, `hair`, `ink`, `steel`, `handle`. The cream outline round the figure is added by the game.
@@ -93,7 +94,7 @@ The guide suggests a PNG sequence or texture atlas as the export; Papercut draws
 Both fighters share one rig and one set of pieces. A paper piece whose name starts with **`kami_`** is worn by Kami only, and one starting with **`sumi_`** by Sumi only. Pieces with any other name are worn by both. Sumi's colour swap (cream robe, indigo kimono) still applies to Sumi's own pieces.
 
 **Already in the file** (built by Claude from these steps on 2026-11-02, at Marz's request; the cord is a little thicker than in 7d: corners (0.64, 2.34), (0.915, 2.375), (0.935, 2.48), (0.605, 2.45), and the forearms a little wider). The steps stay here so you can see how each piece is made and change any corner. Marz's picks (the straw hat of the first draft was swapped for hair worn down at Marz's request):
-- **Kami** keeps the topknot and the wide hanging sleeves. Since 2026-11-04 Kami also wears the guide's wide V lapels (`kami_lapel_L/R`, Y −0.004 and −0.007, in front of the inner kimono) and the outer robe's long cream front panels (`kami_panel_L/R`, Y +0.078, from under the belt at Z 1.98 down to Z 0.55, hanging from `skirt_L/R` so they swing with the legs). Sumi's straight lapels are `sumi_lapel_L/R`.
+- **Kami** keeps the topknot and the wide hanging sleeves.
 - **Sumi** wears long hair down (no topknot), and sleeves tied back above the elbow with a cord, with bare forearms.
 
 **Stay inside the H box:** the game hits a box 0.9 m wide and 2.15 m tall. In Blender units that's X −0.86 to +0.86 and Z up to 4.10. Sumi's hair below stays inside it (the top of the head and X −0.47 at the back).
@@ -180,3 +181,11 @@ Repeat 7d and 7e for the right, starting from `kami_sleeve_R` and `hand_R_paper`
 - Draws a thick ink line round every paper piece and a thin cream rim round the whole figure; the sword gets its own.
 - Poses the rig with rigid rotations (key poses in code for now): the sleeves turn at the shoulders, the hands reach the sword's handle, the hakama halves swing at the hips, the torso leans, the head tilts. Poses snap like stop-motion.
 - Cuts red slashes into the paper on hits, and on a K.O. cuts every piece in two for the paper-physics halves.
+
+## Rebuild from a drawing
+When the fighter should look like a new drawing, Claude can trace it instead of reshaping pieces by hand.
+1. Make the drawing: **front view only**, orthographic (body facing you, head in profile toward the right), flat colours (cream, indigo, black, gold), thick black ink lines between every paper piece, plain white background, about 1000 x 1500 px or bigger. Save it as `art/fighters/reference/kami_front.webp` (or tell Claude its name).
+2. Claude runs `art/fighters/trace_front.py` (it writes `reference/kami_front_trace.json`, the traced pieces in model units, 4.00 tall) and then `art/fighters/build_from_trace.py` on the model, which swaps the body pieces for the traced ones, refits the shoulders and neck, keeps the hands, sword and Sumi's own pieces, and exports `samurai.glb`.
+3. The arms keep their length, so the poses and the sword's reach in the fight stay the same; check with the hitbox view (**H**).
+
+The drawing's right side (toward the rival) becomes the `_L` pieces. Colour changes inside a piece without an ink line (the waves on the sleeve cuffs) become prints on it.
