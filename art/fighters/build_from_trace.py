@@ -161,8 +161,17 @@ def reshape(o, faces):
     me.update()
 
 SUMI_SLEEVE = [(0.28, 2.66), (0.70, 2.62), (0.86, 2.20), (0.84, 1.95), (0.95, 1.50), (0.62, 1.46), (0.50, 1.92), (0.40, 2.20)]
+# Her design sits at the wrist, like Kami's wave cuffs (Marz): the cord is a cuff band just above the opening,
+# the crest right above it.
+SUMI_CORD = [(0.58, 1.67), (0.90, 1.69), (0.92, 1.58), (0.61, 1.55)]
+CREST_Z = 1.82
 left = faces_of(D.objects['sumi_sleeve_L'])
 left[0] = ('pc_robe', left[0][1], SUMI_SLEEVE)
+crest = [i for i, (m, _, _) in enumerate(left) if i > 0 and m != 'pc_cord']
+cz = max(sum(z for _, z in left[i][2]) / len(left[i][2]) for i in crest[:1])  # the crest's outer ring
+for i, (m, y, pts) in enumerate(left):
+    if m == 'pc_cord': left[i] = (m, y, SUMI_CORD)
+    elif i in crest: left[i] = (m, y, [(x, z + CREST_Z - cz) for x, z in pts])
 reshape(D.objects['sumi_sleeve_L'], left)
 reshape(D.objects['sumi_sleeve_R'], [(m, y, [(-x, z) for x, z in reversed(pts)]) for m, y, pts in left])
 for s in 'LR':

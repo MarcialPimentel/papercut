@@ -95,7 +95,7 @@ Both fighters share one rig and one set of pieces. A paper piece whose name star
 
 **Already in the file** (built by Claude from these steps on 2026-11-02, at Marz's request; the cord is a little thicker than in 7d: corners (0.64, 2.34), (0.915, 2.375), (0.935, 2.48), (0.605, 2.45), and the forearms a little wider). The steps stay here so you can see how each piece is made and change any corner. Marz's picks (the straw hat of the first draft was swapped for hair worn down at Marz's request):
 - **Kami** keeps the topknot and the wide hanging sleeves.
-- **Sumi** wears long hair down (no topknot), and sleeves tied back above the elbow with a cord, with bare forearms. **Changed 2026-11-04:** her sleeves now reach the wrist like Kami's (`build_from_trace.py` reshapes them; the cord stays at the elbow) and the forearms are gone, so steps 7d and 7e below are history.
+- **Sumi** wears long hair down (no topknot), and sleeves tied back above the elbow with a cord, with bare forearms. **Changed 2026-11-04:** her sleeves now reach the wrist like Kami's (`build_from_trace.py` reshapes them; her crest and cord sit at the wrist, like Kami's wave cuffs) and the forearms are gone, so steps 7d and 7e below are history.
 
 **Stay inside the H box:** the game hits a box 0.9 m wide and 2.15 m tall. In Blender units that's X −0.86 to +0.86 and Z up to 4.10. Sumi's hair below stays inside it (the top of the head and X −0.47 at the back).
 
