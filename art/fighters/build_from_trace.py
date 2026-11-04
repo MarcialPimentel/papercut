@@ -138,6 +138,36 @@ for p in [p for p in trace if p['kind'] == 'foot']:
     a, b = min(xs), max(xs)
     make('feet_' + side(p), 'skirt_' + side(p), [('pc_ink', 0.200, [(sx * a, 0.0), (sx * b, 0.0), (sx * (b - 0.07), 0.24), (sx * a, 0.24)][:: sx])])
 
+# ---------- Sumi's sleeves: down to the wrist like Kami's, narrower, with her crest and the cord at the elbow ----------
+# (Marz, 2026-11-04: cover the arms; the bare forearms go.)
+def faces_of(o):
+    mw, me = o.matrix_world, o.data
+    return [(me.materials[p.material_index].name, (mw @ me.vertices[p.vertices[0]].co).y,
+             [((mw @ me.vertices[i].co).x, (mw @ me.vertices[i].co).z) for i in p.vertices]) for p in me.polygons]
+
+def reshape(o, faces):
+    inv, me = o.matrix_world.inverted(), o.data
+    mats = []
+    for m, _, _ in faces:
+        if m not in mats: mats.append(m)
+    verts, polys = [], []
+    for _, y, pts in faces:
+        polys.append(list(range(len(verts), len(verts) + len(pts))))
+        verts += [tuple(inv @ Vector((x, y, z))) for x, z in pts]
+    me.clear_geometry(); me.materials.clear()
+    me.from_pydata(verts, [], polys)
+    for m in mats: me.materials.append(MAT[m])
+    for p, (m, _, _) in zip(me.polygons, faces): p.material_index = mats.index(m)
+    me.update()
+
+SUMI_SLEEVE = [(0.28, 2.66), (0.70, 2.62), (0.86, 2.20), (0.84, 1.95), (0.95, 1.50), (0.62, 1.46), (0.50, 1.92), (0.40, 2.20)]
+left = faces_of(D.objects['sumi_sleeve_L'])
+left[0] = ('pc_robe', left[0][1], SUMI_SLEEVE)
+reshape(D.objects['sumi_sleeve_L'], left)
+reshape(D.objects['sumi_sleeve_R'], [(m, y, [(-x, z) for x, z in reversed(pts)]) for m, y, pts in left])
+for s in 'LR':
+    if 'sumi_forearm_' + s in D.objects: D.objects.remove(D.objects['sumi_forearm_' + s])
+
 bpy.ops.wm.save_mainfile()
 if len(args) > 1:
     bpy.ops.object.select_all(action='DESELECT')
