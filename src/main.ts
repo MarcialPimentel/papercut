@@ -24,7 +24,7 @@ import { FighterScreen, myPick } from './fighter-screen';
 import { myName, saveName } from './name';
 import { loadDisplay, saveDisplay, skipFrame } from './settings';
 import { desktop, store } from './store';
-import { DEFAULT_CFG, DEFENCE_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
+import { DEFENCE_CFG, ENDLESS_CFG, TRAINING_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
 import { Dummy } from './sim/dummy';
 import { TrainingDummy } from './training-dummy';
 import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
@@ -278,7 +278,7 @@ function defenceBot() { const d = new Dummy(); d.level = DEFENCE_BOT_LEVEL; retu
 
 function startPractice(endless = false, defence = false) {
   wakeAudio();
-  const cfg = endless ? ENDLESS_CFG : defence ? DEFENCE_CFG : DEFAULT_CFG;
+  const cfg = endless ? ENDLESS_CFG : defence ? DEFENCE_CFG : TRAINING_CFG;
   // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) and Dojo Defense never do.
   if (endless || defence) resetTuning(); else applyTuning(loadSaved());
   const seed = newSeed();

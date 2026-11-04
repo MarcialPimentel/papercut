@@ -142,7 +142,7 @@ function resetForRound(s: State, ev: FightEvent[]) {
   s.roundWinner = -1; s.how = ''; s.why = '';
 }
 
-/** Endless: a fresh bot appears a few steps away, on the left or right; you stay where you are. */
+/** Endless (and Training): a fresh bot appears a few steps away, on the left or right; you stay where you are. */
 function nextBot(s: State, ev: FightEvent[]) {
   const x = s.f[0].x;
   resetForRound(s, ev); // fresh fighters (you keep your strip), heal every few bots, back to the intro
@@ -194,6 +194,8 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
       break;
     case 'ko':
       if (s.phaseT >= RULES.koFrames) {
+        // Training: whoever went down, a fresh dummy steps in (Endless's way) and you're back to full.
+        if (s.cfg.training) { nextBot(s, ev); break; }
         s.final = s.cfg.gauntlet
           ? s.roundWinner === 1 || !s.f[0].alive // Endless: one lost round ends the run
           : s.cfg.wins > 0 && s.f.some((f) => f.wins >= s.cfg.wins);

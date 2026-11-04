@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { newMatch, step, type State } from '../src/sim/sim';
+import { BTN, newMatch, step, type FightEvent, type State } from '../src/sim/sim';
+import { MOVES } from '../src/sim/rules';
+import { TRAINING_CFG } from '../src/sim/config';
 import { TrainingDummy, type BotGuard, type BotJump, type BotMove } from '../src/training-dummy';
 
 /** A fight past the intro, the fighters 3 m apart, and a dummy with these bot actions. */
@@ -60,5 +62,53 @@ describe('training dummy', () => {
     const xs = run(t.s, t.d, 120).xs;
     expect(Math.min(...xs)).toBeLessThan(1.5);
     expect(xs[xs.length - 1]).toBeGreaterThan(Math.min(...xs) + 0.5);
+  });
+});
+
+describe('training: no rounds', () => {
+  /** Training rules past the intro, the fighters close; seat 0 can be cut by setting its strip low. */
+  function training() {
+    const s = newMatch(TRAINING_CFG);
+    while (s.phase !== 'fight') step(s, [0, 0]);
+    s.f[0].x = -0.6; s.f[1].x = 0.6;
+    return s;
+  }
+  /** Step until the fight is on again after a K.O.; returns every event on the way. */
+  function untilNextFight(s: State) {
+    const ev: FightEvent[] = [];
+    for (let n = 0; n < 2000 && !(s.phase === 'fight' && ev.some((e) => e.k === 'spawn')); n++) ev.push(...step(s, [0, 0]));
+    return ev;
+  }
+
+  it('a fresh dummy steps in after you cut it, with no page turn or match end', () => {
+    const s = training();
+    s.f[1].hp = 1;
+    for (let n = 0; n < MOVES.light.wind + 2; n++) step(s, [BTN.low | (n === 0 ? BTN.light : 0), 0]);
+    expect(s.phase).toBe('ko');
+    const ev = untilNextFight(s);
+    expect(ev.map((e) => e.k)).toContain('spawn');
+    expect(ev.map((e) => e.k)).not.toContain('turn');
+    expect(ev.map((e) => e.k)).not.toContain('over');
+    expect(s.phase).toBe('fight');
+    expect(s.f[0].wins).toBe(1);
+    expect(s.f[1].alive).toBe(true);
+    expect(s.f[1].hp).toBe(TRAINING_CFG.maxHp);
+  });
+
+  it('if you go down, the dummy comes back too and you are back to full', () => {
+    const s = training();
+    s.f[0].hp = 1;
+    for (let n = 0; n < MOVES.light.wind + 2; n++) step(s, [0, BTN.low | (n === 0 ? BTN.light : 0)]);
+    expect(s.phase).toBe('ko');
+    untilNextFight(s);
+    expect(s.phase).toBe('fight');
+    expect(s.f[0].alive && s.f[1].alive).toBe(true);
+    expect(s.f[0].hp).toBe(TRAINING_CFG.maxHp);
+  });
+
+  it('has no timer', () => {
+    const s = training();
+    for (let n = 0; n < 90 * 60; n++) step(s, [0, 0]);
+    expect(s.phase).toBe('fight');
   });
 });

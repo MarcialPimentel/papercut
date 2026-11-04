@@ -12,6 +12,8 @@ export interface MatchCfg {
   gauntlet: boolean;
   /** Dojo Defence: one heavy's worth of health; cut your rival down, then run across the notebook to their cover. */
   defence?: boolean;
+  /** Training (offline): no rounds. After every K.O. a fresh dummy steps in, as in Endless, and both strips are full again. */
+  training?: boolean;
 }
 
 export const DEFAULT_CFG: MatchCfg = { wins: 3, maxHp: 80, roundSecs: 60, gauntlet: false };
@@ -26,6 +28,9 @@ export const ROOM_OPTIONS = {
 /** Endless mode: the strip refills by this share every `healEvery` bots, and the bots level up just as often. */
 export const ENDLESS = { healEvery: 5, healShare: 0.5 };
 export const ENDLESS_CFG: MatchCfg = { wins: 0, maxHp: 80, roundSecs: 60, gauntlet: true };
+
+/** Training: no rounds and no timer; the dummy comes back after every K.O. */
+export const TRAINING_CFG: MatchCfg = { wins: 0, maxHp: 80, roundSecs: 0, gauntlet: false, training: true };
 
 /** Dojo Defence: no rounds or timer, and a strip that one heavy (35) empties. */
 export const DEFENCE_CFG: MatchCfg = { wins: 0, maxHp: 35, roundSecs: 0, gauntlet: false, defence: true };
