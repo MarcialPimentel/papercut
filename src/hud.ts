@@ -109,7 +109,7 @@ export class Hud {
     const name = (i: number) => (this.names?.[i] ?? LOOKS[i].name) + (this.you === i ? ' (you)' : '');
     const plain = (i: number) => this.names?.[i] ?? LOOKS[i].name;
     if (def) {
-      // Dojo Defence: the five spreads instead of a clock, the one being fought on lit, and who has the way.
+      // Dojo Defense: the five spreads instead of a clock, the one being fought on lit, and who has the way.
       const key = `d${s.zone}|${s.way}|${this.names?.join()}`;
       if (key !== this.lastTrack) {
         this.lastTrack = key; this.lastClock = -1;
@@ -127,7 +127,7 @@ export class Hud {
     if (s.phase === 'intro') {
       html = s.phaseT >= RULES.introCut ? 'Cut!'
         : g ? `Bot ${cut + 1}<small>Level ${botLevel(cut)} · ${PAGES[s.page].name}</small>`
-        : def ? `Dojo Defence<small>Cut them down, then run for their cover. ${esc(plain(0))} runs right, ${esc(plain(1))} runs left.</small>`
+        : def ? `Dojo Defense<small>Cut them down, then run for their cover. ${esc(plain(0))} runs right, ${esc(plain(1))} runs left.</small>`
         : `Round ${s.round}<small>${PAGES[s.page].name}</small>`;
     } else if (def && s.phase === 'fight' && s.respawnT > 30 && s.roundWinner >= 0) {
       const w = s.roundWinner;

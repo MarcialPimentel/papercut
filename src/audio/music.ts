@@ -113,7 +113,7 @@ export const TRACKS: Record<TrackKey, Track> = {
   },
 };
 
-/** The track for each notebook page (PAGES order: Graph, Ruled, Legal Pad, the back cover, and Dojo Defence's
+/** The track for each notebook page (PAGES order: Graph, Ruled, Legal Pad, the back cover, and Dojo Defense's
  *  front cover, which shares the back cover's track). */
 export const PAGE_TRACKS: readonly TrackKey[] = ['dojo', 'courtyard', 'grove', 'cover', 'cover'];
 

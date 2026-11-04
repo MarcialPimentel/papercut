@@ -7,7 +7,7 @@ import { C, coarse, mulberry32 } from './common';
 import { PAGE_SEGS, PD, PW, PZ, pageY } from './page';
 export { PD, PW, PZ };
 
-/** Dojo Defence's front cover is the same marble board as the back cover, in daylight. */
+/** Dojo Defense's front cover is the same marble board as the back cover, in daylight. */
 const texKey = (key: string) => (key === 'front' ? 'cover' : key);
 
 export class Notebook {
@@ -209,7 +209,7 @@ export class Notebook {
       const r = mulberry32(21);
       for (let i = 0; i < 24; i++) { let x = -8 + r() * 16; if (Math.abs(x) < 2.2) x += x < 0 ? -2.2 : 2.2; this.bamboo(g, x, PZ - 0.9 - r() * 1.7, 3.6 + r() * 2.4, 0.08 + r() * 0.05, r); }
     } else if (P.key === 'front') {
-      // Dojo Defence: the front cover by day, the back cover's scenery mirrored, with a paper sun.
+      // Dojo Defense: the front cover by day, the back cover's scenery mirrored, with a paper sun.
       this.addFlat(mb(1), this.ngon(0.85), new THREE.MeshBasicMaterial({ color: C.legal }), 4.0, 3.5, 0.05);
       this.pyramid(g, 'graph', 4.4, PZ - 1.9, 1.8, 2.6, 0.3); this.pyramid(g, 'graph', -3.8, PZ - 2.1, 2.0, 2.2, 0.6);
       this.torii(g, -5.2, PZ - 0.6, 1.1, this.lambert(C.ink, null, true));
@@ -272,7 +272,7 @@ export class Notebook {
   /**
    * The page turn, driven by seconds since it began: 0-0.35 fold flat, 0.35-1.15 the leaf flips,
    * then the next spread pops up. `from`/`to` are page indexes. `back`: the left leaf flips over to the right
-   * (Dojo Defence, running toward the front cover).
+   * (Dojo Defense, running toward the front cover).
    */
   turn(t: number, from: number, to: number, back = false) {
     const easeIn = (k: number) => k * k, easeOut = (k: number) => 1 - (1 - k) * (1 - k);

@@ -201,7 +201,7 @@ export class View {
     else if (this.book.fold !== 1) { this.book.endTurn(); this.book.setFold(1); }
     const fold = this.book.fold;
     this.physics.step(real * scale);
-    // Dojo Defence: a fighter coming back after a cut pops up from the page like a pop-up card.
+    // Dojo Defense: a fighter coming back after a cut pops up from the page like a pop-up card.
     const rise = (u: number) => { const k = 1 - u / RULES.unfoldFrames; return 1 - (1 - k) * (1 - k); };
     s.f.forEach((f, i) => { this.fighters[i].draw(f, real, f.unfold > 0 ? fold * rise(f.unfold) : fold, this.clock); this.fighters[i].updateHalves(real * scale, fold); });
     this.fx.update(real, real * scale, fold);
@@ -233,7 +233,7 @@ export class View {
       cx = h.base.x + h.dir * 0.4; cy = 0.95; dist *= 0.82; yaw = 0.72 * h.dir; pitch = 0.18;
     }
     if (s.phase === 'turn') { cx = 0; cy = 0.4; dist = Math.max(dist, portrait ? 26 : 17); pitch = 0.62; yaw = 0.12; }
-    // Dojo Defence ends at the cover's far edge: stay on the winner there.
+    // Dojo Defense ends at the cover's far edge: stay on the winner there.
     if (s.phase === 'over') { cx = s.cfg.defence ? cx : 0; cy = 1.2; yaw = 0.5; pitch = 0.25; dist = Math.max(dist * 0.8, 8); }
     const k = 1 - Math.exp(-real * (this.killCam > 0 || s.phase === 'turn' ? 5 : 4));
     const c = this.cam;
