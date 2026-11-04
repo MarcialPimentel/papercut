@@ -26,6 +26,7 @@ import { loadDisplay, saveDisplay, skipFrame } from './settings';
 import { desktop, store } from './store';
 import { DEFAULT_CFG, DEFENCE_CFG, ENDLESS_CFG, cleanCfg, roundsLabel, type MatchCfg } from './sim/config';
 import { Dummy } from './sim/dummy';
+import { TrainingDummy } from './training-dummy';
 import { applyTuning, isTuned, loadSaved, resetTuning } from './tuning';
 import { forDivision, forEndless, fromEvents, unlock } from './achievements';
 import { TuningPanel } from './tuning-panel';
@@ -65,7 +66,7 @@ tuner.onClose = () => { controls.clear(); if (mode.kind === 'practice') { contro
 
 type Mode =
   | { kind: 'menu'; s: State }
-  | { kind: 'practice'; s: State; dummy: Dummy; endless: boolean; defence: boolean; tally: Tally; seed: number; inputs: RunInputs }
+  | { kind: 'practice'; s: State; dummy: Dummy | TrainingDummy; endless: boolean; defence: boolean; tally: Tally; seed: number; inputs: RunInputs }
   | { kind: 'tutorial'; s: State; tut: Tutorial }
   | { kind: 'online'; lock: Rollback; code: string; sink: RollbackSink }
   | { kind: 'watch'; spec: Spectator; code: string; names: [string, string] } // watching a tournament fight
@@ -281,7 +282,7 @@ function startPractice(endless = false, defence = false) {
   // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) and Dojo Defense never do.
   if (endless || defence) resetTuning(); else applyTuning(loadSaved());
   const seed = newSeed();
-  mode = { kind: 'practice', s: newMatch(cfg), dummy: endless ? endlessBot(seed) : defence ? defenceBot() : new Dummy(), endless, defence, tally: new Tally(), seed, inputs: new RunInputs() };
+  mode = { kind: 'practice', s: newMatch(cfg), dummy: endless ? endlessBot(seed) : defence ? defenceBot() : new TrainingDummy(), endless, defence, tally: new Tally(), seed, inputs: new RunInputs() };
   hud.placeNote = '';
   // Practice is against Sumi; in Endless every bot wears a random look.
   const mine = myPick(), botLook = () => lookOf(pairPicks(mine, randomPick(Math.random))[1], LOOKS[1].name);
@@ -873,7 +874,7 @@ function frame(now: number) {
       const mine = controls.sample(view.waistY(s, 0), s.f[0].facing);
       // Endless: the bot's level follows your score, and your inputs are kept so the server can re-play the run.
       if (m.endless) m.inputs.add(s.frame, mine);
-      const ev = step(s, [mine, m.endless ? botInput(m.dummy, s) : m.dummy.think(s)]);
+      const ev = step(s, [mine, m.endless && m.dummy instanceof Dummy ? botInput(m.dummy, s) : m.dummy.think(s)]);
       const done = m.tally.feed(s, ev);
       // Achievements: never with the tuning panel's numbers changed.
       if (m.endless) unlock([...fromEvents(s, ev, 0, false), ...forEndless(s.f[0].wins)]);
@@ -951,10 +952,10 @@ function frame(now: number) {
   let status = '';
   if (m.kind === 'tutorial') status = `Tutorial · ${menuHint()}`;
   else if (m.kind === 'practice') {
-    const tune = keysFor(controls, 'tune')[0];
+    const tune = keysFor(controls, 'tune')[0], boxes = keysFor(controls, 'hitboxes')[0];
     status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · ${menuHint()}`
       : m.defence ? `Dojo Defense · solo against a bot · ${menuHint()}`
-      : `Training: Sumi is a dummy · ${tune ? `${tune} to tune${isTuned() ? ' (tuned numbers)' : ''} · ` : ''}${menuHint()}`;
+      : `Training · ${tune ? `${tune} to tune and set bot actions${isTuned() ? ' (tuned numbers)' : ''} · ` : ''}${boxes ? `Press ${boxes} for hitbox view · ` : ''}${menuHint()}`;
   }
   else if (m.kind === 'online') {
     const l = m.lock;
