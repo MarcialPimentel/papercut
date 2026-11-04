@@ -103,6 +103,7 @@ const isRobe = (obj: string) => ROBE_OBJS.has(obj.replace(/^(kami|sumi)_/i, ''))
  *  sleeve's band. It is printed in the look's contrast colour (the kimono's), never red: red is for cuts. */
 const CORD = 'cord';
 const KIMONO = '#F2E3C0';
+const ROBE = '#3C3A7E';
 const SCALE = 2.1 / 4; // as in puppet.ts (the model is 4 units tall)
 const PRINT = 0.004 * SCALE; // a print sits this far in front of its paper, like the Blender model's prints
 const rect = (x0: number, y0: number, x1: number, y1: number): Pt[] => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
@@ -128,12 +129,15 @@ function dressOutfit(input: Shape[], outfit: string): Shape[] {
   for (const [i, s] of shapes.entries()) {
     if (!s.paper && isRobe(s.obj) && input[i].role !== CORD && !keep.has(input[i])) continue;
     out.push(s);
-    if (outfit === 'stripes' && s.paper && s.role === 'robe' && isRobe(s.obj)) {
+    // Stripes in the other colour: cream on the indigo sleeves, indigo on the cream coat (the robe objects are the
+    // sleeves and, since the traced model of #79, the coat), so the outfit covers the whole body.
+    if (outfit === 'stripes' && s.paper && (s.role === 'robe' || s.role === 'kimono') && isRobe(s.obj)) {
       const b = bbox(s.pts), step = 0.22 * SCALE, w = 0.09 * SCALE;
+      const [role, color] = s.role === 'robe' ? ['kimono', KIMONO] : ['robe', ROBE];
       // Just behind the hem band, so the band runs over the stripes.
       for (let x = b.x0 + 0.06 * SCALE; x < b.x1; x += step) {
         const pts = clipConvex(s.pts, rect(x, b.y0 - 1, x + w, b.y1 + 1));
-        if (pts.length >= 3) out.push({ pts, role: 'kimono', color: '#F2E3C0', z: s.z + PRINT * 0.6, paper: false, obj: s.obj });
+        if (pts.length >= 3) out.push({ pts, role, color, z: s.z + PRINT * 0.6, paper: false, obj: s.obj });
       }
     }
   }
