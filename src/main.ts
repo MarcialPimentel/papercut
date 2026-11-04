@@ -85,7 +85,7 @@ let tourney: {
   /** When to go back to the bracket after the fight on screen ended (0 = not yet). */
   backAt: number;
 } | null = null;
-const rulesLabel = (c: MatchCfg) => c.defence ? 'Dojo Defence' : `${roundsLabel(c.wins)}, ${c.maxHp} health, ${c.roundSecs ? c.roundSecs + 's' : 'no timer'}`;
+const rulesLabel = (c: MatchCfg) => c.defence ? 'Dojo Defense' : `${roundsLabel(c.wins)}, ${c.maxHp} health, ${c.roundSecs ? c.roundSecs + 's' : 'no timer'}`;
 const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // ---------- looks (issue #38) ----------
@@ -271,14 +271,14 @@ function showBest() {
   $('#bestRun').textContent = b > 0 ? `Your best run: ${b} bot${b === 1 ? '' : 's'}${myPlace ? ` · #${myPlace} on the leaderboard` : ''}` : 'How many bots can you cut?';
 }
 
-/** The Dojo Defence bot: the Endless bot's reads at a fixed level. */
+/** The Dojo Defense bot: the Endless bot's reads at a fixed level. */
 const DEFENCE_BOT_LEVEL = 2;
 function defenceBot() { const d = new Dummy(); d.level = DEFENCE_BOT_LEVEL; return d; }
 
 function startPractice(endless = false, defence = false) {
   wakeAudio();
   const cfg = endless ? ENDLESS_CFG : defence ? DEFENCE_CFG : DEFAULT_CFG;
-  // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) and Dojo Defence never do.
+  // Practice plays with the numbers kept from the tuning panel; Endless (a scored run) and Dojo Defense never do.
   if (endless || defence) resetTuning(); else applyTuning(loadSaved());
   const seed = newSeed();
   mode = { kind: 'practice', s: newMatch(cfg), dummy: endless ? endlessBot(seed) : defence ? defenceBot() : new Dummy(), endless, defence, tally: new Tally(), seed, inputs: new RunInputs() };
@@ -953,7 +953,7 @@ function frame(now: number) {
   else if (m.kind === 'practice') {
     const tune = keysFor(controls, 'tune')[0];
     status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · ${menuHint()}`
-      : m.defence ? `Dojo Defence · solo against a bot · ${menuHint()}`
+      : m.defence ? `Dojo Defense · solo against a bot · ${menuHint()}`
       : `Training: Sumi is a dummy · ${tune ? `${tune} to tune${isTuned() ? ' (tuned numbers)' : ''} · ` : ''}${menuHint()}`;
   }
   else if (m.kind === 'online') {

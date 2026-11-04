@@ -14,7 +14,7 @@ function run(s: State, frames: number, inp: (n: number) => [number, number] = ()
 }
 const kinds = (ev: FightEvent[]) => ev.map((e) => e.k);
 
-/** A Dojo Defence match past its intro, fighters close together. */
+/** A Dojo Defense match past its intro, fighters close together. */
 function fightAt(gap = 1.2): State {
   const s = newMatch(DEFENCE_CFG);
   while (s.phase !== 'fight') step(s, [0, 0]);
@@ -27,7 +27,7 @@ function kamiKills(s: State) {
   return run(s, MOVES.heavy.wind + 2, (n) => [low | (n === 0 ? heavy : 0), 0]);
 }
 
-describe('Dojo Defence', () => {
+describe('Dojo Defense', () => {
   it('starts on the Ruled Courtyard with nobody holding the way', () => {
     const s = newMatch(DEFENCE_CFG);
     expect(s.zone).toBe(0);
@@ -124,7 +124,7 @@ describe('Dojo Defence', () => {
     expect(s.f[0].x).toBeLessThan(s.f[1].x);
   });
 
-  it('room rules keep Defence, with its fixed numbers', () => {
+  it('room rules keep Defense, with its fixed numbers', () => {
     expect(cleanCfg({ defence: true, maxHp: 150, wins: 3 })).toEqual(DEFENCE_CFG);
     expect(cleanCfg({ maxHp: 80 }).defence).toBeFalsy();
   });
