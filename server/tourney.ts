@@ -2,6 +2,7 @@
 // The two fighters play an ordinary online match; everyone else in the room gets both players'
 // inputs and watches it live. The server's own re-play of each fight decides who goes through.
 
+import { leadOf } from './lead';
 import { BYE_SLOT, cleanName, delayFor, type BracketMatch, type ToClient } from '../src/net/protocol';
 import type { MatchCfg } from '../src/sim/config';
 import { Referee, type GuardStyle, type MatchRecord } from './referee';
@@ -116,7 +117,7 @@ export class Tourney {
   }
 
   /** Pass a fighter's message along: inputs go to the rival and to everyone watching, hashes only to the rival. */
-  relay(peer: TPeer, msg: { t: 'in' | 'hash'; f: number; b?: number; h?: number }) {
+  relay(peer: TPeer, msg: { t: 'in' | 'hash'; f: number; b?: number; h?: number; a?: number }) {
     const fs = this.fighters();
     if (!fs) return;
     const seat = fs[0].peer === peer ? 0 : fs[1].peer === peer ? 1 : -1;
@@ -132,7 +133,7 @@ export class Tourney {
     const b = (msg.b ?? 0) | 0;
     // Send it on before the referee steps it: the input that ends the fight still reaches everyone.
     if (!ref.accepts(seat, msg.f)) return;
-    if (!rival.gone) rival.peer.send({ t: 'in', f: msg.f, b });
+    if (!rival.gone) rival.peer.send({ t: 'in', f: msg.f, b, a: leadOf(msg.a) });
     for (const p of this.live) if (p !== fs[0] && p !== fs[1]) p.peer.send({ t: 'in', f: msg.f, b, s: seat });
     ref.input(seat, msg.f, b);
   }

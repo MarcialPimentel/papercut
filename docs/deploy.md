@@ -98,7 +98,7 @@ Then open http://localhost:5173. To try an online fight alone, open the game in 
 
 ## Notes for later
 
-- **One server, one region.** Inputs travel player → hub → player, so players far from the hub (it is in one region) get a longer input delay (up to 8 frames). Direct browser-to-browser links (WebRTC) and rollback are the planned fix.
+- **One server, one region.** Inputs travel player → hub → player, so players far from the hub (it is in one region) get a longer input delay (up to 6 frames) and more rollback. Direct browser-to-browser links (WebRTC) are the planned fix.
 - **No accounts.** Rooms live in memory; a restart sends everyone back to the menu. Only the stats are stored.
 - **On your own PC** the stats are kept in memory (no `DATABASE_URL`): play a match in two windows, then open http://localhost:5173/stats.
 - **Capacity:** the container accepts up to 200 connections (`CAPACITY`). A fight costs the server almost nothing.

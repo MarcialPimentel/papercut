@@ -229,13 +229,13 @@ describe('tournament', () => {
 
 describe('watching a tournament fight', () => {
   it('a watcher sees exactly the fight the two fighters see', async () => {
-    const { Lockstep } = await import('../src/net/lockstep');
+    const { Rollback } = await import('../src/net/rollback');
     const { Spectator } = await import('../src/net/spectator');
     const { BTN, hashState } = await import('../src/sim/sim');
     let seed = 21;
     const rand = () => { seed = (Math.imul(seed, 48271) + 1) >>> 0; return seed / 4294967296; };
     const lobby = new Lobby(rand, () => 0);
-    const games: (InstanceType<typeof Lockstep> | InstanceType<typeof Spectator>)[] = [];
+    const games: (InstanceType<typeof Rollback> | InstanceType<typeof Spectator>)[] = [];
     const inFlight: { at: number; from: Peer; m: Parameters<Lobby['message']>[1] }[] = [];
     let now = 0;
     const peers: Peer[] = [0, 1, 2].map((i) => {
@@ -244,7 +244,7 @@ describe('watching a tournament fight', () => {
         send: (m) => {
           if (m.t === 'match') {
             games[i] = m.seat === -1 ? new Spectator(m.cfg, m.delay)
-              : new Lockstep(m.seat, m.delay, (out) => inFlight.push({ at: now + 1 + Math.floor(rand() * 5), from: p, m: out }), m.cfg);
+              : new Rollback(m.seat, m.delay, (out) => inFlight.push({ at: now + 1 + Math.floor(rand() * 5), from: p, m: out }), m.cfg);
           } else if (m.t === 'in' || m.t === 'hash') games[i]?.receive(m);
         },
       };
@@ -258,12 +258,14 @@ describe('watching a tournament fight', () => {
     const buttons = () => (rand() < 0.4 ? BTN.right : 0) | (rand() < 0.5 ? BTN.low : 0) | (rand() < 0.05 ? BTN.light : 0) | (rand() < 0.03 ? BTN.heavy : 0);
     // Fingerprints every 100 frames, for each game.
     const prints = [new Map<number, number>(), new Map<number, number>(), new Map<number, number>()];
-    const note = (k: number) => { const st = games[k].state; if (st.frame % 100 === 0) prints[k].set(st.frame, hashState(st)); };
+    // A fighter's game shows guessed frames, so its fingerprints come from confirmed frames only.
+    const note = (k: number, st = games[k].state) => { if (st.frame % 100 === 0) prints[k].set(st.frame, hashState(st)); };
+    const sinks = [0, 1, 2].map((k) => ({ show() {}, confirm: (st: typeof games[number]['state']) => note(k, st) }));
     for (now = 0; now < 3000; now++) {
       for (let k = inFlight.length - 1; k >= 0; k--) if (inFlight[k].at <= now) { const x = inFlight.splice(k, 1)[0]; lobby.message(x.from, x.m); }
-      games.forEach((g, k) => { const ev = g instanceof Lockstep ? g.tick(buttons) : g.tick(); if (ev) note(k); });
+      games.forEach((g, k) => { if (g instanceof Rollback) g.tick(buttons, sinks[k]); else if (g.tick()) note(k); });
     }
-    const w = games.findIndex((g) => g instanceof Spectator), f = games.findIndex((g) => g instanceof Lockstep);
+    const w = games.findIndex((g) => g instanceof Spectator), f = games.findIndex((g) => g instanceof Rollback);
     expect(games[w].state.frame).toBeGreaterThan(2000);
     let compared = 0;
     for (const [frame, h] of prints[w]) if (prints[f].has(frame)) { expect(h).toBe(prints[f].get(frame)); compared++; }

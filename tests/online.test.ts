@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Lobby, type Peer } from '../server/lobby';
-import { Lockstep } from '../src/net/lockstep';
+import { MAX_GUESS, Rollback, type RollbackSink } from '../src/net/rollback';
+import type { FightEvent, State } from '../src/sim/sim';
 import { delayFor, type ToClient, type ToServer } from '../src/net/protocol';
 import { BTN, hashState } from '../src/sim/sim';
 import { DEFAULT_CFG } from '../src/sim/config';
@@ -70,59 +71,90 @@ describe('lobby', () => {
     expect(b.last()).toEqual({ t: 'waiting' });
   });
 
-  it('input delay grows with distance, between 2 and 8 frames', () => {
+  it('input delay covers about half the lag (rollback guesses the rest), between 2 and 6 frames', () => {
     expect(delayFor(10, 10)).toBe(2);
-    expect(delayFor(60, 60)).toBe(5);
-    expect(delayFor(400, 400)).toBe(8);
+    expect(delayFor(60, 60)).toBe(3);
+    expect(delayFor(400, 400)).toBe(6);
   });
 });
 
-describe('lockstep over a laggy connection', () => {
-  it('both games see exactly the same fight', () => {
-    let seed = 5;
-    const rand = () => { seed = (Math.imul(seed, 48271) + 1) >>> 0; return seed / 4294967296; };
-    const lobby = new Lobby(rand);
-    // Each player's messages reach the server after a random 1-6 ticks.
-    const inFlight: { at: number; to: 'server'; from: Peer; m: ToServer }[] = [];
-    let now = 0;
-    const sessions: Lockstep[] = [];
-    const peers = [0, 1].map((i) => {
-      const p: Peer = {
-        rtt: 50,
-        send: (m) => {
-          if (m.t === 'start') {
-            sessions[i] = new Lockstep(m.seat, m.delay, (out) => inFlight.push({ at: now + 1 + Math.floor(rand() * 6), to: 'server', from: p, m: out }));
-          } else sessions[i]?.receive(m);
-        },
-      };
-      return p;
-    });
-    lobby.message(peers[0], { t: 'quick' });
-    lobby.message(peers[1], { t: 'quick' });
-    expect(sessions).toHaveLength(2);
+/**
+ * Two rollback games through the real lobby and referee. Each message takes `lag()` ticks to reach the
+ * server. Returns what each game confirmed (fingerprints every 60 frames, K.O.s) and how often it waited.
+ */
+function playLaggy(seed: number, ticks: number, lag: (now: number, from: number) => number) {
+  const rand = () => { seed = (Math.imul(seed, 48271) + 1) >>> 0; return seed / 4294967296; };
+  const lobby = new Lobby(rand);
+  const inFlight: { at: number; from: Peer; m: ToServer }[] = [];
+  let now = 0;
+  const games: Rollback[] = [];
+  const prints = [new Map<number, number>(), new Map<number, number>()];
+  const kos: number[][] = [[], []];
+  const shownKo = [0, 0];
+  const sinks: RollbackSink[] = [0, 1].map((i) => ({
+    show: (_s: State, ev: FightEvent[]) => { shownKo[i] += ev.filter((e) => e.k === 'ko').length; },
+    confirm: (st: State, ev: FightEvent[]) => {
+      if (st.frame % 60 === 0) prints[i].set(st.frame, hashState(st));
+      for (const e of ev) if (e.k === 'ko') kos[i].push(st.frame);
+    },
+  }));
+  const peers = [0, 1].map((i) => {
+    const p: Peer = {
+      rtt: 50,
+      send: (m) => {
+        if (m.t === 'start') games[i] = new Rollback(m.seat, m.delay, (out) => inFlight.push({ at: now + lag(now, i), from: p, m: out }));
+        else games[i]?.receive(m);
+      },
+    };
+    return p;
+  });
+  lobby.message(peers[0], { t: 'quick' });
+  lobby.message(peers[1], { t: 'quick' });
+  const buttons = () => (rand() < 0.4 ? BTN.right : 0) | (rand() < 0.3 ? BTN.left : 0) | (rand() < 0.5 ? BTN.low : 0) |
+    (rand() < 0.05 ? BTN.light : 0) | (rand() < 0.03 ? BTN.heavy : 0) | (rand() < 0.02 ? BTN.feint : 0) | (rand() < 0.01 ? BTN.jump : 0);
+  let waits = 0;
+  for (now = 0; now < ticks; now++) {
+    // Messages from one sender arrive in order, as they do over a websocket.
+    inFlight.sort((x, y) => x.at - y.at);
+    while (inFlight.length && inFlight[0].at <= now) { const x = inFlight.shift()!; lobby.message(x.from, x.m); }
+    games.forEach((g, i) => { g.tick(buttons, sinks[i]); if (g.waiting > 0) waits++; });
+  }
+  return { games, prints, kos, shownKo, waits };
+}
 
-    const buttons = () => (rand() < 0.4 ? BTN.right : 0) | (rand() < 0.3 ? BTN.left : 0) | (rand() < 0.5 ? BTN.low : 0) |
-      (rand() < 0.05 ? BTN.light : 0) | (rand() < 0.03 ? BTN.heavy : 0) | (rand() < 0.02 ? BTN.feint : 0) | (rand() < 0.01 ? BTN.jump : 0);
-    let stalls = 0;
-    for (now = 0; now < 8000; now++) {
-      for (let k = inFlight.length - 1; k >= 0; k--) {
-        if (inFlight[k].at <= now) { const x = inFlight.splice(k, 1)[0]; lobby.message(x.from, x.m); }
-      }
-      for (const s of sessions) if (s.tick(buttons) === null) stalls++;
-    }
-    const [a, b] = sessions;
-    const common = Math.min(a.frame, b.frame);
-    expect(common).toBeGreaterThan(5000);
-    expect(Math.abs(a.frame - b.frame)).toBeLessThanOrEqual(a.delay + 6);
-    // Run the one that's ahead's partner up to the same frame and compare.
-    for (let n = 0; n < 200 && a.frame !== b.frame; n++) {
-      for (const x of inFlight.splice(0)) lobby.message(x.from, x.m);
-      (a.frame < b.frame ? a : b).tick(() => 0);
-    }
-    expect(a.frame).toBe(b.frame);
-    expect(hashState(a.state)).toBe(hashState(b.state));
+describe('rollback over a laggy connection', () => {
+  it('both games confirm exactly the same fight, and guesses really get corrected', () => {
+    let jitter = 3;
+    const r = playLaggy(5, 8000, () => { jitter = (jitter * 7 + 3) % 11; return 1 + (jitter % 6); });
+    const [a, b] = r.games;
+    expect(Math.min(a.frame, b.frame)).toBeGreaterThan(7000);
+    let compared = 0;
+    for (const [f, h] of r.prints[0]) if (r.prints[1].has(f)) { expect(h).toBe(r.prints[1].get(f)); compared++; }
+    expect(compared).toBeGreaterThan(100);
+    const n = Math.min(r.kos[0].length, r.kos[1].length);
+    expect(n).toBeGreaterThan(0);
+    expect(r.kos[0].slice(0, n)).toEqual(r.kos[1].slice(0, n));
+    expect(r.shownKo).toEqual([0, 0]); // a K.O. is never shown on a guess
     expect(a.desynced || b.desynced).toBe(false);
-    expect(stalls).toBeGreaterThan(0); // the lag really did make them wait sometimes
+    expect(a.rerun + b.rerun).toBeGreaterThan(0); // the lag really did make some guesses wrong
+    expect(r.waits).toBe(0); // and nobody had to wait: up to 6 ticks of lag fits in the guesses
+  });
+
+  it('a long lag spike makes the games wait, then they carry on in step', () => {
+    const r = playLaggy(9, 4000, (now) => (now > 1000 && now < 1040 ? 40 : 2));
+    const [a, b] = r.games;
+    expect(r.waits).toBeGreaterThan(0);
+    expect(a.guessing).toBeLessThanOrEqual(MAX_GUESS);
+    expect(Math.abs(a.frame - b.frame)).toBeLessThan(MAX_GUESS + 4);
+    for (const [f, h] of r.prints[0]) if (r.prints[1].has(f)) expect(h).toBe(r.prints[1].get(f));
+    expect(a.desynced || b.desynced).toBe(false);
+  });
+
+  it("a game running ahead holds back until both games' leads meet", () => {
+    // Player 2's messages take far longer than player 1's, so player 1 sees player 2 behind and runs ahead.
+    const r = playLaggy(13, 3000, (_now, from) => (from === 1 ? 7 : 1));
+    const [a, b] = r.games;
+    expect(Math.abs(a.lead - b.lead)).toBeLessThan(4);
   });
 });
 

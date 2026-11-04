@@ -1,6 +1,7 @@
 // Pairs players into rooms (1v1 or tournament) and relays their inputs. The server's referee steps
 // the same fight alongside the players to read the result and count what happened (see referee.ts).
 
+import { leadOf } from './lead';
 import { CODE_LENGTH, CODE_LETTERS, cleanLook, cleanName, delayFor, normalizeCode, type RankInfo, type ToClient, type ToServer } from '../src/net/protocol';
 import { DEFAULT_CFG, cleanCfg, type MatchCfg } from '../src/sim/config';
 import { Referee, cleanGuard, type GuardStyle, type MatchRecord } from './referee';
@@ -192,7 +193,7 @@ export class Lobby {
         const seat = r.host === p ? 0 : 1;
         // Only what the server's referee accepted reaches the rival, so both always step the same inputs.
         // The input goes out before the referee steps it, so a result it decides never arrives ahead of it.
-        if (m.t === 'in') { const b = m.b | 0; if (r.ref.accepts(seat, m.f)) { o.send({ t: 'in', f: m.f, b }); r.ref.input(seat, m.f, b); } }
+        if (m.t === 'in') { const b = m.b | 0; if (r.ref.accepts(seat, m.f)) { o.send({ t: 'in', f: m.f, b, a: leadOf(m.a) }); r.ref.input(seat, m.f, b); } }
         else { const h = m.h >>> 0; if (r.ref.hash(seat, m.f, h)) o.send({ t: 'hash', f: m.f, h }); }
         return;
       }
