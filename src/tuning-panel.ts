@@ -1,7 +1,8 @@
-// The tuning panel (#9): a legal-pad sheet of sliders, opened with T in Practice. The fight pauses while it's
-// open. Every change applies at once and is kept in this browser for Practice; "Copy numbers" copies the
+// The tuning panel (#9): a legal-pad sheet of sliders, opened with T in Training. The fight pauses while it's
+// open. At the top, "Bot actions" set what the training dummy does (src/training-dummy.ts). Every change applies at once and is kept in this browser for Practice; "Copy numbers" copies the
 // changes so they can be made the game's own numbers in a PR.
 
+import { BOT, BOT_OPTIONS } from './training-dummy';
 import { DEFAULTS, KNOBS, changes, copyText, getValue, resetTuning, saveCurrent, setValue, type Knob } from './tuning';
 
 /** "12f", "0.85m", "1.0x": as many decimals as the slider's step has. */
@@ -22,7 +23,12 @@ export class TuningPanel {
     el.setAttribute('aria-label', 'Tuning panel');
     let html = `<header><b>Tuning</b><span class="tcount"></span><button class="tx" data-t="close" aria-label="Close">T</button></header>
       <p class="tnote">Training only: online fights always use the game's numbers. Changes apply at once and are kept in this browser. Frames are 1/60 s.</p>
-      <div class="tbody">`;
+      <div class="tbody"><section class="tbot"><h3>Bot actions</h3>`;
+    for (const o of BOT_OPTIONS) {
+      html += `<div class="tbotrow"><span class="tl">${o.label}</span><span class="tchips">${o.choices
+        .map(([v, name]) => `<button type="button" class="tchip" data-bot="${o.key}" data-v="${v}">${name}</button>`).join('')}</span></div>`;
+    }
+    html += '</section>';
     let group = '';
     for (const k of KNOBS) {
       if (k.group !== group) { if (group) html += '</section>'; group = k.group; html += `<section><h3>${group}</h3>`; }
@@ -44,6 +50,9 @@ export class TuningPanel {
       input.addEventListener('input', () => { setValue(key, Number(input.value)); this.refresh(key); saveCurrent(); });
       row.querySelector('.td')!.addEventListener('click', (e) => { e.preventDefault(); setValue(key, DEFAULTS[key]); this.refresh(key); saveCurrent(); });
     }
+    for (const b of el.querySelectorAll<HTMLButtonElement>('.tchip')) {
+      b.addEventListener('click', () => { (BOT as Record<string, string>)[b.dataset.bot!] = b.dataset.v!; this.refreshBot(); });
+    }
     el.querySelectorAll('[data-t="close"]').forEach((b) => b.addEventListener('click', () => this.toggle(false)));
     el.querySelector('[data-t="reset"]')!.addEventListener('click', () => { resetTuning(); saveCurrent(); this.refresh(); });
     this.copyBtn.addEventListener('click', async () => {
@@ -57,8 +66,16 @@ export class TuningPanel {
     this.refresh();
   }
 
+  /** Light up the bot action chosen in each row. */
+  private refreshBot() {
+    for (const b of this.el.querySelectorAll<HTMLButtonElement>('.tchip')) {
+      b.setAttribute('aria-pressed', String((BOT as Record<string, string>)[b.dataset.bot!] === b.dataset.v));
+    }
+  }
+
   /** Show the current values (one row, or all), mark the changed ones, and count them. */
   refresh(only?: string) {
+    this.refreshBot();
     for (const [key, r] of this.rows) {
       if (only && key !== only) continue;
       const k = KNOBS.find((x) => x.key === key)!, v = getValue(key);

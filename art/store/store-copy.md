@@ -33,7 +33,7 @@ Fight across the Graph Paper Dojo, the Ruled Courtyard and the Legal Pad Grove, 
 [*][b]Find a fight[/b] with whoever is waiting.
 [*][b]Tournaments[/b] for 3 to 8 friends, with a knockout bracket.
 [*][b]Endless:[/b] how many bots can you cut?
-[*][b]Practice[/b] against a dummy that blocks, swings and feints.
+[*][b]Training[/b] against a dummy you set up: high or low guard, jumping, walking in or away.
 [/list]
 ```
 
