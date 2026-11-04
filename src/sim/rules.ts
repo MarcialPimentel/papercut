@@ -64,6 +64,12 @@ export const RULES = {
  *  the drawn samurai (the robe is 0.55 wide in front of the centre; the blade must be a little way into it). */
 export const BODY = { half: 0.45, feet: 0.05, top: 2.15 };
 
+/** A slash in the air cuts down at the rival: the blade slopes down from the hilt (this far ahead of the centre and
+ *  this high above the jumper's feet) to its tip at the move's reach. `slope` is how far it drops per metre ahead
+ *  (0.53 is 28 degrees, the drawn air strike pose). It lands when any part of the blade inside the rival's body is
+ *  between their feet and the top of their head, so it reaches a standing rival from anywhere in the jump. */
+export const AIR_CUT = { hiltX: 0.74, hiltY: 1.3, slope: 0.53, deg: 28 };
+
 /** How far apart (centre to centre) two fighters on the ground can be for this slash to land. */
 export const rangeOf = (m: Move) => m.reach + m.lunge + BODY.half;
 
