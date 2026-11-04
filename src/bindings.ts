@@ -17,7 +17,7 @@ export const ACTIONS: { id: Action; name: string; note?: string }[] = [
   { id: 'emote', name: 'Taunt', note: '"come at me"; only for show, standing still' },
   { id: 'restart', name: 'Restart / rematch' },
   { id: 'hitboxes', name: 'Hitbox view' },
-  { id: 'tune', name: 'Tuning panel', note: 'in Practice' },
+  { id: 'tune', name: 'Tuning panel', note: 'in Training' },
   { id: 'skip', name: 'Skip tutorial step', note: 'in the tutorial' },
 ];
 

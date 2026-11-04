@@ -100,7 +100,7 @@ const dressOnline = (looks?: [string, string]) => dress(decodePick(looks?.[0], D
 const myLook = () => encodePick(myPick());
 
 // ---------- menus ----------
-type Screen = 'main' | 'defence' | 'fighter' | 'howto' | 'board' | 'replays' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
+type Screen = 'main' | 'friend' | 'defence' | 'fighter' | 'howto' | 'board' | 'replays' | 'settings' | 'controls' | 'setup' | 'host' | 'tlobby' | 'bracket' | 'search' | 'join' | 'error' | 'welcome' | 'tutdone';
 let screen: Screen | null = null;
 function showMenu(to: Screen, opts: { code?: string; msg?: string } = {}) {
   if (screen === 'controls' && to !== 'controls') bindScreen.cancel();
@@ -527,6 +527,8 @@ $('#bTutEndless').addEventListener('click', () => startPractice(true));
 $('#bTutMenu').addEventListener('click', () => showMenu('main'));
 $('#bEndless').addEventListener('click', () => startPractice(true));
 $('#bDefence').addEventListener('click', () => showMenu('defence'));
+$('#bFriendMenu').addEventListener('click', () => showMenu('friend'));
+$('#bFriendBack').addEventListener('click', () => showMenu('main'));
 $('#bDefSolo').addEventListener('click', () => startPractice(false, true));
 $('#bDefRoom').addEventListener('click', () => { showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg: DEFENCE_CFG, name: myName(), look: myLook() })); });
 $('#bDefBack').addEventListener('click', () => showMenu('main'));
@@ -556,7 +558,7 @@ controls.onNav = (n) => {
     navigate(n, $('#menu'), () => {
       // B on the bracket never leaves the tournament: it goes back to the fight being watched, or does nothing.
       if (screen === 'bracket') { if (mode.kind === 'watch') hideMenu(); return; }
-      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bDefBack, #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #bReplaysBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
+      const back = [...document.querySelectorAll<HTMLElement>('#menu [data-cancel], #bDefBack, #bFriendBack, #bHowToBack, #bindBack, #bFighterDone, #bBoardBack, #bReplaysBack, #settingsForm [type=submit], #bWelcomeSkip, #bTutMenu')].find((b) => !b.closest('[hidden]'));
       back?.click();
     });
     return;
@@ -662,7 +664,7 @@ function searching(ranked: boolean) {
   $('#searchTitle').textContent = ranked ? 'Looking for a ranked rival…' : 'Looking for a rival…';
   $('#searchNote').textContent = ranked
     ? "You'll be paired with someone close to your rating. The longer you wait, the wider the search."
-    : "You'll be paired with the next person who presses 'Find a fight'. Send a friend to papercut.marz.gg to make it quicker.";
+    : "You'll be paired with the next person who presses 'Fight whoever is waiting' (under Fight a friend). Send a friend to papercut.marz.gg to make it quicker.";
   showMenu('search');
 }
 $('#joinForm').addEventListener('submit', (e) => {
@@ -672,6 +674,8 @@ $('#joinForm').addEventListener('submit', (e) => {
   showMenu('join', { code }); ensureNet(() => net.send({ t: 'join', code, name: myName(), look: myLook() }));
 });
 for (const b of document.querySelectorAll('[data-cancel]')) b.addEventListener('click', () => { net.send({ t: 'cancel' }); toMenu(); });
+// Back from the room / tournament rules goes to the Fight a friend screen it came from.
+$('#setupForm [data-cancel]').addEventListener('click', () => showMenu('friend'));
 $('#copyLink').addEventListener('click', async () => {
   const input = $<HTMLInputElement>('#inviteLink');
   try { await navigator.clipboard.writeText(input.value); $('#copyLink').textContent = 'Copied'; }
@@ -726,7 +730,7 @@ function command(c: Command) {
   if (c === 'menu' && mode.kind === 'watch') { if (screen === 'bracket') hideMenu(); else { showMenu('bracket'); renderBracket(); } return; }
   if (c === 'menu' && mode.kind === 'replay') { toMenu('replays'); return; }
   if (mode.kind === 'replay') { if (c === 'restart') replayCmd('restart'); return; }
-  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'defence' || screen === 'replays' || screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone' || screen === 'board') showMenu('main'); return; }
+  if (c === 'menu') { if (mode.kind !== 'menu') toMenu(); else if (screen === 'friend' || screen === 'defence' || screen === 'replays' || screen === 'howto' || screen === 'settings' || screen === 'controls' || screen === 'fighter' || screen === 'welcome' || screen === 'tutdone' || screen === 'board') showMenu('main'); return; }
   if (mode.kind === 'tutorial') {
     if (c === 'skip') mode.tut.skip();
     if (c === 'restart') { mode.s = freshFight(); view.reset(mode.s); }
@@ -946,7 +950,7 @@ function frame(now: number) {
     const tune = keysFor(controls, 'tune')[0];
     status = m.endless ? `Endless · level ${botLevel(m.s.f[0].wins)} · ${menuHint()}`
       : m.defence ? `Dojo Defence · solo against a bot · ${menuHint()}`
-      : `Practice: Sumi is a dummy · ${tune ? `${tune} to tune${isTuned() ? ' (tuned numbers)' : ''} · ` : ''}${menuHint()}`;
+      : `Training: Sumi is a dummy · ${tune ? `${tune} to tune${isTuned() ? ' (tuned numbers)' : ''} · ` : ''}${menuHint()}`;
   }
   else if (m.kind === 'online') {
     const l = m.lock;
