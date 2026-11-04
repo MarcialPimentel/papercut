@@ -1,8 +1,8 @@
 // Draws the fight: listens to each fight frame and its events, and turns them into the 3D scene.
 
 import * as THREE from 'three';
-import { PAGES, RULES } from '../sim/rules';
-import type { FightEvent, State } from '../sim/sim';
+import { AIR_CUT, PAGES, RULES } from '../sim/rules';
+import { airCut, type FightEvent, type State } from '../sim/sim';
 import { C, LOOKS, clamp, lerp, reduceMotion, type Look } from './common';
 import { FighterView } from './fighter';
 import { PaperPhysics } from './physics';
@@ -130,10 +130,17 @@ export class View {
       case 'swing': if (e.atk === 'heavy') sfx.windup(pan(s.f[e.p].x)); break;
       case 'feint': fx.label('Feint', s.f[e.p].x, s.f[e.p].y + 2.3, 'gold'); break; // silent: the fold already played when the heavy started
       case 'jump': case 'dash': sfx.hop(pan(s.f[e.p].x)); break;
-      case 'whiff':
-        fx.razor(e.x, e.y, e.ang, C.ink, e.heavy ? 2.8 : 1.8);
+      case 'whiff': {
+        // A miss draws its streak ending at the blade's tip, never past it: a streak across a rival who wasn't hit
+        // reads as a hit that didn't count. It comes in along its angle from behind the tip.
+        // The event sits 0.3 m short of the tip (sim.ts apply); an air cut drops along its slope to the tip.
+        const f = s.f[e.p], dir = f.facing, len = e.heavy ? 1.8 : 1.5;
+        const tx = e.x + dir * 0.3, ty = airCut(f) ? e.y - 0.3 * AIR_CUT.slope : e.y;
+        const ux = dir * Math.cos(e.ang), uy = dir * Math.sin(e.ang); // forward along the streak
+        fx.razor(tx - (ux * len) / 2, ty - (uy * len) / 2, e.ang, C.ink, len);
         if (e.over) fx.label('Over', s.f[1 - e.p].x, s.f[1 - e.p].y + 2.2, 'gold');
         break;
+      }
       case 'clash':
         fx.razor(e.x, e.y, e.ang, C.ink, 2.2); fx.burst(e.x, e.y, [C.paper, C.ink], 10, 1); fx.label('Clash', e.x, e.y + 0.6); sfx.clash(pan(e.x));
         this.shake = 0.08;
