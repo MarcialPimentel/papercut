@@ -27,15 +27,15 @@ _2026-11-02. For Blender 5.2. Built from Marz's "Japanese Swordfighter – Blend
 
 ```
 root (feet, X = 0)
-  torso (waist)        hakama_back, robe_L/R, lapel_L/R, kimono, collar, obi
+  torso (waist)        hakama_back, robe_L/R, kami_lapel_L/R or sumi_lapel_L/R, kimono, collar, obi
     head (neck)        face, hair (with the topknot and its gold tie)
     arm_L (shoulder)   sleeve_L
       hand_L           hand_L_paper (cream mitten)
     arm_R (shoulder)   sleeve_R
       hand_R           hand_R_paper
         sword (guard)  sword_paper (handle, gold wrap, black guard, blade)
-  skirt_L (hip)        hakama_L, feet_L
-  skirt_R (hip)        hakama_R, feet_R
+  skirt_L (hip)        hakama_L, feet_L, kami_panel_L
+  skirt_R (hip)        hakama_R, feet_R, kami_panel_R
 ```
 
 - **Palette** (materials `pc_<id>`): `kimono` (cream, kimono and trim), `robe` (indigo, primary), `hakama` and `hakamaDark`, `accent` (gold: topknot tie, hilt wrap), plus `skin`, `hair`, `ink`, `steel`, `handle`. The cream outline round the figure is added by the game.
@@ -93,7 +93,7 @@ The guide suggests a PNG sequence or texture atlas as the export; Papercut draws
 Both fighters share one rig and one set of pieces. A paper piece whose name starts with **`kami_`** is worn by Kami only, and one starting with **`sumi_`** by Sumi only. Pieces with any other name are worn by both. Sumi's colour swap (cream robe, indigo kimono) still applies to Sumi's own pieces.
 
 **Already in the file** (built by Claude from these steps on 2026-11-02, at Marz's request; the cord is a little thicker than in 7d: corners (0.64, 2.34), (0.915, 2.375), (0.935, 2.48), (0.605, 2.45), and the forearms a little wider). The steps stay here so you can see how each piece is made and change any corner. Marz's picks (the straw hat of the first draft was swapped for hair worn down at Marz's request):
-- **Kami** keeps the topknot and the wide hanging sleeves.
+- **Kami** keeps the topknot and the wide hanging sleeves. Since 2026-11-04 Kami also wears the guide's wide V lapels (`kami_lapel_L/R`, Y −0.004 and −0.007, in front of the inner kimono) and the outer robe's long cream front panels (`kami_panel_L/R`, Y +0.078, from under the belt at Z 1.98 down to Z 0.55, hanging from `skirt_L/R` so they swing with the legs). Sumi's straight lapels are `sumi_lapel_L/R`.
 - **Sumi** wears long hair down (no topknot), and sleeves tied back above the elbow with a cord, with bare forearms.
 
 **Stay inside the H box:** the game hits a box 0.9 m wide and 2.15 m tall. In Blender units that's X −0.86 to +0.86 and Z up to 4.10. Sumi's hair below stays inside it (the top of the head and X −0.47 at the back).
