@@ -51,7 +51,7 @@ export interface Fighter {
   dashDir: number; dashFrom: number; dashLen: number;
   stunT: number;
   walk: number; // -1, 0, 1: walking direction this frame
-  unfold: number; // Dojo Defense: frames left unfolding after coming back (can't act, can't be hit)
+  unfold: number; // Dojo Defence: frames left unfolding after coming back (can't act, can't be hit)
 }
 
 export interface State {
@@ -71,7 +71,7 @@ export interface State {
   turnTo: number;
   rematch: [boolean, boolean];
   f: [Fighter, Fighter];
-  // Dojo Defense (cfg.defence) only:
+  // Dojo Defence (cfg.defence) only:
   zone: number; // which spread the fight is on, -2 (front cover) to 2 (back cover)
   way: number; // who has the way (made the last kill and may run on): 0, 1, or -1 nobody
   respawnT: number; // frames until the cut fighter unfolds again (0 = not counting)
@@ -96,7 +96,7 @@ export type FightEvent =
   | { k: 'swap'; page: number }
   | { k: 'over'; winner: number }
   | { k: 'heal'; p: number; amt: number }
-  | { k: 'spawn'; p: number } // Endless: a fresh bot appears beside you. Dojo Defense: a cut fighter unfolds again
+  | { k: 'spawn'; p: number } // Endless: a fresh bot appears beside you. Dojo Defence: a cut fighter unfolds again
   | { k: 'restart' };
 
 const DEG = Math.PI / 180;
@@ -237,7 +237,7 @@ export function step(s: State, inputs: readonly [number, number]): FightEvent[] 
   return ev;
 }
 
-/** Who won the match. In Endless the bot always ends the run; in Dojo Defense, whoever crossed the rival's cover. */
+/** Who won the match. In Endless the bot always ends the run; in Dojo Defence, whoever crossed the rival's cover. */
 export const matchWinner = (s: State) => (s.cfg.gauntlet ? 1 : s.cfg.defence ? Math.max(0, s.way) : s.f[0].wins > s.f[1].wins ? 0 : 1);
 
 function trackStances(s: State, inputs: readonly [number, number]) {
@@ -478,7 +478,7 @@ function endRound(s: State, winner: number, how: string, ev: FightEvent[]) {
   ev.push({ k: 'roundEnd', winner, how });
 }
 
-// ---------- Dojo Defense ----------
+// ---------- Dojo Defence ----------
 // A tug-of-war across five spreads. A K.O. doesn't end anything: the killer gets the way and may run on toward the
 // rival's cover, while the cut fighter unfolds again a little way ahead of them, in their path. Nobody can pass a
 // living rival (not even by jumping), so the only way through is to cut them down. Cross the rival's cover to win.

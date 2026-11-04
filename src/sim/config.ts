@@ -10,7 +10,7 @@ export interface MatchCfg {
   roundSecs: number;
   /** Endless mode (offline): seat 0 keeps their strip between bots, heals every few bots, and one lost round ends the run. */
   gauntlet: boolean;
-  /** Dojo Defense: one heavy's worth of health; cut your rival down, then run across the notebook to their cover. */
+  /** Dojo Defence: one heavy's worth of health; cut your rival down, then run across the notebook to their cover. */
   defence?: boolean;
 }
 
@@ -27,13 +27,13 @@ export const ROOM_OPTIONS = {
 export const ENDLESS = { healEvery: 5, healShare: 0.5 };
 export const ENDLESS_CFG: MatchCfg = { wins: 0, maxHp: 80, roundSecs: 60, gauntlet: true };
 
-/** Dojo Defense: no rounds or timer, and a strip that one heavy (35) empties. */
+/** Dojo Defence: no rounds or timer, and a strip that one heavy (35) empties. */
 export const DEFENCE_CFG: MatchCfg = { wins: 0, maxHp: 35, roundSecs: 0, gauntlet: false, defence: true };
 
 /** A room's settings from an untrusted message: anything not on the menu falls back to the default. */
 export function cleanCfg(x: unknown): MatchCfg {
   const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>;
-  if (o.defence === true) return { ...DEFENCE_CFG }; // Dojo Defense has fixed rules
+  if (o.defence === true) return { ...DEFENCE_CFG }; // Dojo Defence has fixed rules
   const pick = <K extends keyof typeof ROOM_OPTIONS>(k: K): number =>
     (ROOM_OPTIONS[k] as readonly number[]).includes(o[k] as number) ? (o[k] as number) : DEFAULT_CFG[k];
   return { wins: pick('wins'), maxHp: pick('maxHp'), roundSecs: pick('roundSecs'), gauntlet: false };
