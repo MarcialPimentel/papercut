@@ -531,7 +531,7 @@ $('#bDefSolo').addEventListener('click', () => startPractice(false, true));
 $('#bDefRoom').addEventListener('click', () => { showMenu('host'); ensureNet(() => net.send({ t: 'host', cfg: DEFENCE_CFG, name: myName(), look: myLook() })); });
 $('#bDefBack').addEventListener('click', () => showMenu('main'));
 $('#bHowTo').addEventListener('click', () => showMenu('howto'));
-const fighterScreen = new FighterScreen($<HTMLCanvasElement>('#fCanvas'), $('#fPicks'), $<HTMLInputElement>('#fName'), $('#fNameTag'), view.physics, (p) => { if (mode.kind === 'menu') dress(p, SUMI_PICK); });
+const fighterScreen = new FighterScreen($<HTMLCanvasElement>('#fCanvas'), $('#fPicks'), $('#fWho'), $<HTMLInputElement>('#fName'), $('#fNameTag'), view.physics, (p) => { if (mode.kind === 'menu') dress(p, SUMI_PICK); });
 $('#bFighter').addEventListener('click', () => showMenu('fighter'));
 $('#bFighterDone').addEventListener('click', () => showMenu('main'));
 $('#bHowToBack').addEventListener('click', () => showMenu('main'));

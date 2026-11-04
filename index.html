@@ -87,7 +87,7 @@
         </div>
 
        <div data-screen="fighter" class="stack fighter" hidden>
-          <p class="big">Your fighter</p>
+          <div class="fhead"><p class="big">Your fighter</p><div class="chips fwho" id="fWho" data-choices aria-label="Kami or Sumi"></div></div>
           <div class="fprev" data-paper="graph"><canvas id="fCanvas" aria-label="Your fighter, turning its guard high and low"></canvas><span class="fname" id="fNameTag"></span></div>
           <div class="fpicks">
             <label class="frow"><b>Name</b><input class="fname-in" id="fName" maxlength="14" autocomplete="off" spellcheck="false"></label>
@@ -99,7 +99,7 @@
 
         <div data-screen="defence" class="stack" hidden>
           <p class="big">Dojo Defence</p>
-          <p class="muted defence-rules">A tug-of-war across the notebook. One heavy empties the strip. Cut your rival down and you have the way: run for their cover while they unfold again in your path. Nobody can get past a living rival, so the only way through is to cut them down. Kami runs right to the back cover, Sumi runs left to the front cover.</p>
+          <p class="muted defence-rules">A tug-of-war across the notebook. One heavy empties the strip. Cut your rival down and you have the way: run for their cover while they unfold again in your path. Nobody can get past a living rival, so the only way through is to cut them down. Whoever starts on the left runs right to the back cover (you, solo, or the room's host); whoever starts on the right runs left to the front cover.</p>
           <button class="mbtn red" id="bDefSolo" type="button">Play solo<small>Push against a bot</small></button>
           <button class="mbtn" id="bDefRoom" type="button">Room with a friend<small>Get an invite link to send</small></button>
           <button class="mbtn" id="bDefBack" type="button">Back</button>

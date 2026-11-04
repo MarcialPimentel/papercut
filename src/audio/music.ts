@@ -1,4 +1,4 @@
-// The title screen and regular fights play recorded songs (SONGS, below); everything else is the code-made band.
+// The title screen and every fight but a tournament's play recorded songs (SONGS, below); the rest is the code-made band.
 // Music made in code: taiko drums, a small high drum, wooden clappers, a temple bell, and koto-like plucks
 // or a bamboo flute on Japanese scales. Every page, the menu, Endless, tournaments and the back cover has its
 // own track (tempo, scale, drums and lead), so a session never loops one tune.
@@ -174,7 +174,7 @@ function makePhrase(density: number): Phrase {
 }
 
 // ---------- recorded songs ----------
-// Two songs Marz made with Suno replace the code-made music on the title screen and in regular fights.
+// Two songs Marz made with Suno replace the code-made music on the title screen and in fights (Endless too).
 // Each file is baked as a seamless loop: it plays from the start once, then loops loopStart..loopEnd
 // (the file's last beats already crossfade into the audio just before loopStart). Sources: docs/sound.md.
 
@@ -186,11 +186,11 @@ export const SONGS: Record<SongKey, Song> = {
 };
 E.want(Object.fromEntries(Object.entries(SONGS).map(([k, s]) => [`song:${k}`, [s.url]])));
 
-/** Which recorded song (if any) replaces the code-made track. "Round N" keeps its drums, Endless keeps its
- *  build-up, tournaments keep their festival theme, and the bracket and back cover stay calm. */
+/** Which recorded song (if any) replaces the code-made track. "Round N" keeps its drums, every fight but a
+ *  tournament's plays the fight song (Endless too), and the bracket and back cover stay calm. */
 export function songFor(track: TrackKey, mode: MusicMode): SongKey | null {
   if (mode === 'menu') return track === 'menu' ? 'title' : null;
-  if (mode === 'fight') return track === 'dojo' || track === 'courtyard' || track === 'grove' ? 'fight' : null;
+  if (mode === 'fight') return track === 'tourney' ? null : 'fight';
   return null;
 }
 
@@ -225,7 +225,10 @@ export class Music {
    *  tension and the Endless level change the song in place. */
   set(mode: MusicMode, tension: Tension = 0, track: TrackKey = 'dojo', level = 1) {
     const want = songFor(track, mode);
-    const song = want && E.has(`song:${want}`) ? want : null; // the code-made track plays until the file loads
+    const song = want && E.has(`song:${want}`) ? want : null;
+    // While the song is still loading, stay as we are (silent at launch) rather than start the old code-made
+    // track and cross over. After 6 s without it (a slow or failed download), the code-made track plays.
+    if (want && !song && E.loading(`song:${want}`) && performance.now() - E.wokeAt < 6000) return;
     if (mode === this.mode && tension === this.tension && track === this.track && level === this.level && song === this.song) return;
     const a = E.live;
     if (!a) return; // audio not started yet: pick it up on a later frame

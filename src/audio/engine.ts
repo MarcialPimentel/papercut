@@ -25,11 +25,18 @@ export class Engine {
   private samples = new Map<string, AudioBuffer[]>();
   private noiseBuf: AudioBuffer | null = null;
   private wanted: Record<string, string[]> = {};
+  /** Files are downloaded as soon as they're asked for (before the first click), and decoded once audio starts. */
+  private files = new Map<string, Promise<ArrayBuffer | null>>();
+  /** Recordings still downloading or decoding. */
+  private pending = new Set<string>();
+  /** When audio started (ms), so callers can stop waiting for a slow file. */
+  wokeAt = 0;
 
   /** Create the context on the first press; returns null if audio is unavailable. */
   wake(): AudioContext | null {
     if (!this.ctx) {
       try { this.ctx = new AudioContext(); } catch { return null; }
+      this.wokeAt = performance.now();
       const a = this.ctx;
       const limiter = a.createDynamicsCompressor();
       limiter.threshold.value = -10; limiter.knee.value = 8; limiter.ratio.value = 8;
@@ -73,21 +80,36 @@ export class Engine {
   /** Ask for recordings by name (several files = random pick). Missing files are skipped quietly. */
   want(list: Record<string, string[]>) {
     Object.assign(this.wanted, list);
-    if (this.ctx) for (const [name, urls] of Object.entries(list)) void this.fetchSample(name, urls);
+    for (const [name, urls] of Object.entries(list)) {
+      this.pending.add(name);
+      for (const url of urls) this.download(url);
+      if (this.ctx) void this.fetchSample(name, urls);
+    }
+  }
+  private download(url: string): Promise<ArrayBuffer | null> {
+    let p = this.files.get(url);
+    if (!p) {
+      p = typeof window === 'undefined' ? Promise.resolve(null)
+        : fetch(url).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+      this.files.set(url, p);
+    }
+    return p;
   }
   private async fetchSample(name: string, urls: string[]) {
     const a = this.ctx!;
     const bufs: AudioBuffer[] = [];
     for (const url of urls) {
       try {
-        const r = await fetch(url);
-        if (!r.ok) continue;
-        bufs.push(await a.decodeAudioData(await r.arrayBuffer()));
+        const data = await this.download(url);
+        if (data) bufs.push(await a.decodeAudioData(data.slice(0))); // decoding empties the buffer, so decode a copy
       } catch { /* missing or unreadable: the code-made sound plays instead */ }
     }
     if (bufs.length) this.samples.set(name, bufs);
+    this.pending.delete(name);
   }
   has(name: string) { return this.samples.has(name); }
+  /** True while a recording is still downloading or decoding (false once it's ready, or if it failed). */
+  loading(name: string) { return this.pending.has(name); }
   /** A loaded recording's first file (for the recorded songs, which play as long loops). */
   buffer(name: string): AudioBuffer | null { return this.samples.get(name)?.[0] ?? null; }
 

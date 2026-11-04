@@ -53,6 +53,7 @@ _Since 2026-11-02, from Marz's art-direction brief ("Stylized 2D Papercraft"), h
 
 | Choice | Options | What changes |
 |---|---|---|
+| Fighter | Kami (topknot, wide sleeves) or Sumi (long hair, tied-back sleeves), picked at the top of the screen | `kami_` / `sumi_` pieces |
 | Colours | Indigo (Kami's), Kraft, Sumi ink, Pine, Graph blue, Plum, Oxblood; each dark (robe over trim) or light (swapped) | `robe`, `kimono`, `hakama`, `hakamaDark` roles |
 | Outfit | Waves (the model's waves and sleeve crests), Stripes, Plain (hem band only) | The robe's and sleeves' prints, never the paper outline |
 | Sword | Katana (the model's), Folded (white paper blade with a centre fold), Bokken (kraft wood, no guard), Hamon (steel with an ink temper line, square guard) | Blade, guard, grip and wrap colours, the guard's shape and a blade print; the blade outline (and reach) never changes |

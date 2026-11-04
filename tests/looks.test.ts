@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Lobby, type Peer } from '../server/lobby';
 import type { ToClient } from '../src/net/protocol';
 import {
-  COLOUR_SETS, DEFAULT_PICK, OUTFITS, SUMI_PICK, SWORDS, decodePick, dressPiece, encodePick, lookOf, pairPicks, randomPick, type Pick,
+  COLOUR_SETS, DEFAULT_PICK, FIGHTERS, OUTFITS, SUMI_PICK, SWORDS, decodePick, dressPiece, encodePick, lookOf, pairPicks, randomPick, type Pick,
 } from '../src/render/looks';
 import { PIECE_NAMES, puppetFrom, wornBy, type Puppet } from '../src/render/puppet';
 
@@ -16,7 +16,7 @@ beforeAll(async () => {
   puppet = puppetFrom(gltf.scene);
 });
 
-const ALL: Pick[] = COLOUR_SETS.flatMap((c) => [false, true].flatMap((light) => OUTFITS.flatMap((o) => SWORDS.map((s) => ({ set: c.id, light, outfit: o.id, sword: s.id })))));
+const ALL: Pick[] = COLOUR_SETS.flatMap((c) => [false, true].flatMap((light) => OUTFITS.flatMap((o) => SWORDS.flatMap((s) => FIGHTERS.map((f) => ({ set: c.id, light, outfit: o.id, sword: s.id, fighter: f.id }))))));
 
 /** Hue (degrees), saturation and lightness of a #RRGGBB colour. */
 function hueSat(hex: string) {
@@ -43,6 +43,15 @@ describe('look codes', () => {
     expect(decodePick(undefined, SUMI_PICK)).toEqual(SUMI_PICK);
     expect(decodePick('red.l.bikini.laser')).toEqual({ ...DEFAULT_PICK, light: true });
     expect(decodePick(42)).toEqual(DEFAULT_PICK);
+  });
+  it("Kami or Sumi travels in the code; older codes without it keep the seat's own fighter", () => {
+    expect(encodePick({ ...DEFAULT_PICK, fighter: 'sumi' })).toBe('indigo.d.waves.katana.s');
+    expect(decodePick('indigo.d.waves.katana.s').fighter).toBe('sumi');
+    expect(decodePick('indigo.l.waves.katana.k', SUMI_PICK).fighter).toBe('kami');
+    expect(decodePick('indigo.d.waves.katana').fighter).toBe('kami');
+    expect(decodePick('indigo.d.waves.katana', SUMI_PICK).fighter).toBe('sumi');
+    expect(lookOf({ ...DEFAULT_PICK, fighter: 'sumi' }, 'x').variant).toBe('sumi');
+    expect(lookOf(SUMI_PICK, 'x').key).not.toBe(lookOf({ ...SUMI_PICK, fighter: 'kami' }, 'x').key);
   });
   it('random bot looks are always valid', () => {
     let seed = 3;
