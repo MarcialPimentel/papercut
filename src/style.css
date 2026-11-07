@@ -234,7 +234,8 @@ kbd { font: 700 12px var(--body); border: 1.5px solid rgba(24,23,28,.3); border-
   .wlabel { font-size: 22px; }
   .mbtn { font-size: 22px; }
 }
-@media (prefers-reduced-motion: reduce) { .pop { animation-duration: .01s; } .sliver { animation-duration: .01s; } }
+/* Reduced motion (e.g. Windows "Animation effects" off): stickers hold still for their second instead of fading out at once. */
+@media (prefers-reduced-motion: reduce) { .pop { animation: none; } .sliver { animation-duration: .01s; } }
 
 /* the Fighter screen */
 .fighter .mbtn { text-align: center; }
